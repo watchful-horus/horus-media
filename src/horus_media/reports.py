@@ -43,8 +43,9 @@ def build(conn: sqlite3.Connection, start: date, end: date, tz: tzinfo | None = 
 
 def to_text(r: dict) -> str:
     plural = "" if r["total_plays"] == 1 else "s"
-    lines = [f"{r['range']['start']} to {r['range']['end']}: {r['total_plays']} play{plural}"
-             f" (the {r['days']} days before: {r['previous_plays']})"]
+    head = (f"{r['range']['start']} to {r['range']['end']}: {r['total_plays']} play{plural}"
+            f" (the {r['days']} days before: {r['previous_plays']})")
+    lines = [head]
     if not r["total_plays"]:
         return lines[0] + "\nNothing was played."
     lines.append("By server: " + ", ".join(f"{s['server']} {s['plays']}" for s in r["per_server"]))
