@@ -42,8 +42,8 @@ def build(conn: sqlite3.Connection, start: date, end: date, tz: tzinfo | None = 
 
 
 def to_text(r: dict) -> str:
-    lines = [f"{r['range']['start']} to {r['range']['end']}: {r['total_plays']} play"
-             f"{'' if r['total_plays'] == 1 else 's'}"
+    plural = "" if r["total_plays"] == 1 else "s"
+    lines = [f"{r['range']['start']} to {r['range']['end']}: {r['total_plays']} play{plural}"
              f" (the {r['days']} days before: {r['previous_plays']})"]
     if not r["total_plays"]:
         return lines[0] + "\nNothing was played."
