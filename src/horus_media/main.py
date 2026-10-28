@@ -62,7 +62,8 @@ async def lifespan(app: FastAPI):
     if auth.auth_disabled():
         log.warning("Login is DISABLED (HORUS_AUTH_DISABLED): anyone who can reach Horus can use it")
     elif first_run:
-        log.warning("First-run setup: open Horus and choose an admin password. Setup code (only needed from another computer): %s", auth.setup_code())
+        log.warning("First-run setup: no account exists yet. Open Horus and create the admin account now: "
+                    "until you do, anyone who can reach this page could create it")
     stop = threading.Event()
     thread = threading.Thread(target=run_forever, args=(stop,), daemon=True, name="poller")
     thread.start()

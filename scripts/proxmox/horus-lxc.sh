@@ -20,7 +20,7 @@
 #   IP=dhcp (or 192.168.1.50/24 with GATEWAY=192.168.1.1)  VLAN=  MTU=  MAC=  DNS=  SEARCHDOMAIN=
 #   HORUS_PORT=8000  UNPRIVILEGED=1  TAGS=horus  ROOT_PASSWORD=  ADD_SSH_KEYS=no
 #   ADMIN_USER=admin  ADMIN_PASSWORD=<8+ characters>  (creates the Horus login during the install;
-#   without a password, the account is created in the browser and the setup code is needed)
+#   without a password, a random one is generated and shown at the end)
 #   STORAGE=<first storage that can hold containers>  TEMPLATE_STORAGE=<first that holds templates>
 #   TZ=<this host's>
 set -Eeuo pipefail
@@ -226,11 +226,11 @@ valid_tags() { [[ "$1" =~ ^[A-Za-z0-9_.+-]+(\;[A-Za-z0-9_.+-]+)*$ ]]; }
 valid_zone() { [[ -f "/usr/share/zoneinfo/$1" ]]; }
 valid_bridge() { [[ -d "/sys/class/net/$1/bridge" ]]; }
 
-valid_username() { [[ "$1" =~ ^[A-Za-z0-9._-]{3,32}$ ]]; }
+valid_username() { [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._@+-]{2,63}$ ]]; }  # the same rule as Horus: an email address works
 
 ask_admin() {  # the first Horus account, made during the install so the first-run screen never appears
   say "Horus administrator account"
-  ask_valid ADMIN_USER "Username for the Horus administrator (3 to 32 letters, numbers, . - _)" valid_username "Use 3 to 32 letters, numbers, dots, dashes or underscores."
+  ask_valid ADMIN_USER "Username for the Horus administrator (an email address, or 3 to 64 letters, numbers, . - _ @ +)" valid_username "Use 3 to 64 letters, numbers, dots, dashes, underscores, @ or +."
   ask_secret ADMIN_PASSWORD "Password for $ADMIN_USER (at least 8 characters; blank: generate one and show it at the end)" 8
 }
 
@@ -389,8 +389,8 @@ check_settings() {  # stops with a clear message before anything is created
   [[ -z "$TIMEZONE" ]] || valid_zone "$TIMEZONE" || die "$TIMEZONE is not a time zone name from /usr/share/zoneinfo."
   [[ "$UNPRIVILEGED" == 0 || "$UNPRIVILEGED" == 1 ]] || die "UNPRIVILEGED must be 1 or 0."
   [[ "$ADD_SSH_KEYS" != yes || -n "$SSH_KEY_FILE" ]] || die "No SSH keys were found on this host to add."
-  valid_username "$ADMIN_USER" || die "The Horus username must be 3 to 32 letters, numbers, dots, dashes or underscores."
-  if [[ -z "$ADMIN_PASSWORD" ]]; then  # nothing chosen: make one, so the first-run setup-code screen is never needed
+  valid_username "$ADMIN_USER" || die "The Horus username must be 3 to 64 letters, numbers, dots, dashes, underscores, @ or +."
+  if [[ -z "$ADMIN_PASSWORD" ]]; then  # nothing chosen: make one, so nobody else can claim the first account
     ADMIN_PASSWORD="$(openssl rand -base64 33 | tr -dc 'A-Za-z0-9' | head -c 16 || true)"
     GENERATED_PASSWORD="$ADMIN_PASSWORD"
   fi

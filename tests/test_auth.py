@@ -28,9 +28,8 @@ def local(app=None):  # a browser on the same computer
     return TestClient(app or create_app(), client=("127.0.0.1", 50000))
 
 
-def set_up(client, username=OWNER, password=PASSWORD, code=None):
-    body = {"username": username, "password": password, **({"code": code} if code else {})}
-    return client.post("/api/auth/setup", json=body)
+def set_up(client, username=OWNER, password=PASSWORD):
+    return client.post("/api/auth/setup", json={"username": username, "password": password})
 
 
 def sign_in(client, username=OWNER, password=PASSWORD):
@@ -54,19 +53,18 @@ def add_user(admin, username="viewer", password="viewer password", role="user"):
 def test_nothing_is_reachable_before_setup(secured):
     c = remote()
     status = c.get("/api/auth/status").json()
-    assert status["setup_required"] and status["needs_code"] and not status["authenticated"]
+    assert status["setup_required"] and not status["authenticated"]
     assert status["user"] is None
     assert c.get("/api/servers").status_code == 401
     assert c.get("/api/activity").status_code == 401
     assert c.get("/api/health").status_code == 200  # the login screen itself must load
 
 
-def test_setup_from_another_computer_needs_the_code(secured):
+def test_setup_works_from_another_computer_without_any_code(secured):
     c = remote()
-    assert set_up(c).status_code == 403
-    assert set_up(c, code="WRONG123").status_code == 403
-    assert set_up(c, code=auth.setup_code().lower()).status_code == 200  # case does not matter
+    assert set_up(c).status_code == 200
     assert c.get("/api/servers").status_code == 200  # logged in by the setup itself
+    assert set_up(remote(), username="someone-else").status_code == 409  # and only once
 
 
 def test_an_email_address_works_as_a_username(secured):
@@ -87,7 +85,7 @@ def test_an_email_address_works_as_a_username(secured):
 
 def test_first_person_picks_their_username_and_becomes_admin(secured):
     c = local()
-    assert c.get("/api/auth/status").json()["needs_code"] is False
+    assert "needs_code" not in c.get("/api/auth/status").json()  # there is no setup code any more
     r = set_up(c, username="Dana_K")
     assert r.status_code == 200 and r.json()["user"]["username"] == "Dana_K"
     status = c.get("/api/auth/status").json()

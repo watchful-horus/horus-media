@@ -1,6 +1,6 @@
 # Copy to compose.yaml and run: docker compose up -d
-# Then open http://<this host>:8000 and create the first account. From another computer the
-# first-run screen asks for a setup code: `docker compose logs horus` prints it.
+# Then open http://<this host>:8000 and create the first account straight away: the container listens
+# on the network from the start, so until it exists anyone who can reach the page could create it.
 services:
   horus:
     build: .

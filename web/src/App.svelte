@@ -27,7 +27,7 @@
   }
 
   let where = $state(fromHash())
-  let auth = $state(null) // null while checking; then { setup_required, needs_code, authenticated, auth_disabled, user }
+  let auth = $state(null) // null while checking; then { setup_required, authenticated, auth_disabled, user }
 
   // Settings are for admins. (With the login turned off there are no accounts, so everything shows.)
   const isAdmin = $derived(!!auth && (auth.auth_disabled || auth.user?.role === 'admin'))
@@ -86,7 +86,7 @@
 {#if !auth}
   <p class="loading muted">Loading...</p>
 {:else if auth.setup_required}
-  <Auth mode="setup" needsCode={auth.needs_code} ondone={checkAuth} />
+  <Auth mode="setup" ondone={checkAuth} />
 {:else if !auth.authenticated}
   <Auth mode="login" ondone={checkAuth} />
 {:else}

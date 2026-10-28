@@ -2,16 +2,14 @@
   import { api } from './api.js'
 
   // mode: 'setup' (first run: choose the admin password) or 'login'
-  let { mode, needsCode = false, ondone } = $props()
+  let { mode, ondone } = $props()
 
   let username = $state('')
   let password = $state('')
   let confirm = $state('')
-  let code = $state('')
   let error = $state(null)
   let busy = $state(false)
   let restoring = $state(false) // the "restore from a backup instead" panel is open
-  let restoreCode = $state('')
 
   async function restoreFrom(e) {
     const file = e.currentTarget.files?.[0]
@@ -20,7 +18,7 @@
     error = null
     busy = true
     try {
-      await api.restoreAtSetup(file, restoreCode)
+      await api.restoreAtSetup(file)
       ondone() // the backup's accounts are in place now: shows the sign-in screen
     } catch (err) {
       error = err.message
@@ -37,7 +35,7 @@
     }
     busy = true
     try {
-      if (mode === 'setup') await api.setup(username, password, code)
+      if (mode === 'setup') await api.setup(username, password)
       else await api.login(username, password)
       password = confirm = ''
       ondone()
@@ -54,6 +52,7 @@
     <h1>Horus</h1>
     {#if mode === 'setup'}
       <p class="muted">Welcome. Choose a username and password for the first account. It will be the admin. Anyone who can reach this page will need to sign in.</p>
+      <p class="muted small">Create it now: until an account exists, anyone who can open this page could.</p>
     {:else}
       <p class="muted">Sign in to continue.</p>
     {/if}
@@ -72,13 +71,6 @@
         Confirm password
         <input type="password" bind:value={confirm} autocomplete="new-password" required />
       </label>
-      {#if needsCode}
-        <label>
-          Setup code
-          <input bind:value={code} autocomplete="off" placeholder="Shown in the Horus console or log" required />
-        </label>
-        <p class="muted small">You are not on the computer running Horus, so enter the code it printed when it started.</p>
-      {/if}
     {/if}
     {#if error}<p class="bad" role="alert">{error}</p>{/if}
     <button class="primary" disabled={busy}>{mode === 'setup' ? 'Create account' : 'Sign in'}</button>
@@ -92,13 +84,7 @@
           Choose a Horus backup (the zip you downloaded from Settings &gt; Backups). Its
           accounts, servers and history come back, and you sign in with the account from that backup.
         </p>
-        {#if needsCode}
-          <label>
-            Setup code
-            <input bind:value={restoreCode} autocomplete="off" placeholder="Shown in the Horus console or log" />
-          </label>
-        {/if}
-        <input type="file" accept=".zip,.db" disabled={busy || (needsCode && !restoreCode)} onchange={restoreFrom} aria-label="Backup file" />
+        <input type="file" accept=".zip,.db" disabled={busy} onchange={restoreFrom} aria-label="Backup file" />
         {#if error}<p class="bad" role="alert">{error}</p>{/if}
       {/if}
     </div>

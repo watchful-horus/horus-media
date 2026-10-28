@@ -337,7 +337,7 @@ def role_allows(role: str, method: str, path: str) -> bool:
     return method == "POST" and path == "/api/auth/password"
 
 
-# --- brute-force protection and first-run code ----------------------------------------------
+# --- brute-force protection ------------------------------------------------------------------
 
 class LoginLimiter:
     """At most `limit` failed attempts per client in `window` seconds."""
@@ -360,19 +360,3 @@ class LoginLimiter:
 
     def reset(self, who: str) -> None:
         self._failures.pop(who, None)
-
-
-_SETUP_CODE: str | None = None
-
-
-def setup_code() -> str:
-    """Needed to create the first admin from another computer. Printed in the console/log."""
-    global _SETUP_CODE
-    if _SETUP_CODE is None:
-        _SETUP_CODE = secrets.token_hex(4).upper()
-    return _SETUP_CODE
-
-
-def is_loopback(host: str | None) -> bool:
-    host = host or ""
-    return host in ("127.0.0.1", "::1", "localhost") or host.startswith("::ffff:127.")

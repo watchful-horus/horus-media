@@ -1,6 +1,5 @@
 """Login, first-run setup, user accounts and API-key management."""
 
-import hmac
 import logging
 from collections.abc import Callable
 from typing import Annotated, Literal
@@ -27,7 +26,6 @@ class Login(BaseModel):
 class Setup(BaseModel):
     username: str
     password: str
-    code: str = ""
 
 
 class ChangePassword(BaseModel):
@@ -95,8 +93,6 @@ def make_router(get_store: Callable) -> APIRouter:
         return {
             "auth_disabled": auth.auth_disabled(),
             "setup_required": not exists and not auth.auth_disabled(),
-            # Creating the first admin from another computer needs the code in the console/log.
-            "needs_code": not exists and not auth.is_loopback(client(request)),
             "authenticated": auth.auth_disabled() or user is not None,
             "user": user,
         }
@@ -105,15 +101,6 @@ def make_router(get_store: Callable) -> APIRouter:
     def setup(body: Setup, request: Request, response: Response, store: Store):
         if auth.admin_exists(store.conn):
             raise HTTPException(409, "Horus is already set up")
-        who = client(request)
-        if limiter.blocked(who):
-            raise HTTPException(429, "Too many attempts, wait a minute")
-        if not auth.is_loopback(who) and not hmac.compare_digest(
-            body.code.strip().upper(), auth.setup_code()
-        ):
-            limiter.fail(who)
-            log.warning("first-run setup refused: wrong or missing setup code from %s", who)
-            raise HTTPException(403, "Enter the setup code shown in the Horus console or log")
         try:
             user = auth.create_user(store.conn, body.username, body.password, "admin")
         except auth.UserError as e:
@@ -126,7 +113,7 @@ def make_router(get_store: Callable) -> APIRouter:
     @router.post("/auth/restore")
     async def restore_at_setup(request: Request):
         """First run only: start from a backup instead of creating an account. The body is the
-        backup file. From another computer it needs the same setup code as creating the admin."""
+        backup file. It stops working as soon as an admin exists."""
         conn = connect(db_path())
         try:
             migrate(conn)
@@ -135,14 +122,6 @@ def make_router(get_store: Callable) -> APIRouter:
             conn.close()
         if taken or auth.auth_disabled():
             raise HTTPException(409, "Horus is already set up")
-        who = client(request)
-        if limiter.blocked(who):
-            raise HTTPException(429, "Too many attempts, wait a minute")
-        sent = request.headers.get("x-setup-code", "").strip().upper()
-        if not auth.is_loopback(who) and not hmac.compare_digest(sent, auth.setup_code()):
-            limiter.fail(who)
-            log.warning("first-run restore refused: wrong or missing setup code from %s", who)
-            raise HTTPException(403, "Enter the setup code shown in the Horus console or log")
         return await restore_upload(request)
 
     @router.post("/auth/login")

@@ -19,7 +19,7 @@ Status as of 2026-10-28. The app is feature-complete for the original v1 scope a
 - Earlier/later arrows, presets and All time, "View as table" on every chart, validated colour palette, light and dark themes
 
 **Accounts and API**
-- First-run account creation (the first person picks their username and becomes admin); admin and user roles; admins manage people; allow-list permissions for users; scrypt, sessions, rate-limited sign-in, setup code for remote first run
+- First-run account creation (the first person picks their username and becomes admin); admin and user roles; admins manage people; allow-list permissions for users; scrypt, sessions, rate-limited sign-in; an email address works as a username. (A setup code for remote first run existed until 2026-10-28 and was removed at the author's request: until the first account exists, anyone who can open the page can create it, so installers that listen on the network should create the admin up front.)
 - API keys (hashed, shown once) and a read-only `/api/v1` data API for Grafana: plays, bandwidth, history, activity, servers; JSON and CSV
 
 **Operations**
@@ -39,7 +39,7 @@ Status as of 2026-10-28. The app is feature-complete for the original v1 scope a
 - Prometheus `/metrics`; notification channels (Discord, ntfy, webhook); read-only Seerr requests tab
 - Auto / light / dark theme toggle; Windows "start at login" (`python -m horus_media startup install`)
 - Tree-shaken ECharts (bundle about 1 MB to 650 kB); httpx deprecation warning silenced in tests
-- Proxmox installer wizard (`scripts/proxmox/horus-lxc.sh`), run on a real Proxmox host: detects storage and bridges, validates input, shows numbered steps instead of raw output, picks the template for the CPU type, and creates the admin account during the install (blank password generates one), so the first-run setup code is never needed
+- Proxmox installer wizard (`scripts/proxmox/horus-lxc.sh`), run on a real Proxmox host: detects storage and bridges, validates input, shows numbered steps instead of raw output, picks the template for the CPU type, and creates the admin account during the install (blank password generates one), so nobody else can claim the first account
 - `python -m horus_media create-admin --username NAME` (password on standard input), used by the installers
 - `.gitattributes` keeps LF line endings for shell scripts and Docker files
 - Installer in the community-scripts style (`ct/horus.sh`, `install/horus-install.sh`, `json/horus.json`) and a release workflow (`.github/workflows/release.yml`) that builds the web UI and wheel on a `v*` tag; written but not run yet, because it needs a published release

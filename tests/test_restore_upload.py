@@ -4,7 +4,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from horus_media import auth, backup
+from horus_media import backup
 from horus_media.crypto import KEY_FILENAME
 from horus_media.main import create_app
 
@@ -100,15 +100,11 @@ def test_fresh_install_can_start_from_a_backup(tmp_path, monkeypatch, source):
     assert [s["name"] for s in c.get("/api/servers").json()] == ["Plex"]
 
 
-def test_first_run_restore_from_another_computer_needs_the_code(tmp_path, monkeypatch, source):
+def test_first_run_restore_works_from_another_computer_without_any_code(tmp_path, monkeypatch, source):
     full, _ = source
     app = new_app(tmp_path / "fresh", monkeypatch, secured=True)
     remote = TestClient(app, client=("10.0.0.5", 1))
-    assert remote.post("/api/auth/restore", content=full, headers=HEADERS).status_code == 403
-    bad = {**HEADERS, "X-Setup-Code": "WRONG"}
-    assert remote.post("/api/auth/restore", content=full, headers=bad).status_code == 403
-    good = {**HEADERS, "X-Setup-Code": auth.setup_code()}
-    assert remote.post("/api/auth/restore", content=full, headers=good).status_code == 200
+    assert remote.post("/api/auth/restore", content=full, headers=HEADERS).status_code == 200
 
 
 def test_first_run_restore_closes_once_an_admin_exists(tmp_path, monkeypatch, source):

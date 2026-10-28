@@ -30,10 +30,10 @@ async function upload(path, file, headers = {}) {
 
 export const api = {
   uploadBackup: (file) => upload('/api/backups/upload', file),
-  restoreAtSetup: (file, code) => upload('/api/auth/restore', file, code ? { 'X-Setup-Code': code } : {}),
+  restoreAtSetup: (file) => upload('/api/auth/restore', file),
   deleteBackup: (name) => request('DELETE', `/api/backups/${name}`),
   authStatus: () => request('GET', '/api/auth/status'),
-  setup: (username, password, code) => request('POST', '/api/auth/setup', { username, password, code }),
+  setup: (username, password) => request('POST', '/api/auth/setup', { username, password }),
   login: (username, password) => request('POST', '/api/auth/login', { username, password }),
   users: () => request('GET', '/api/users'),
   createUser: (u) => request('POST', '/api/users', u),
