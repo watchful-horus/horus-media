@@ -30,6 +30,44 @@ jobs:
       - name: Test
         run: pytest -q
 
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the compose example
+        run: docker compose -f compose.example.yaml config --quiet
+
+      - name: Build the image
+        run: docker build -t horus-media:ci .
+
+      - name: Start it and wait until it reports healthy
+        run: |
+          docker run -d --name horus -p 8000:8000 horus-media:ci
+          for i in $(seq 1 40); do
+            status="$(docker inspect --format '{{.State.Health.Status}}' horus)"
+            echo "health: ${status}"
+            [ "${status}" = "healthy" ] && exit 0
+            sleep 3
+          done
+          docker logs horus
+          exit 1
+
+      - name: Check what it serves and who it runs as
+        run: |
+          curl -fsS http://127.0.0.1:8000/api/health
+          curl -fsS http://127.0.0.1:8000/ | grep -q 'id="app"'
+          curl -fsS http://127.0.0.1:8000/favicon.svg | grep -q "<svg"
+          test "$(docker exec horus id -u)" = "10001"
+
+      - name: Create an admin account in the data volume
+        run: |
+          echo "a long throwaway password" | docker exec -i horus python -m horus_media create-admin --username ci
+
+      - name: Show the container log if anything failed
+        if: failure()
+        run: docker logs horus
+
   web:
     runs-on: ubuntu-latest
     steps:

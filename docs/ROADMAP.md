@@ -54,7 +54,7 @@ Status as of 2026-10-28. The app is feature-complete for the original v1 scope a
 - [ ] CI: tests and lint on every push
 - [ ] Screenshots and release notes; version bump; a `horus-media` console command
 - [ ] Pre-fill the update address with the real GitHub "latest release" link once the repo is public
-- [ ] Re-scan tracked files for personal details (homelab addresses, usernames, paths) before the visibility change
+- [x] Re-scan tracked files for personal details (homelab addresses, usernames, paths) before the visibility change (done 2026-10-28; repeat right before switching the repo to public)
 
 **Features**
 - [ ] Seerr: create requests / approvals (Horus is read-only for now); more notification kinds
