@@ -40,6 +40,8 @@
   onMount(() => guard(load))
 
   const listen = $derived(info?.listen)
+  // The port in the address bar (blank means the default for http or https).
+  const usedPort = location.port || (location.protocol === 'https:' ? '443' : '80')
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -210,7 +212,15 @@
 
     <section class="card">
       <h2>Network</h2>
-      {#if listen.port_editable}
+      {#if listen.in_container}
+        <!-- Inside a container the app's own port is fixed; the port people use is Docker's mapping,
+             and the address in the browser is the only place that shows it. -->
+        <label>
+          HTTP port
+          <input type="number" value={usedPort} disabled />
+          <span class="hint">The port you are connected on. Horus runs in a container, so the port is set by the container's port mapping (for example <code>{usedPort}:{listen.port_running}</code> in your compose file). Change it there.</span>
+        </label>
+      {:else if listen.port_editable}
         <label>
           HTTP port
           <input type="number" min="1024" max="65535" step="1" bind:value={form.http_port} />
@@ -231,7 +241,9 @@
         </label>
       {/if}
 
-      {#if listen.host_editable}
+      {#if listen.in_container}
+        <!-- Always reachable from other computers in a container: nothing to choose. -->
+      {:else if listen.host_editable}
         <label class="check">
           <input type="checkbox" bind:checked={form.listen_all} disabled={!info.admin_exists && !info.auth_disabled} />
           Allow other computers to connect
@@ -248,11 +260,7 @@
         </label>
         <p class="hint">Locked: the <code>HORUS_HOST</code> environment variable sets it.</p>
       {/if}
-      {#if listen.in_container}
-        <p class="hint">Horus is running in a container, so the port people use is set by the container's port mapping. Change it there.</p>
-      {/if}
-
-      {#if listen.restart_needed}
+      {#if listen.restart_needed && !listen.in_container}
         <div class="notice" role="status">
           <span>{dirty ? 'Save, then restart' : 'Saved. Restart'} Horus to use the new network settings.</span>
           <button type="button" class="primary" disabled={busy || dirty || !listen.can_restart} onclick={restart}>Restart now</button>
