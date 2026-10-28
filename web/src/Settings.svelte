@@ -181,7 +181,7 @@
     </section>
 
     <section class="card">
-      <h2>Alerts</h2>
+      <h2>Alerts and reports</h2>
       <p class="hint">All off by default. An alert only reaches you through a notification channel that has it ticked (Integrations &gt; Notifications). Each one is sent once when the limit is crossed, and again only after it has dropped back below.</p>
       <label>
         Transcodes at once, per server
@@ -196,6 +196,15 @@
       <label class="check">
         <input type="checkbox" bind:checked={form.alert_new_user} />
         Alert when someone Horus has never seen starts playing
+      </label>
+      <label>
+        Send a summary report
+        <select bind:value={form.report_schedule}>
+          <option value="off">Never</option>
+          <option value="weekly">Every week (the last 7 days)</option>
+          <option value="monthly">Every month (the last 30 days)</option>
+        </select>
+        <span class="hint">Goes to every notification channel with "report" ticked. The first one arrives a week or month after you switch this on. You can also see or send one now under Integrations.</span>
       </label>
     </section>
 

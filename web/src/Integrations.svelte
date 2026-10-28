@@ -68,6 +68,27 @@
     })
   }
 
+  // Report: last 7 / 30 / 90 full days, shown here and downloadable as CSV.
+  let reportDays = $state(7)
+  let report = $state(null)
+  let reportNote = $state(null)
+  const isoDay = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+  function reportRange() {
+    const end = new Date(Date.now() - 86400000)
+    const start = new Date(end.getTime() - (reportDays - 1) * 86400000)
+    return `start=${isoDay(start)}&end=${isoDay(end)}`
+  }
+  const showReport = () =>
+    guard(async () => {
+      reportNote = null
+      report = await api.report(reportRange())
+    })
+  const sendReport = () =>
+    guard(async () => {
+      await api.sendReport(reportRange())
+      reportNote = 'Sent to every channel that has the report ticked.'
+    })
+
   const saveSeerr = () =>
     guard(async () => {
       seerr = await api.saveSeerr({ url: seerrForm.url, api_key: seerrForm.api_key || undefined })
@@ -91,6 +112,26 @@
     })
   }
 </script>
+
+<section class="card">
+  <h2>Report</h2>
+  <p class="hint">
+    A short summary of plays, people, devices, transcoding and peak bandwidth. To get one automatically,
+    pick weekly or monthly under Settings &gt; Alerts and tick "report" on a channel below.
+  </p>
+  <div class="actions">
+    <select bind:value={reportDays} aria-label="Report length">
+      <option value={7}>Last 7 days</option>
+      <option value={30}>Last 30 days</option>
+      <option value={90}>Last 90 days</option>
+    </select>
+    <button disabled={busy} onclick={showReport}>Show</button>
+    <a class="button" href="/api/report?{reportRange()}&format=csv">Download CSV</a>
+    <button disabled={busy} onclick={sendReport}>Send now</button>
+  </div>
+  {#if report}<pre class="report">{report.text}</pre>{/if}
+  {#if reportNote}<p class="okmsg">{reportNote}</p>{/if}
+</section>
 
 <section class="card">
   <h2>Notifications</h2>
@@ -182,5 +223,8 @@
   fieldset { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; display: grid; gap: 6px; }
   legend { font-size: 13px; color: var(--muted); padding: 0 4px; }
   .okmsg { color: var(--ok); }
+  .report { white-space: pre-wrap; margin: 12px 0 0; font: inherit; font-size: 13px; }
+  a.button { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+    color: inherit; text-decoration: none; font-size: 14px; }
   .bad { color: var(--bad); }
 </style>

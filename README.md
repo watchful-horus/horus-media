@@ -146,7 +146,7 @@ scrape_configs:
 ```
 
 ## Notifications and Seerr
-**Settings > Integrations** can post a message to a Discord channel webhook, an ntfy topic, or any web address (JSON) when someone starts or finishes playing, or a server becomes unreachable or comes back. Channel addresses are secrets: they are stored encrypted and never shown again. Connecting Overseerr or Jellyseerr adds a **Requests** tab listing recent media requests (Horus only reads from Seerr).
+**Settings > Integrations** can post a message to a Discord channel webhook, an ntfy topic, or any web address (JSON) when someone starts or finishes playing, or a server becomes unreachable or comes back. Channel addresses are secrets: they are stored encrypted and never shown again. Three optional alerts (**Settings > General > Alerts and reports**, all off by default) use the same channels: too many transcodes at once, a server's bandwidth over a limit, and someone Horus has never seen starting to play. Each is sent once when the limit is crossed. The same section can send a weekly or monthly summary report; **Integrations > Report** shows one on screen, downloads it as CSV, or sends it now. Tick the matching event on a channel to receive them. Connecting Overseerr or Jellyseerr adds a **Requests** tab listing recent media requests (Horus only reads from Seerr).
 
 ## Start at login (Windows)
 ```

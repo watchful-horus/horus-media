@@ -59,6 +59,7 @@ Status as of 2026-10-28. The app is feature-complete for the original v1 scope a
 - [x] Re-scan tracked files for personal details (homelab addresses, usernames, paths) before the visibility change (done 2026-10-28; repeat right before switching the repo to public)
 
 **Features**
+- [x] Rename a server (everything follows, since history joins on the id); optional alerts (transcodes, bandwidth, new person); weekly/monthly summary report with an on-screen view and CSV (2026-10-28). Watchlist view was dropped
 - [ ] Seerr: create requests / approvals (Horus is read-only for now); more notification kinds
 - [x] Control keys (2026-10-28): API keys that can run Horus as their admin owner for testing and automation. Off by default (Settings > API), always expiring, never able to touch users, keys or sign-in, every use logged. `scripts/horusctl.py` calls the API with such a key without printing it
 - [ ] Docker: create the first admin from environment variables (for example `HORUS_ADMIN_USER` and a password file), so a container never shows an open first-run screen to the network (the setup code was removed on 2026-10-28)

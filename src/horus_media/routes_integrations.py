@@ -2,13 +2,14 @@
 
 import logging
 from collections.abc import Callable
-from typing import Annotated
+from datetime import date
+from typing import Annotated, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
-from . import notifications, seerr
+from . import app_settings, notifications, reports, seerr
 from .store import ServerStore
 
 log = logging.getLogger(__name__)
@@ -36,6 +37,35 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
     Store = Annotated[ServerStore, Depends(get_store)]
 
     # --- notifications ---
+
+    # --- reports ---
+
+    def report_range(start: date | None, end: date | None) -> tuple[date, date]:
+        if start is None or end is None:
+            start, end = reports.last_days(7)
+        if start > end or (end - start).days > 365:
+            raise HTTPException(422, "Invalid date range")
+        return start, end
+
+    @router.get("/report")
+    def report(store: Store, start: date | None = None, end: date | None = None,
+               format: Literal["json", "csv"] = "json"):
+        start, end = report_range(start, end)
+        built = reports.build(store.conn, start, end, app_settings.load(store.conn).zone())
+        if format == "csv":
+            return Response(reports.to_csv(built), media_type="text/csv", headers={
+                "Content-Disposition": f'attachment; filename="horus-{start}-to-{end}.csv"'})
+        return {**built, "text": reports.to_text(built)}
+
+    @router.post("/report/send", status_code=204)
+    def send_report(store: Store, start: date | None = None, end: date | None = None):
+        """Send the report now to every channel that has the report event ticked."""
+        start, end = report_range(start, end)
+        built = reports.build(store.conn, start, end, app_settings.load(store.conn).zone())
+        notifications.notify(store.conn, store.cipher, "report", "Horus report",
+                             reports.to_text(built), transport, wait=True)
+        log.info("report sent on request: %s to %s", start, end)
+        return Response(status_code=204)
 
     @router.get("/notifications")
     def channels(store: Store):

@@ -202,6 +202,55 @@ def test_optional_alerts_fire_once_per_crossing(tmp_path):
         notifications.notify = real
 
 
+def test_report_text_csv_and_scheduled_send(tmp_path):
+    from horus_media import app_settings, maintenance, reports
+
+    SENT.clear()
+    db = tmp_path / "h.db"
+    conn = connect(db)
+    migrate(conn)
+    cipher = TokenCipher.for_db(db)
+    ServerStore(conn, cipher).add("emby", "Emby", "http://emby", TOKEN)
+    notifications.add_channel(conn, cipher, "All", "webhook", HOOK, ["report"])
+    transport = httpx.MockTransport(lambda r: (SENT.append(r), httpx.Response(200))[1])
+    t0 = datetime(2026, 3, 10, 12, 0, tzinfo=UTC)
+    with conn:
+        conn.execute(
+            "INSERT INTO history (server_id, session_key, user, title, media_type, device, "
+            "platform, play_method, started_at, last_seen_at, ended_at) VALUES "
+            "(1, 'k', 'carol', 'Film', 'movie', 'TV', 'Roku', 'transcode', ?, ?, ?)",
+            (t0.isoformat(),) * 3)
+    start, end = t0.date() - timedelta(days=2), t0.date() + timedelta(days=2)
+    built = reports.build(conn, start, end, UTC)
+    assert built["total_plays"] == 1 and built["transcode_percent"] == 100
+    assert "carol 1" in reports.to_text(built)
+    csv_text = reports.to_csv(built)
+    assert csv_text.splitlines()[0] == "date,Emby,total"
+    assert "2026-03-10,1,1" in csv_text
+
+    cfg = app_settings.update(conn, {"report_schedule": "weekly"})
+    maintenance.run(conn, db, cfg, now=t0, transport=transport)
+    assert SENT == []  # switching it on does not send at once
+    maintenance.run(conn, db, cfg, now=t0 + timedelta(days=3), transport=transport)
+    assert SENT == []  # not due yet
+    maintenance.run(conn, db, cfg, now=t0 + timedelta(days=7), transport=transport)
+    assert len(SENT) == 1
+    assert json.loads(SENT[0].content)["event"] == "report"
+    maintenance.run(conn, db, cfg, now=t0 + timedelta(days=8), transport=transport)
+    assert len(SENT) == 1
+
+
+def test_report_endpoints_and_csv(api):
+    r = api.get("/api/report", params={"start": "2026-03-01", "end": "2026-03-07"})
+    assert r.status_code == 200 and r.json()["total_plays"] == 0
+    assert "Nothing was played" in r.json()["text"]
+    assert api.get("/api/report", params={"start": "2026-03-07", "end": "2026-03-01"}
+                   ).status_code == 422
+    c = api.get("/api/report", params={"start": "2026-03-01", "end": "2026-03-02", "format": "csv"})
+    assert c.headers["content-type"].startswith("text/csv")
+    assert api.post("/api/report/send").status_code == 204
+
+
 def test_unreachable_at_startup_is_not_a_notification(tmp_path):
     SENT.clear()
     conn = connect(tmp_path / "h.db")

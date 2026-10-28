@@ -8,8 +8,9 @@ from pathlib import Path
 
 import httpx
 
-from . import app_settings, backup, updates
+from . import app_settings, backup, notifications, reports, updates
 from .app_settings import Settings
+from .crypto import TokenCipher
 
 log = logging.getLogger(__name__)
 
@@ -39,6 +40,26 @@ def prune_history(conn: sqlite3.Connection, days: int, now: datetime) -> None:
                  plays, samples, days)
 
 
+REPORT_DAYS = {"weekly": 7, "monthly": 30}
+
+
+def send_scheduled_report(conn: sqlite3.Connection, db_file: Path, cfg: Settings, now: datetime,
+                          transport: httpx.BaseTransport | None = None) -> None:
+    days = REPORT_DAYS[cfg.report_schedule]
+    if not app_settings.get_state(conn, "last_report"):
+        # Just switched on: the first report goes out one period from now, not at once.
+        app_settings.set_state(conn, "last_report", now.isoformat())
+        return
+    if not _due(conn, "last_report", timedelta(days=days), now):
+        return
+    app_settings.set_state(conn, "last_report", now.isoformat())  # even if sending fails
+    start, end = reports.last_days(days, now.astimezone(cfg.zone()).date())
+    text = reports.to_text(reports.build(conn, start, end, cfg.zone()))
+    notifications.notify(conn, TokenCipher.for_db(db_file), "report",
+                         f"Horus {cfg.report_schedule} report", text, transport, wait=True)
+    log.info("%s report sent", cfg.report_schedule)
+
+
 def run(
     conn: sqlite3.Connection,
     db_file: Path,
@@ -59,6 +80,9 @@ def run(
         backup.prune(db_file, cfg.backup_keep)
         log.info("scheduled backup written: %s (keeping %d)", made.name, cfg.backup_keep)
         app_settings.set_state(conn, "last_backup", now.isoformat())
+
+    if cfg.report_schedule != "off":
+        send_scheduled_report(conn, db_file, cfg, now, transport)
 
     url = updates.effective_url(cfg.update_url)
     if cfg.update_check and url and _due(conn, "last_update_check", UPDATE_EVERY, now):

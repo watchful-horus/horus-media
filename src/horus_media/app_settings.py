@@ -34,6 +34,7 @@ class Settings(BaseModel):
     alert_transcodes_over: int = Field(0, ge=0, le=100)  # 0 = off; alert above this many transcodes
     alert_bandwidth_over_mbps: int = Field(0, ge=0, le=100000)  # 0 = off; per server
     alert_new_user: bool = False  # someone Horus has never seen before starts playing
+    report_schedule: Literal["off", "weekly", "monthly"] = "off"  # summary sent to channels
 
     @field_validator("timezone")
     @classmethod
