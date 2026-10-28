@@ -119,7 +119,7 @@
   <h2>Add a person</h2>
   <form class="add" onsubmit={(e) => { e.preventDefault(); add() }}>
     <label>Username
-      <input bind:value={form.username} autocomplete="off" required minlength="3" maxlength="32" placeholder="3 to 32 letters, numbers, . - _" />
+      <input bind:value={form.username} autocomplete="off" required minlength="3" maxlength="64" placeholder="Email address, or 3 to 64 letters, numbers, . - _ @ +" />
     </label>
     <label>Password
       <input type="password" bind:value={form.password} autocomplete="new-password" required minlength="8" placeholder="At least 8 characters" />

@@ -69,6 +69,22 @@ def test_setup_from_another_computer_needs_the_code(secured):
     assert c.get("/api/servers").status_code == 200  # logged in by the setup itself
 
 
+def test_an_email_address_works_as_a_username(secured):
+    c = local()
+    email = "First.Last+horus@example.co.uk"
+    assert set_up(c, username=email).status_code == 200
+    assert sign_in(local(), username=email.upper()).status_code == 200  # not case-sensitive
+    admin = sign_in(local(), username=email)
+    assert admin.json()["user"]["username"] == email
+    assert admin.json()["user"]["role"] == "admin"
+    made = local()
+    sign_in(made, username=email)
+    assert made.post("/api/users", json={"username": "other@example.com", "password": "another password"}
+                     ).status_code == 201
+    assert made.post("/api/users", json={"username": "OTHER@EXAMPLE.COM", "password": "another password"}
+                     ).status_code == 409  # still unique ignoring case
+
+
 def test_first_person_picks_their_username_and_becomes_admin(secured):
     c = local()
     assert c.get("/api/auth/status").json()["needs_code"] is False
@@ -82,7 +98,8 @@ def test_first_person_picks_their_username_and_becomes_admin(secured):
 
 def test_setup_rules(secured):
     c = local()
-    for bad in ("ab", "x" * 33, "has space", "semi;colon", "-leading", "", "ünïcode"):
+    for bad in ("ab", "x" * 65, "has space", "semi;colon", "-leading", "@leading", "", "ünïcode",
+                "a@b c.com", "slash/name", "quote'name"):
         assert set_up(c, username=bad).status_code == 422, bad
     assert set_up(c, password="short").status_code == 422
     assert set_up(c).status_code == 200

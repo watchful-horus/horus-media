@@ -73,7 +73,7 @@ There are two roles. Admins add people in **Settings > Users** and choose each p
 | Servers, settings, backups, logs, restart | yes | no |
 | Add or remove people, API keys | yes | no |
 
-Usernames are 3 to 32 letters, numbers, dots, dashes or underscores, and are not case-sensitive. There is always at least one admin: the last one cannot be deleted or demoted, and you cannot delete or demote yourself. Anything added to Horus later is admin-only until it is deliberately opened to users.
+Usernames are 3 to 64 letters, numbers, dots, dashes, underscores, `@` or `+`, so an email address works, and they are not case-sensitive. Usernames show up in the log (for example "login: name from address"), so treat a shared log as personal data. There is always at least one admin: the last one cannot be deleted or demoted, and you cannot delete or demote yourself. Anything added to Horus later is admin-only until it is deliberately opened to users.
 
 - Passwords are stored as scrypt hashes; session tokens and API keys only as SHA-256 hashes. Repeated wrong passwords are slowed down, and sign-in errors do not say whether the username or the password was wrong.
 - Changing or resetting a password signs that person out everywhere else.

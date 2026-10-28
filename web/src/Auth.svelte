@@ -60,8 +60,8 @@
 
     <label>
       Username
-      <input bind:value={username} autocomplete="username" required minlength="3" maxlength="32"
-        placeholder={mode === 'setup' ? '3 to 32 letters, numbers, . - _' : ''} autofocus />
+      <input bind:value={username} autocomplete="username" required minlength="3" maxlength="64"
+        placeholder={mode === 'setup' ? 'Your email address, or 3 to 64 letters, numbers, . - _ @ +' : ''} autofocus />
     </label>
     <label>
       Password

@@ -25,7 +25,8 @@ SESSION_DAYS = 30
 MIN_PASSWORD = 8
 KEY_PREFIX = "hk_"
 ROLES = ("admin", "user")
-USERNAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{2,31}$")
+# Letters, numbers and . _ - @ + so an email address works as a username.
+USERNAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._@+-]{2,63}$")
 _SCRYPT = {"n": 2**14, "r": 8, "p": 1}
 _KEY_TOUCH_EVERY = timedelta(minutes=1)
 
@@ -118,7 +119,8 @@ def get_user(conn: sqlite3.Connection, user_id: int) -> dict | None:
 def create_user(conn: sqlite3.Connection, username: str, password: str, role: str) -> dict:
     username = username.strip()
     if not USERNAME_RE.fullmatch(username):
-        raise UserError("Usernames are 3 to 32 letters, numbers, dots, dashes or underscores")
+        raise UserError("Usernames are 3 to 64 letters, numbers, dots, dashes, underscores, @ or +. "
+                        "An email address works")
     if role not in ROLES:
         raise UserError("Role must be admin or user")
     check_new_password(password)
