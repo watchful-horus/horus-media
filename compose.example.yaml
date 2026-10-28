@@ -1,0 +1,17 @@
+# Copy to compose.yaml and run: docker compose up -d
+# Then open http://<this host>:8000 and create the first account. From another computer the
+# first-run screen asks for a setup code: `docker compose logs horus` prints it.
+services:
+  horus:
+    build: .
+    # image: ghcr.io/<owner>/horus-media:latest   # once published
+    container_name: horus
+    restart: unless-stopped
+    ports:
+      - "8000:8000"        # change the left number to use another port on the host
+    environment:
+      TZ: Europe/London    # your time zone: decides which day/hour plays count toward
+    volumes:
+      - horus-data:/data   # database, encryption key, backups and logs
+volumes:
+  horus-data:

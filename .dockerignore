@@ -1,0 +1,12 @@
+.git
+.venv
+.env
+data
+backups
+docs
+tests
+CLAUDE.md
+**/__pycache__
+**/node_modules
+src/horus_media/static
+*.key

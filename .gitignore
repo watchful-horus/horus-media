@@ -1,0 +1,20 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+data/
+backups/
+node_modules/
+dist/
+build/
+*.key
+src/horus_media/static/
+
+# Local-only: personal project notes and tool settings (contain homelab details)
+CLAUDE.md
+CLAUDE.local.md
+.claude/

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img">
+  <title>Horus</title>
+  <rect width="128" height="128" rx="28" fill="#2a78d6"/>
+  <path d="M20 66C38 38 90 38 108 66C90 94 38 94 20 66Z" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round"/>
+  <rect x="49" y="64" width="8" height="12" rx="2" fill="#fff"/>
+  <rect x="60" y="53" width="8" height="23" rx="2" fill="#fff"/>
+  <rect x="71" y="59" width="8" height="17" rx="2" fill="#fff"/>
+</svg>

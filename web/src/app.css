@@ -1,0 +1,46 @@
+:root {
+  --bg: #f9f9f7; --panel: #fcfcfb; --text: #0b0b0b; --muted: #52514e; --border: #e1e0d9;
+  --accent: #2a78d6; --ok: #006300; --warn: #a86400; --bad: #c0392b;
+  /* chart chrome */
+  --grid: #e1e0d9; --axis: #c3c2b7; --tick: #898781;
+  /* categorical series, fixed order (validated palette) */
+  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
+  --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948;
+  color-scheme: light dark;
+}
+/* Dark follows the system unless the header toggle forces light or dark (data-theme). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0d0d; --panel: #1a1a19; --text: #f0efec; --muted: #a9a8a0; --border: #2c2c2a;
+    --accent: #3987e5; --ok: #0ca30c; --warn: #e0a23a; --bad: #ef6b5b;
+    --grid: #2c2c2a; --axis: #383835; --tick: #898781;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+    --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d0d0d; --panel: #1a1a19; --text: #f0efec; --muted: #a9a8a0; --border: #2c2c2a;
+  --accent: #3987e5; --ok: #0ca30c; --warn: #e0a23a; --bad: #ef6b5b;
+  --grid: #2c2c2a; --axis: #383835; --tick: #898781;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+  --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+  color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+button, input, select { font: inherit; color: inherit; }
+button { background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 12px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button:disabled { opacity: .5; cursor: default; }
+/* Buttons, links and file pickers in an .actions row look and size alike everywhere in the app. */
+.actions > button, .actions > a.button, .actions > label.button {
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+  min-height: 36px; min-width: 112px; padding: 0 16px; margin: 0; font-size: 14px;
+  line-height: 1.2; white-space: nowrap; text-align: center; }
+input, select { background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 10px; width: 100%; }
+.muted { color: var(--muted); }

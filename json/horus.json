@@ -1,0 +1,59 @@
+{
+  "name": "Horus",
+  "slug": "horus",
+  "categories": [
+    13
+  ],
+  "date_created": "2026-10-28",
+  "type": "ct",
+  "updateable": true,
+  "privileged": false,
+  "interface_port": 8000,
+  "documentation": "https://github.com/watchful-horus/horus-media#readme",
+  "website": "https://github.com/watchful-horus/horus-media",
+  "repository": "https://github.com/watchful-horus/horus-media",
+  "logo": null,
+  "description": "Horus is a self-hosted dashboard for Plex and Emby. It shows live activity from both servers in one list and records playback history for graphs: plays per day, by user, platform and hour, direct play versus transcode, and bandwidth. It only reads from the servers and never controls playback.",
+  "install_methods": [
+    {
+      "type": "default",
+      "script": "ct/horus.sh",
+      "config_path": "/opt/horus/data/horus.db",
+      "resources": {
+        "cpu": 1,
+        "ram": 512,
+        "hdd": 4,
+        "os": "Debian",
+        "version": "13"
+      }
+    }
+  ],
+  "default_credentials": {
+    "username": null,
+    "password": null
+  },
+  "notes": [
+    {
+      "text": "Unless you set var_admin_pass, the generated admin login is saved to ~/horus.creds inside the container.",
+      "type": "info"
+    },
+    {
+      "text": "Add your Plex and Emby servers under Servers after signing in. Horus only reads from them.",
+      "type": "info"
+    }
+  ],
+  "app_vars": [
+    {
+      "name": "var_admin_user",
+      "label": "Admin Username",
+      "type": "text",
+      "default": "admin"
+    },
+    {
+      "name": "var_admin_pass",
+      "label": "Admin Password",
+      "type": "password",
+      "secret": true
+    }
+  ]
+}
