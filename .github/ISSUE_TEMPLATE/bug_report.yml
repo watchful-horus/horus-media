@@ -1,0 +1,49 @@
+name: Bug report
+description: Something doesn't work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Don't paste server tokens, API keys, passwords or real IP addresses.**
+        For a security problem, use the Security tab instead of an issue.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Horus version
+      description: Shown in Settings, under System.
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - Docker
+        - Proxmox script
+        - From source
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: server
+    attributes:
+      label: Which server type?
+      options:
+        - Plex
+        - Emby
+        - Both
+        - Not related to a server
+  - type: textarea
+    id: log
+    attributes:
+      label: Log lines
+      description: From Settings, Logs. Horus scrubs tokens, but please check before pasting.
+      render: text

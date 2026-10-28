@@ -1,0 +1,20 @@
+name: Feature request
+description: An idea to make Horus better
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      description: Describe the problem you want solved, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is it useful?
+  - type: markdown
+    attributes:
+      value: |
+        Horus is read-only against Plex and Emby, so requests that change or control a server
+        (delete, play, edit) won't be accepted.

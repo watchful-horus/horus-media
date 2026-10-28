@@ -167,6 +167,9 @@ Tokens, API keys, passwords and credentials inside URLs are scrubbed before anyt
 - **Plex:** use *Sign in with Plex* in Settings > Servers: Horus opens plex.tv in a new tab, you approve, then pick a server. Horus contacts plex.tv only for this step. Or paste an `X-Plex-Token` manually.
 - **Emby:** create an API key in the Emby dashboard (Advanced > API Keys) and paste it in.
 
+## Contributing and security
+Help is welcome: see [CONTRIBUTING.md](CONTRIBUTING.md) for the ground rules and how to set up. To report a security problem privately, see [SECURITY.md](SECURITY.md).
+
 ## Licence
 Horus is released under the [MIT licence](LICENSE). Plex and Emby are trademarks of their owners; Horus is not affiliated with or endorsed by either.
 
