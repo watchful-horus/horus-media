@@ -34,6 +34,9 @@ cd /opt/horus
 $STD uv venv --python 3.12 .venv
 $STD uv pip install --python .venv/bin/python /opt/horus/horus_media-*.whl
 printf '%s\n' "${var_admin_pass}" | HORUS_DB_PATH=/opt/horus/data/horus.db .venv/bin/python -m horus_media create-admin --username "${var_admin_user}"
+# The port and network are saved in Horus itself (not in HORUS_PORT / HORUS_HOST, which would lock
+# them), so they can be changed later on the Settings page.
+HORUS_DB_PATH=/opt/horus/data/horus.db .venv/bin/python -m horus_media configure --port 8000 --listen-all
 msg_ok "Installed Horus"
 
 msg_info "Creating Service"
@@ -47,8 +50,6 @@ Type=simple
 User=root
 WorkingDirectory=/opt/horus
 Environment=HORUS_DB_PATH=/opt/horus/data/horus.db
-Environment=HORUS_HOST=0.0.0.0
-Environment=HORUS_PORT=8000
 ExecStart=/opt/horus/.venv/bin/python -m horus_media
 Restart=on-failure
 RestartSec=5

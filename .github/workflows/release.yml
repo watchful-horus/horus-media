@@ -47,7 +47,8 @@ jobs:
           python -m pip wheel . --no-deps -w dist
 
       - name: Pack the release asset
-        run: tar -czf "horus-media-${GITHUB_REF_NAME}.tar.gz" -C dist .
+        # Owner 0:0 so extracting it as root never tries to restore the runner's user id.
+        run: tar --owner=0 --group=0 --numeric-owner -czf "horus-media-${GITHUB_REF_NAME}.tar.gz" -C dist .
 
       - name: Publish the release
         env:
