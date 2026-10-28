@@ -121,6 +121,8 @@
   }
 
   let renaming = $state(null) // { id, name } while a server's name is being edited
+  // After a tick, so the box already holds the current name when it is selected.
+  const focusSelect = (el) => { setTimeout(() => { el.focus(); el.select() }) }
   const saveName = () =>
     guard(async () => {
       await api.renameServer(renaming.id, renaming.name)
@@ -147,7 +149,7 @@
       <div>
         {#if renaming?.id === s.id}
           <form class="inline" onsubmit={(e) => { e.preventDefault(); saveName() }}>
-            <input bind:value={renaming.name} maxlength="80" aria-label="New name for {s.name}" required />
+            <input use:focusSelect bind:value={renaming.name} maxlength="80" aria-label="New name for {s.name}" required />
             <button class="primary" disabled={busy || !renaming.name.trim()}>Save</button>
             <button type="button" onclick={() => (renaming = null)}>Cancel</button>
           </form>

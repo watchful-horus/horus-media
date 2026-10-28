@@ -223,6 +223,7 @@
   fieldset { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; display: grid; gap: 6px; }
   legend { font-size: 13px; color: var(--muted); padding: 0 4px; }
   .okmsg { color: var(--ok); }
+  .actions select { width: auto; }
   .report { white-space: pre-wrap; margin: 12px 0 0; font: inherit; font-size: 13px; }
   a.button { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
     color: inherit; text-decoration: none; font-size: 14px; }
