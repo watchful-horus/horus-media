@@ -181,6 +181,25 @@
     </section>
 
     <section class="card">
+      <h2>Alerts</h2>
+      <p class="hint">All off by default. An alert only reaches you through a notification channel that has it ticked (Integrations &gt; Notifications). Each one is sent once when the limit is crossed, and again only after it has dropped back below.</p>
+      <label>
+        Transcodes at once, per server
+        <input type="number" min="0" max="100" step="1" bind:value={form.alert_transcodes_over} />
+        <span class="hint">Alert when more than this many streams are being transcoded. 0 turns it off.</span>
+      </label>
+      <label>
+        Bandwidth, per server (Mbps)
+        <input type="number" min="0" max="100000" step="1" bind:value={form.alert_bandwidth_over_mbps} />
+        <span class="hint">Alert when one server's streams add up to more than this. 0 turns it off.</span>
+      </label>
+      <label class="check">
+        <input type="checkbox" bind:checked={form.alert_new_user} />
+        Alert when someone Horus has never seen starts playing
+      </label>
+    </section>
+
+    <section class="card">
       <h2>Network</h2>
       {#if listen.port_editable}
         <label>

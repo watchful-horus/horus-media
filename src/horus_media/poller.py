@@ -22,6 +22,40 @@ log = logging.getLogger(__name__)
 _server_up: dict[int, bool] = {}
 
 
+# Which threshold alerts are currently firing, per (server id, alert), so each one is sent once
+# when the limit is crossed and again only after it has dropped back below.
+_alert_active: dict[tuple[int, str], bool] = {}
+
+
+def _edge(sid: int, alert: str, over: bool) -> bool:
+    """True only on the poll where `over` turns from False to True."""
+    was = _alert_active.get((sid, alert), False)
+    _alert_active[(sid, alert)] = over
+    return over and not was
+
+
+def _check_new_users(conn: sqlite3.Connection, result: ServerActivity, cfg, emit) -> None:
+    if not cfg.alert_new_user:
+        return
+    for user in {s.user for s in result.sessions if s.user}:
+        if not conn.execute("SELECT 1 FROM history WHERE user = ? LIMIT 1", (user,)).fetchone():
+            emit("new_user", f"{user} is new",
+                 f"Horus has not seen {user} play anything before. Now playing on {result.name}.")
+
+
+def _check_limits(result: ServerActivity, cfg, emit) -> None:
+    transcodes = sum(1 for s in result.sessions if s.play_method == "transcode")
+    limit = cfg.alert_transcodes_over
+    if _edge(result.id, "transcodes", bool(limit) and transcodes > limit):
+        emit("transcodes_high", f"{result.name}: {transcodes} transcodes",
+             f"More than {limit} streams are being transcoded at once.")
+    mbps = sum(s.bandwidth_kbps or 0 for s in result.sessions) / 1000
+    limit = cfg.alert_bandwidth_over_mbps
+    if _edge(result.id, "bandwidth", bool(limit) and mbps > limit):
+        emit("bandwidth_high", f"{result.name}: {mbps:.0f} Mbps",
+             f"Streams from this server use more than {limit} Mbps.")
+
+
 def close_stale(conn: sqlite3.Connection) -> None:
     """Close plays left open by a previous run, ending them at the last time they were seen."""
     with conn:
@@ -82,6 +116,8 @@ def poll_once(
 ) -> None:
     ts = (now or datetime.now(UTC)).isoformat()
     entries = ServerStore(conn, cipher).list_with_tokens()
+    cfg = app_settings.load(conn)
+
     def emit(event: str, title: str, message: str) -> None:
         notifications.notify(conn, cipher, event, title, message, transport)
 
@@ -99,7 +135,9 @@ def poll_once(
             emit("server_up", f"{result.name} is back", "It is answering again.")
         _server_up[result.id] = True
         log.debug("polled %s: %d session(s)", result.name, len(result.sessions))
+        _check_limits(result, cfg, emit)
         with conn:
+            _check_new_users(conn, result, cfg, emit)  # before _record adds them to history
             _record(conn, result, ts, emit)
 
 

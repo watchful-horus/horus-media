@@ -148,6 +148,60 @@ def test_poller_notifies_on_play_start_end_and_server_changes(tmp_path):
     assert sid
 
 
+def test_optional_alerts_fire_once_per_crossing(tmp_path):
+    from horus_media import app_settings
+
+    SENT.clear()
+    conn = connect(tmp_path / "h.db")
+    migrate(conn)
+    cipher = TokenCipher(tmp_path / "h.key")
+    ServerStore(conn, cipher).add("emby", "Emby", "http://emby", TOKEN)
+    notifications.add_channel(conn, cipher, "All", "webhook", HOOK,
+                              ["transcodes_high", "bandwidth_high", "new_user"])
+    sessions: list = []
+
+    def fake(request):
+        if request.url.host == "hooks.example.com":
+            SENT.append(request)
+            return httpx.Response(200)
+        return httpx.Response(200, json=sessions)
+
+    transport = httpx.MockTransport(fake)
+    t0 = datetime(2026, 3, 10, 12, 0, tzinfo=UTC)
+    poller._server_up.clear()
+    poller._alert_active.clear()
+
+    def poll(minutes):
+        poller.poll_once(conn, cipher, transport, now=t0 + timedelta(minutes=minutes))
+
+    def sent():
+        return [json.loads(r.content)["event"] for r in SENT]
+
+    real = notifications.notify
+    notifications.notify = lambda *a, **k: real(*a, **{**k, "wait": True})
+    try:
+        sessions[:] = [emby_session("s1", "i1", "A", method="Transcode"),
+                       emby_session("s2", "i2", "B", method="Transcode", user="dave")]
+        poll(0)
+        assert sent() == []  # everything is off by default
+
+        app_settings.update(conn, {"alert_transcodes_over": 1, "alert_new_user": True})
+        poll(1)
+        poll(2)  # still over the limit: not repeated
+        assert sorted(sent()) == ["transcodes_high"]  # carol and dave are already in history
+
+        sessions[:] = [emby_session("s3", "i3", "C", user="erin")]
+        poll(3)
+        assert sorted(sent()) == ["new_user", "transcodes_high"]
+
+        sessions[:] = [emby_session("s1", "i1", "A", method="Transcode"),
+                       emby_session("s2", "i2", "B", method="Transcode")]
+        poll(4)  # dropped below, then crossed again
+        assert sent().count("transcodes_high") == 2
+    finally:
+        notifications.notify = real
+
+
 def test_unreachable_at_startup_is_not_a_notification(tmp_path):
     SENT.clear()
     conn = connect(tmp_path / "h.db")

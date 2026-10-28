@@ -29,6 +29,9 @@ EVENTS = {
     "play_ended": "A play ends",
     "server_down": "A server becomes unreachable",
     "server_up": "A server comes back",
+    "transcodes_high": "Too many transcodes at once (set the limit in Settings > Alerts)",
+    "bandwidth_high": "A server's bandwidth is over the limit (set it in Settings > Alerts)",
+    "new_user": "Someone new plays something (turn on in Settings > Alerts)",
 }
 TIMEOUT = 5.0
 _URL = re.compile(r"https?://[^\s]+")

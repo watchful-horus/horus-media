@@ -30,6 +30,11 @@ class Settings(BaseModel):
     listen_all: bool = False  # accept connections from other computers (needs an admin login)
     control_keys_enabled: bool = False  # API keys that can control Horus (off unless an admin allows it)
 
+    # Optional alerts, sent through the notification channels that pick them. All off by default.
+    alert_transcodes_over: int = Field(0, ge=0, le=100)  # 0 = off; alert above this many transcodes
+    alert_bandwidth_over_mbps: int = Field(0, ge=0, le=100000)  # 0 = off; per server
+    alert_new_user: bool = False  # someone Horus has never seen before starts playing
+
     @field_validator("timezone")
     @classmethod
     def _known_zone(cls, v: str) -> str:
