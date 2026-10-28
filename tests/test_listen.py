@@ -168,6 +168,8 @@ def test_restart_and_shutdown(api, monkeypatch):
     monkeypatch.setattr(routes_settings.threading, "Timer", Immediate)
     monkeypatch.setattr(routes_settings, "_restart_process", lambda: fired.append("restart"))
     monkeypatch.setattr(routes_settings, "_shutdown_process", lambda: fired.append("stop"))
+    # Not in a container, even if these tests themselves run inside one (Docker has /.dockerenv).
+    monkeypatch.setattr(listen, "in_container", lambda: False)
 
     # Works however Horus was started (here: not via python -m, like a plain uvicorn start).
     assert info(client)["can_restart"] and info(client)["can_shutdown"]
