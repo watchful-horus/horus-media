@@ -4,7 +4,7 @@
 services:
   horus:
     build: .
-    # image: ghcr.io/watchful-horus/horus-media:0.1.1   # once the package is public (then drop `build: .`)
+    # image: ghcr.io/watchful-horus/horus-media:0.1.2   # once the package is public (then drop `build: .`)
     container_name: horus
     restart: unless-stopped
     ports:

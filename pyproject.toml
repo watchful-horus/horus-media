@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "horus-media"
-version = "0.1.1"
+version = "0.1.2"
 description = "Self-hosted dashboard for Plex and Emby: live activity and history graphs"
 requires-python = ">=3.12"
 license = "MIT"
