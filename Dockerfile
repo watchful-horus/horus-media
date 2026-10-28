@@ -14,7 +14,7 @@ ENV PYTHONUNBUFFERED=1 \
     HORUS_PORT=8000 \
     HORUS_DB_PATH=/data/horus.db
 WORKDIR /app
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
 COPY --from=web /src/horus_media/static ./src/horus_media/static
 RUN pip install --no-cache-dir . \

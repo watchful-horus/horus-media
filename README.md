@@ -17,6 +17,12 @@ A self-hosted dashboard for Plex and Emby. See what is playing on both servers r
 
 Not built yet: a published Docker image and release packages.
 
+## Screenshots
+Graphs in the dark theme, and in the light theme. The data shown is invented.
+
+<p align="center"><img src="docs/screenshots/graphs-dark.png" width="48%" alt="Horus graphs, dark theme"> <img src="docs/screenshots/graphs-light.png" width="48%" alt="Horus graphs, light theme"></p>
+<p align="center"><img src="docs/screenshots/graphs-breakdowns-dark.png" width="60%" alt="Bandwidth, plays by user, platform, hour and weekday"></p>
+
 ## Development
 ```bash
 python -m venv .venv
