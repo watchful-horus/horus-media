@@ -27,6 +27,7 @@ from .models import (
     PlexLinkStatus,
     ServerIn,
     ServerOut,
+    ServerRenameIn,
     ServerTestIn,
     ServerType,
     TestResult,
@@ -184,6 +185,14 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
     @app.get("/api/servers", response_model=list[ServerOut])
     def list_servers(store: Store):
         return [dict(r) for r in store.list()]
+
+    @app.patch("/api/servers/{server_id}", response_model=ServerOut)
+    def rename_server(server_id: int, body: ServerRenameIn, store: Store):
+        renamed = store.rename(server_id, body.name)
+        if renamed is None:
+            raise HTTPException(404, "Server not found")
+        log.info("server renamed: id %d is now %s", server_id, body.name)
+        return dict(renamed)
 
     @app.delete("/api/servers/{server_id}", status_code=204)
     def delete_server(server_id: int, store: Store):

@@ -47,6 +47,16 @@ class ServerStore:
             return None
         return row, self._token(row)
 
+    def rename(self, id_: int, name: str) -> sqlite3.Row | None:
+        """History, graphs and metrics join on the id, so the new name shows up everywhere."""
+        with self._conn:
+            changed = self._conn.execute(
+                "UPDATE servers SET name = ? WHERE id = ?", (name, id_)).rowcount
+        if not changed:
+            return None
+        return self._conn.execute(
+            f"SELECT {PUBLIC_COLUMNS} FROM servers WHERE id = ?", (id_,)).fetchone()
+
     def delete(self, id_: int) -> bool:
         with self._conn:
             return self._conn.execute("DELETE FROM servers WHERE id = ?", (id_,)).rowcount > 0

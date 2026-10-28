@@ -24,6 +24,17 @@ def test_add_list_delete_never_returns_token(client):
     assert client.get("/api/servers").json() == []
 
 
+def test_rename_server(client):
+    sid = client.post("/api/servers", json=PLEX).json()["id"]
+    r = client.patch(f"/api/servers/{sid}", json={"name": "  Living room  "})
+    assert r.status_code == 200
+    assert r.json()["name"] == "Living room"
+    assert "token" not in r.text
+    assert client.get("/api/servers").json()[0]["name"] == "Living room"
+    assert client.patch(f"/api/servers/{sid}", json={"name": "   "}).status_code == 422
+    assert client.patch("/api/servers/999", json={"name": "x"}).status_code == 404
+
+
 def test_token_encrypted_in_db(client, tmp_path):
     client.post("/api/servers", json=PLEX)
     raw = sqlite3.connect(tmp_path / "horus.db").execute("SELECT token FROM servers").fetchone()[0]

@@ -77,6 +77,7 @@ export const api = {
     request('GET', `/api/stats?start=${start}&end=${end}${hourly ? '&hourly=true' : ''}`),
   servers: () => request('GET', '/api/servers'),
   addServer: (s) => request('POST', '/api/servers', s),
+  renameServer: (id, name) => request('PATCH', `/api/servers/${id}`, { name }),
   deleteServer: (id) => request('DELETE', `/api/servers/${id}`),
   importHistory: (id) => request('POST', `/api/servers/${id}/import-history`),
   testSaved: (id) => request('POST', `/api/servers/${id}/test`),

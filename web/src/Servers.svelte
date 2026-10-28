@@ -120,6 +120,14 @@
     })
   }
 
+  let renaming = $state(null) // { id, name } while a server's name is being edited
+  const saveName = () =>
+    guard(async () => {
+      await api.renameServer(renaming.id, renaming.name)
+      renaming = null
+      await load()
+    })
+
   const remove = (s) => {
     if (!confirm(`Remove ${s.name}? Horus will stop monitoring it. Nothing changes on the server.`)) return
     guard(async () => {
@@ -137,7 +145,15 @@
   {#each servers as s (s.id)}
     <div class="row">
       <div>
-        <strong>{s.name}</strong> <span class="type">{s.type}</span>
+        {#if renaming?.id === s.id}
+          <form class="inline" onsubmit={(e) => { e.preventDefault(); saveName() }}>
+            <input bind:value={renaming.name} maxlength="80" aria-label="New name for {s.name}" required />
+            <button class="primary" disabled={busy || !renaming.name.trim()}>Save</button>
+            <button type="button" onclick={() => (renaming = null)}>Cancel</button>
+          </form>
+        {:else}
+          <strong>{s.name}</strong> <span class="type">{s.type}</span>
+        {/if}
         <div class="muted small">{s.url}</div>
         {#if results[s.id]}
           <div class="small" class:ok={results[s.id].ok} class:bad={!results[s.id].ok}>
@@ -161,6 +177,7 @@
       <div class="actions">
         <button disabled={busy} onclick={() => testSaved(s.id)}>Test</button>
         <button disabled={busy} onclick={() => importHistory(s)} title={s.type === 'emby' ? 'Needs the Playback Reporting plugin' : 'Reads the history Plex keeps'}>Import history</button>
+        <button disabled={busy} onclick={() => (renaming = { id: s.id, name: s.name })}>Rename</button>
         <button disabled={busy} onclick={() => remove(s)}>Remove</button>
       </div>
     </div>
@@ -252,7 +269,9 @@
   .type { font-size: 12px; text-transform: uppercase; color: var(--muted); }
   .small { font-size: 12px; }
   .note { margin-top: 4px; max-width: 62ch; }
-  .actions { display: grid; grid-template-columns: repeat(3, 120px); gap: 8px; flex: none; }
+  .actions { display: grid; grid-template-columns: repeat(2, 120px); gap: 8px; flex: none; }
+  form.inline { display: flex; gap: 8px; align-items: center; max-width: none; }
+  form.inline input { flex: 1; min-width: 0; }
   .actions > button { min-width: 0; }
   .grow { flex: 1; display: grid; gap: 6px; }
   a { color: var(--accent); }

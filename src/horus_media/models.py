@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ServerType = Literal["plex", "emby"]
 PlayMethod = Literal["direct_play", "direct_stream", "transcode"]
@@ -52,6 +52,18 @@ class ServerIn(BaseModel):
     name: str
     url: str
     token: str
+
+
+class ServerRenameIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+
+    @field_validator("name")
+    @classmethod
+    def _trimmed(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Name cannot be empty")
+        return v
 
 
 class ServerTestIn(BaseModel):
