@@ -62,7 +62,7 @@ jobs:
 
       - name: Create an admin account in the data volume
         run: |
-          echo "a long throwaway password" | docker exec -i horus python -m horus_media create-admin --username ci
+          echo "a long throwaway password" | docker exec -i horus python -m horus_media create-admin --username ci-user
 
       - name: Show the container log if anything failed
         if: failure()
