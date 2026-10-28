@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-_CS_DEFAULT_URL="https://raw.githubusercontent.com/watchful-horus/horus-media/main"
+_CS_DEFAULT_URL="https://raw.githubusercontent.com/watchful-horus/horus-media/main" # on submission to community-scripts, point this at DevScripts
 _cs_boot="${COMMUNITY_SCRIPTS_CORE_DIR:-$(dirname "${BASH_SOURCE[0]}")/../../core}/core/build.func"
 source "$_cs_boot" 2>/dev/null || source <(curl -fsSL "${COMMUNITY_SCRIPTS_CORE_URL:-https://raw.githubusercontent.com/community-scripts/core/main}/core/build.func")
 
