@@ -63,7 +63,7 @@ Status as of 2026-10-28. The app is feature-complete for the original v1 scope a
 - [ ] Docker: create the first admin from environment variables (for example `HORUS_ADMIN_USER` and a password file), so a container never shows an open first-run screen to the network (the setup code was removed on 2026-10-28)
 
 **After the next changes land**
-- [ ] Cut a new version (`0.1.1` or `0.2.0`): the `v0.1.0` release and the `ghcr.io/watchful-horus/horus-media:edge` image predate email usernames and the setup-code removal. Bump the version, tag it, and run the Docker workflow
+- [x] `0.1.1` cut on 2026-10-28 (email usernames, no setup code, newer build tools): release and ghcr.io image published by the tag workflows. `v0.1.0` is the older release. Still to do: `1.0.0` once the Proxmox community install and the published image have had real use
 
 **Tidy-ups**
 - [ ] Code-split the Graphs page so the first load is smaller

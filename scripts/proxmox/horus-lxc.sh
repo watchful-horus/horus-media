@@ -7,7 +7,7 @@
 #   It asks whether to install with default or advanced settings, or to update an existing Horus
 #   container. Everything the wizard asks can also be given up front as environment variables, and
 #   HORUS_WIZARD=0 skips the questions (for scripting):
-#       HORUS_WIZARD=0 HORUS_PACKAGE=/root/horus_media-0.1.0-py3-none-any.whl bash horus-lxc.sh
+#       HORUS_WIZARD=0 HORUS_PACKAGE=/root/horus_media-0.1.1-py3-none-any.whl bash horus-lxc.sh
 #       HORUS_WIZARD=0 bash horus-lxc.sh update 120
 #
 # HORUS_PACKAGE is where Horus is installed from: a path to a wheel on this host, or a web address
