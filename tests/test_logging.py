@@ -5,7 +5,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from horus_media import logging_setup, poller
+from horus_media import __version__, logging_setup, poller
 from horus_media.crypto import TokenCipher
 from horus_media.db import connect, migrate
 from horus_media.logging_setup import scrub
@@ -120,7 +120,7 @@ def test_events_logged_and_no_secret_ever_reaches_the_file(running):
     client.delete(f"/api/servers/{sid}")
 
     text = log_text(tmp)
-    for expected in ("Horus 0.0.1 starting", "settings changed: log_level=DEBUG",
+    for expected in (f"Horus {__version__} starting", "settings changed: log_level=DEBUG",
                      "server added: plex Plex", "connection test OK", "connection test failed",
                      "Plex sign-in started", "server added via Plex sign-in: Home Plex",
                      "backup written: horus-", "server removed"):
