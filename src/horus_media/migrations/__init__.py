@@ -112,4 +112,10 @@ MIGRATIONS: list[str] = [
         api_key TEXT NOT NULL
     );
     """,
+    # Control keys: a key can carry an admin's power (everything except users and keys) and then
+    # always expires. Ordinary keys stay scope 'read' with no expiry.
+    """
+    ALTER TABLE api_keys ADD COLUMN scope TEXT NOT NULL DEFAULT 'read';
+    ALTER TABLE api_keys ADD COLUMN expires_at TEXT;
+    """,
 ]

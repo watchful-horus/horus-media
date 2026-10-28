@@ -28,6 +28,7 @@ class Settings(BaseModel):
     update_url: str = Field("", max_length=500)  # where "check for updates" looks; empty = none
     hide_others_activity: bool = False  # normal users see only their own plays
     listen_all: bool = False  # accept connections from other computers (needs an admin login)
+    control_keys_enabled: bool = False  # API keys that can control Horus (off unless an admin allows it)
 
     @field_validator("timezone")
     @classmethod

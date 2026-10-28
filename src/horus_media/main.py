@@ -116,6 +116,7 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
         if auth.auth_disabled() or not gated or path in PUBLIC_API:
             return await call_next(request)
         conn = connect(db_path())
+        via_key = refusal = None
         try:
             migrate(conn)
             user = auth.session_user(conn, request.cookies.get(auth.SESSION_COOKIE))
@@ -128,13 +129,32 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
                 allowed = valid and (path != "/metrics" or owner is None or owner["role"] == "admin")
                 if allowed and owner:
                     user = owner  # a person's key acts as that person
+            elif not allowed and not user and path.startswith("/api/"):
+                # A control key (switched on in Settings, with an admin owner) acts as that admin,
+                # except on users, keys and sign-in.
+                info = auth.key_info(conn, auth.credential_from_headers(request.headers))
+                if info and info["scope"] == "control":  # a plain read key just gets "Login required"
+                    refusal = auth.control_refusal(info, path)
+                    if refusal:
+                        log.warning("API key %s refused on %s %s: %s", info["name"], request.method,
+                                    path, refusal)
+                    else:
+                        user, allowed, via_key = info["owner"], True, info["name"]
         finally:
             conn.close()
+        if refusal:
+            return JSONResponse({"detail": refusal}, status_code=403)
         if not allowed:
             if user:  # signed in, but this needs an admin
                 return JSONResponse({"detail": "Admin only"}, status_code=403)
             return JSONResponse({"detail": "Login required"}, status_code=401)
         request.state.user = user
+        if via_key:
+            request.state.via_key = via_key
+            response = await call_next(request)
+            log.info("control key %s (%s): %s %s -> %d", via_key, user["username"], request.method,
+                     path, response.status_code)
+            return response
         return await call_next(request)
 
     @app.middleware("http")

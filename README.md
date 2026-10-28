@@ -180,3 +180,13 @@ Horus is released under the [MIT licence](LICENSE). Plex and Emby are trademarks
 - `GET /api/activity` live sessions from all servers, merged, plus per-server status
 - `GET /api/stats?start=YYYY-MM-DD&end=YYYY-MM-DD` aggregated history for the graphs
 - Tokens are never returned by the API.
+
+### Control keys (for testing and automation)
+An ordinary API key can only read the data endpoints under `/api/v1`. A **control key** can also run Horus: make and restore backups, change settings, add servers, import history, read the log, restart and shut down. It acts as the admin who made it, with these limits:
+- **Off by default.** An admin switches control keys on under **Settings > API > Control keys**. Switching them off stops every control key at once.
+- **Always expires.** Choose 24 hours, 7, 30 or 90 days when you make one.
+- **Never users, keys or sign-in.** A control key cannot create or delete people, create or revoke keys, change passwords or sign in, and cannot switch control keys on or off.
+- **Logged.** Every use is written to the log with the key's name, never the key itself.
+- A control key stops working if its owner is no longer an admin.
+
+Send it as `Authorization: Bearer hk_...` (or `X-API-Key`). `scripts/horusctl.py` is a small command-line helper that reads the address and key from a git-ignored `.env` file (`HORUS_TEST_URL`, `HORUS_TEST_CONTROL_KEY`) and never prints the key, for example `python scripts/horusctl.py GET /api/settings`. Only give a control key to something you trust, and use it on a network you trust or over HTTPS: a key sent over plain http can be read by anyone on the same network.

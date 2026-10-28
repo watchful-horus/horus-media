@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 
-from . import auth
+from . import app_settings, auth
 from .config import db_path
 from .db import connect, migrate
 from .restore_upload import restore_upload
@@ -48,6 +48,8 @@ class UserChange(BaseModel):
 
 class KeyName(BaseModel):
     name: str
+    scope: Literal["read", "control"] = "read"
+    expires_in_days: int | None = None  # required for a control key
 
 
 def make_router(get_store: Callable) -> APIRouter:
@@ -226,16 +228,35 @@ def make_router(get_store: Callable) -> APIRouter:
     def list_keys(store: Store):
         return auth.list_keys(store.conn)
 
-    @router.post("/keys", status_code=201)
-    def create_key(body: KeyName, request: Request, store: Store):
+    def new_key(store: ServerStore, body: KeyName, owner: dict | None) -> dict:
+        """Make a key for `owner`. A control key also needs an admin owner, the Settings switch
+        turned on, and an expiry."""
         name = body.name.strip()
         if not name or len(name) > 60:
             raise HTTPException(422, "Give the key a short name, such as Grafana")
-        owner = getattr(request.state, "user", None)
-        key_id, key = auth.create_key(store.conn, name, owner["id"] if owner else None)
-        log.info("API key created: %s (%s...)", name, key[:7])
+        expires_at = None
+        if body.scope == "control":
+            if owner is None:
+                raise HTTPException(409, "Control keys need a signed-in admin account")
+            if owner["role"] != "admin":
+                raise HTTPException(403, "Only an admin can create a control key")
+            if not app_settings.load(store.conn).control_keys_enabled:
+                raise HTTPException(409, "Control keys are switched off. Turn them on first")
+            if body.expires_in_days not in auth.CONTROL_DAYS:
+                days = ", ".join(str(d) for d in auth.CONTROL_DAYS)
+                raise HTTPException(422, f"Choose how many days it lasts: {days}")
+            expires_at = auth.expiry_in(body.expires_in_days)
+        key_id, key = auth.create_key(store.conn, name, owner["id"] if owner else None,
+                                      body.scope, expires_at)
+        log.info("API key created: %s (%s) for %s (%s...)%s", name, body.scope,
+                 owner["username"] if owner else "nobody in particular", key[:7],
+                 f", expires {expires_at[:10]}" if expires_at else "")
         # The only time the full key is ever shown.
-        return {"id": key_id, "name": name, "key": key}
+        return {"id": key_id, "name": name, "key": key, "scope": body.scope, "expires_at": expires_at}
+
+    @router.post("/keys", status_code=201)
+    def create_key(body: KeyName, request: Request, store: Store):
+        return new_key(store, body, getattr(request.state, "user", None))
 
     @router.delete("/keys/{key_id}", status_code=204)
     def revoke_key(key_id: int, store: Store):
@@ -252,13 +273,7 @@ def make_router(get_store: Callable) -> APIRouter:
 
     @router.post("/my-keys", status_code=201)
     def create_my_key(body: KeyName, request: Request, store: Store):
-        user = me(request)
-        name = body.name.strip()
-        if not name or len(name) > 60:
-            raise HTTPException(422, "Give the key a short name, such as Grafana")
-        key_id, key = auth.create_key(store.conn, name, user["id"])
-        log.info("API key created: %s for %s (%s...)", name, user["username"], key[:7])
-        return {"id": key_id, "name": name, "key": key}
+        return new_key(store, body, me(request))
 
     @router.delete("/my-keys/{key_id}", status_code=204)
     def revoke_my_key(key_id: int, request: Request, store: Store):

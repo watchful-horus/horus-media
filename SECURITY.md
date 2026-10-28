@@ -22,7 +22,9 @@ Things that matter most, because Horus stores credentials for people's media ser
 - signing in, or reaching admin features, without the right account,
 - reading or writing files outside Horus's data folder (for example through backup upload,
   restore or log download),
-- a way to make Horus change anything on a Plex or Emby server (it is meant to be read-only).
+- a way to make Horus change anything on a Plex or Emby server (it is meant to be read-only),
+- a way around the limits of control keys: using one when control keys are switched off or the key
+  has expired, or using one to manage users or keys, change a password or sign in.
 
 ## What doesn't
 - Problems in Plex, Emby or other software that Horus talks to.

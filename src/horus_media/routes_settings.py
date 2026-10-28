@@ -122,6 +122,8 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
 
     @router.put("/settings")
     def put_settings(changes: dict[str, Any], store: Store, request: Request):
+        if getattr(request.state, "via_key", None) and "control_keys_enabled" in changes:
+            raise HTTPException(403, "A control key can't change whether control keys are allowed")
         check_listen_change(store.conn, changes, request)
         try:
             app_settings.update(store.conn, changes)

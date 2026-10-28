@@ -55,7 +55,8 @@ export const api = {
   testSeerr: () => request('POST', '/api/seerr/test'),
   seerrRequests: () => request('GET', '/api/seerr/requests'),
   keys: () => request('GET', '/api/keys'),
-  createKey: (name) => request('POST', '/api/keys', { name }),
+  createKey: (name, scope = 'read', days = null) =>
+    request('POST', '/api/keys', { name, scope, expires_in_days: scope === 'control' ? days : null }),
   revokeKey: (id) => request('DELETE', `/api/keys/${id}`),
   restart: () => request('POST', '/api/restart'),
   shutdown: () => request('POST', '/api/shutdown'),

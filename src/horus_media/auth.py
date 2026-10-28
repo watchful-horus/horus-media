@@ -246,15 +246,27 @@ def end_user_sessions(conn: sqlite3.Connection, user_id: int, keep: str | None =
 
 # --- API keys -------------------------------------------------------------------------------
 
-def create_key(conn: sqlite3.Connection, name: str, user_id: int | None = None) -> tuple[int, str]:
+CONTROL_DAYS = (1, 7, 30, 90)  # how long a control key may last, in days
+# A control key acts as its admin owner on everything except these addresses, so a leaked one
+# can't create people, mint more keys, change passwords or lock the admin out.
+_CONTROL_BLOCKED = re.compile(r"^/api/(users|keys|my-keys|auth)(/|$)")
+
+
+def expiry_in(days: int) -> str:
+    return (_now() + timedelta(days=days)).isoformat()
+
+
+def create_key(conn: sqlite3.Connection, name: str, user_id: int | None = None,
+               scope: str = "read", expires_at: str | None = None) -> tuple[int, str]:
     """A new API key. With an owner it can see only what that person may see; without one
-    (login turned off, or a key from before accounts had keys) it sees everything."""
+    (login turned off, or a key from before accounts had keys) it sees everything. A "control"
+    key can also act on Horus as its (admin) owner, and always has an expiry."""
     key = KEY_PREFIX + secrets.token_urlsafe(30)
     with conn:
         cur = conn.execute(
-            "INSERT INTO api_keys (name, prefix, key_hash, created_at, user_id) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (name, key[:7], _sha(key), _now().isoformat(), user_id),
+            "INSERT INTO api_keys (name, prefix, key_hash, created_at, user_id, scope, expires_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (name, key[:7], _sha(key), _now().isoformat(), user_id, scope, expires_at),
         )
     return cur.lastrowid, key
 
@@ -262,7 +274,8 @@ def create_key(conn: sqlite3.Connection, name: str, user_id: int | None = None) 
 def list_keys(conn: sqlite3.Connection, user_id: int | None = None) -> list[dict]:
     """Every key (with its owner), or only one person's."""
     rows = conn.execute(
-        "SELECT k.id, k.name, k.prefix, k.created_at, k.last_used_at, u.username AS owner "
+        "SELECT k.id, k.name, k.prefix, k.created_at, k.last_used_at, k.scope, k.expires_at, "
+        "u.username AS owner "
         "FROM api_keys k LEFT JOIN users u ON u.id = k.user_id "
         + ("WHERE k.user_id = ? " if user_id is not None else "") + "ORDER BY k.id",
         (user_id,) if user_id is not None else (),
@@ -278,21 +291,49 @@ def revoke_key(conn: sqlite3.Connection, key_id: int, user_id: int | None = None
                             (key_id, user_id)).rowcount > 0
 
 
-def check_key(conn: sqlite3.Connection, key: str | None) -> tuple[bool, dict | None]:
-    """(valid, owner). The owner is None for a key that belongs to nobody in particular."""
+def key_info(conn: sqlite3.Connection, key: str | None) -> dict | None:
+    """The key's record (id, name, scope, owner) when the key exists and may be used right now:
+    it has not expired and, for a control key, control keys are switched on. Marks it as used."""
     if not key or not key.startswith(KEY_PREFIX):
-        return False, None
+        return None
     row = conn.execute(
-        "SELECT id, last_used_at, user_id FROM api_keys WHERE key_hash = ?", (_sha(key),)
+        "SELECT id, name, last_used_at, user_id, scope, expires_at FROM api_keys WHERE key_hash = ?",
+        (_sha(key),),
     ).fetchone()
     if not row:
-        return False, None
+        return None
     now = _now()
-    if not row[1] or now - datetime.fromisoformat(row[1]) > _KEY_TOUCH_EVERY:
+    if row[5] and now >= datetime.fromisoformat(row[5]):
+        return None  # expired
+    if row[4] == "control":
+        from . import app_settings  # imported here: app_settings does not need auth otherwise
+
+        if not app_settings.load(conn).control_keys_enabled:
+            return None  # an admin switched control keys off
+    if not row[2] or now - datetime.fromisoformat(row[2]) > _KEY_TOUCH_EVERY:
         with conn:  # "last used", at most once a minute so a busy dashboard does not write nonstop
             conn.execute("UPDATE api_keys SET last_used_at = ? WHERE id = ?",
                          (now.isoformat(), row[0]))
-    return True, (get_user(conn, row[2]) if row[2] is not None else None)
+    owner = get_user(conn, row[3]) if row[3] is not None else None
+    return {"id": row[0], "name": row[1], "scope": row[4], "owner": owner}
+
+
+def control_refusal(info: dict, path: str) -> str | None:
+    """Why this key may not call this address as a control key, or None when it may."""
+    if info["scope"] != "control":
+        return "This key can only read the data endpoints (/api/v1)"
+    owner = info["owner"]
+    if owner is None or owner["role"] != "admin":
+        return "A control key needs an admin account as its owner"
+    if _CONTROL_BLOCKED.match(path):
+        return "A control key can't manage users or keys, or sign in"
+    return None
+
+
+def check_key(conn: sqlite3.Connection, key: str | None) -> tuple[bool, dict | None]:
+    """(valid, owner). The owner is None for a key that belongs to nobody in particular."""
+    info = key_info(conn, key)
+    return (False, None) if info is None else (True, info["owner"])
 
 
 def key_valid(conn: sqlite3.Connection, key: str | None) -> bool:
