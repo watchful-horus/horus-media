@@ -60,6 +60,10 @@ Status as of 2026-10-28. The app is feature-complete for the original v1 scope a
 
 **Features**
 - [ ] Seerr: create requests / approvals (Horus is read-only for now); more notification kinds
+- [ ] Docker: create the first admin from environment variables (for example `HORUS_ADMIN_USER` and a password file), so a container never shows an open first-run screen to the network (the setup code was removed on 2026-10-28)
+
+**After the next changes land**
+- [ ] Cut a new version (`0.1.1` or `0.2.0`): the `v0.1.0` release and the `ghcr.io/watchful-horus/horus-media:edge` image predate email usernames and the setup-code removal. Bump the version, tag it, and run the Docker workflow
 
 **Tidy-ups**
 - [ ] Code-split the Graphs page so the first load is smaller
