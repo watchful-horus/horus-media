@@ -1,3 +1,4 @@
+import os
 import socket
 
 import pytest
@@ -200,6 +201,10 @@ def test_restart_needs_a_login(tmp_path, monkeypatch):
 def test_port_with_lingering_closed_connections_counts_as_free():
     """After a restart the old process's closed connections linger; the port is still free."""
     server = socket.socket()
+    if os.name != "nt":
+        # Like uvicorn's listener. On Linux a lingering connection only lets the port be bound
+        # again when the socket that made it had this option too.
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind(("127.0.0.1", 0))
     server.listen()
     port = server.getsockname()[1]
