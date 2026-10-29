@@ -36,7 +36,7 @@ Status as of 2026-10-29: version 0.4.0. The original v1 scope is complete and th
 - Settings: time zone, poll interval, retention, HTTP port, "allow other computers", Restart, Shut down (disabled in containers), update address and daily check with a time of day, backups
 - Backups: manual and scheduled zips (with a time of day) and retention, token-free export, restore from the UI or an uploaded file (validates first, saves the current state first), delete backups
 - Application logging: rotating file and console, secret scrubbing, level setting, Settings > Logs viewer
-- Update check with install-specific update steps; an admin-only Update now button for a Proxmox container that can write to its own environment (Docker and manual installs are never updated by Horus)
+- Update check with install-specific update steps; an admin-only Update now button for a Proxmox container that can write to its own environment (works on a real container, confirmed 2026-10-29) (Docker and manual installs are never updated by Horus)
 - Notification channels (Discord, ntfy, webhook), optional alerts, weekly/monthly summary reports with CSV. (A read-only Seerr requests tab was added and then removed on 2026-10-29: it had nothing to do with plays or stats)
 - Auto / light / dark theme toggle; Windows "start at login"; `create-admin` and `configure` commands
 
@@ -55,7 +55,7 @@ Status as of 2026-10-29: version 0.4.0. The original v1 scope is complete and th
 ## Next
 
 - [ ] Try Stop stream on a real Emby (never without the author's say-so)
-- [ ] Try Update now on a real Proxmox container (unit-tested with fakes only), and the new Docker admin variables in a real container
+- [ ] Try the new Docker admin variables (`HORUS_ADMIN_USER` and a password file) in a real container (Update now was confirmed on a real Proxmox container on 2026-10-29)
 - [ ] Real-server test run by hand (a real Plex and Emby in a throwaway setup) to catch API changes the fakes can't
 - [ ] arm64 Docker image (the app and its tests pass on aarch64 under emulation; the image build is untried)
 - [ ] Not yet tried on real hardware: restoring a backup that is older than the current database version
