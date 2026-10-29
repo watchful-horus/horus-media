@@ -23,29 +23,6 @@ def handler(request: httpx.Request) -> httpx.Response:
     if request.url.host == "hooks.example.com" or request.url.host == "ntfy.example.com":
         SENT.append(request)
         return httpx.Response(500 if "fail" in path else 200)
-    if request.url.host == "seerr":
-        assert request.method == "GET"
-        if request.headers.get("x-api-key") != "SEERR-KEY":
-            return httpx.Response(403)
-        if path == "/api/v1/status":
-            return httpx.Response(200, json={"version": "2.1.0"})
-        if path == "/api/v1/request":
-            return httpx.Response(200, json={"results": [
-                {"id": 1, "status": 1, "type": "movie", "createdAt": "2026-10-01T10:00:00Z",
-                 "media": {"tmdbId": 11, "mediaType": "movie", "status": 2},
-                 "requestedBy": {"displayName": "alice"}},
-                {"id": 2, "status": 2, "type": "tv", "createdAt": "2026-10-02T10:00:00Z",
-                 "media": {"tmdbId": 22, "mediaType": "tv", "status": 5},
-                 "requestedBy": {"username": "bob"}},
-                {"id": 3, "status": 3, "type": "movie", "createdAt": "2026-10-03T10:00:00Z",
-                 "media": {"tmdbId": 33, "mediaType": "movie", "status": 1},
-                 "requestedBy": {}},
-            ]})
-        if path == "/api/v1/movie/11":
-            return httpx.Response(200, json={"title": "Big Movie"})
-        if path == "/api/v1/tv/22":
-            return httpx.Response(200, json={"name": "Long Show"})
-        return httpx.Response(404)
     return httpx.Response(404)
 
 
@@ -270,41 +247,13 @@ def test_unreachable_at_startup_is_not_a_notification(tmp_path):
     assert SENT == []
 
 
-def seerr_setup(api, key="SEERR-KEY"):
-    return api.put("/api/seerr", json={"url": "http://seerr:5055", "api_key": key})
-
-
-def test_seerr_key_is_never_returned_and_is_encrypted(api, tmp_path):
-    r = seerr_setup(api)
-    assert r.json() == {"configured": True, "url": "http://seerr:5055"}
-    assert "SEERR-KEY" not in api.get("/api/seerr").text
-    raw = connect(tmp_path / "horus.db").execute("SELECT api_key FROM seerr").fetchone()[0]
-    assert "SEERR-KEY" not in raw
-
-
-def test_seerr_requests_are_listed_with_titles_and_status(api):
-    seerr_setup(api)
-    assert api.post("/api/seerr/test").json() == {"ok": True, "version": "2.1.0"}
-    rows = api.get("/api/seerr/requests").json()
-    assert [(r["title"], r["status"], r["requested_by"]) for r in rows] == [
-        ("Big Movie", "Pending", "alice"),
-        ("Long Show", "Available", "bob"),
-        ("TMDB 33", "Declined", "Unknown"),
-    ]
-
-
-def test_seerr_wrong_key_and_missing_setup(api):
-    assert api.get("/api/seerr/requests").status_code == 404
-    seerr_setup(api, key="wrong")
-    assert api.post("/api/seerr/test").json()["error"] == "API key not accepted"
-    assert api.get("/api/seerr/requests").status_code == 502
-
-
-def test_seerr_address_change_keeps_the_key(api):
-    seerr_setup(api)
-    api.put("/api/seerr", json={"url": "http://seerr:5056"})
-    assert api.get("/api/seerr").json()["url"] == "http://seerr:5056"
-    assert api.put("/api/seerr", json={"url": "nope"}).status_code == 422
-    api.delete("/api/seerr")
-    assert api.get("/api/seerr").json()["configured"] is False
-    assert api.put("/api/seerr", json={"url": "http://x"}).status_code == 422  # no key left
+def test_a_stored_seerr_connection_is_forgotten_when_upgrading(tmp_path):
+    conn = connect(tmp_path / "old.db")
+    last = migrate(conn)
+    # Make it look like an install from before the Seerr view was removed.
+    conn.execute("CREATE TABLE seerr (id INTEGER PRIMARY KEY, url TEXT NOT NULL, api_key TEXT NOT NULL)")
+    conn.execute("INSERT INTO seerr VALUES (1, 'http://seerr:5055', 'encrypted-key')")
+    conn.execute("DELETE FROM schema_version WHERE version = ?", (last,))
+    conn.commit()
+    migrate(conn)
+    assert conn.execute("SELECT name FROM sqlite_master WHERE name = 'seerr'").fetchone() is None

@@ -4,7 +4,6 @@
   import Account from './Account.svelte'
   import Activity from './Activity.svelte'
   import Auth from './Auth.svelte'
-  import Requests from './Requests.svelte'
   import SettingsPage from './SettingsPage.svelte'
   import { applyMode, nextMode, savedMode } from './theme.js'
 
@@ -17,7 +16,7 @@
 
   // The address bar (#activity, #graphs, #account, #settings/servers ...) records where you are,
   // so a reload or a bookmark returns to the same page.
-  const TABS = ['activity', 'graphs', 'requests', 'account', 'settings']
+  const TABS = ['activity', 'graphs', 'account', 'settings']
   const SECTIONS = ['general', 'alerts', 'network', 'maintenance', 'servers', 'users', 'api', 'integrations', 'logs']
 
   function fromHash() {
@@ -39,20 +38,6 @@
     where = { tab, section }
     history.replaceState(null, '', tab === 'settings' ? `#settings/${section}` : `#${tab}`)
   }
-
-  let seerrOn = $state(false)
-  async function checkSeerr() {
-    try {
-      seerrOn = isAdmin && (await api.seerr()).configured
-    } catch {
-      seerrOn = false
-    }
-  }
-  $effect(() => {
-    if (auth?.authenticated) checkSeerr()
-    addEventListener('horus:seerr', checkSeerr)
-    return () => removeEventListener('horus:seerr', checkSeerr)
-  })
 
   async function checkAuth() {
     try {
@@ -101,9 +86,6 @@
     <nav>
       <button class:active={where.tab === 'activity'} onclick={() => go('activity')}>Activity</button>
       <button class:active={where.tab === 'graphs'} onclick={() => go('graphs')}>Graphs</button>
-      {#if seerrOn}
-        <button class:active={where.tab === 'requests'} onclick={() => go('requests')}>Requests</button>
-      {/if}
       {#if isAdmin}
         <button class:active={where.tab === 'settings'} onclick={() => go('settings', where.section)}>Settings</button>
       {/if}
@@ -129,8 +111,6 @@
       {:catch}
         <p class="bad">Could not load the graphs. Reload the page to try again.</p>
       {/await}
-    {:else if where.tab === 'requests' && seerrOn}
-      <Requests />
     {:else if where.tab === 'account' && auth.user}
       <Account user={auth.user} />
     {:else if where.tab === 'settings' && isAdmin}

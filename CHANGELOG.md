@@ -3,6 +3,11 @@
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
 ## Unreleased
+- **Removed the Seerr requests tab and its Integrations section.** It only listed Overseerr/Jellyseerr requests and was not connected to plays or stats. On upgrade, any stored Seerr address and API key are deleted (migration 10). A backup made after this change cannot be restored into an older Horus.
+- **Users page:** cleaner rows (avatar, name, role and last sign-in, actions lined up on the right), and the "Normal users see only their own activity" setting now lives there instead of in General.
+- **Backups list:** Download, Restore and Delete line up in a column on the right.
+- **Docker:** `HORUS_ALLOW_SELF_RESTART=1` gives a container a Restart button (Horus restarts inside the container; Shut down and the port stay with Docker), and the page now explains in plain words why those controls are off by default. The restart page-reload now uses the port in your address bar.
+- **Server unreachable:** the log says why (timed out, connection refused or host not reachable, connection dropped) and, when it comes back, how long it was down.
 - **Settings is easier to scan:** the long General page is split into four entries in the left list: General, Alerts and reports, Network and Maintenance (backups, updates, version, restart). They share one Save button. Old bookmarks such as `#settings/general/network` still work.
 
 ## 0.3.0 (2026-10-29)

@@ -8,6 +8,7 @@
 - `HORUS_OPEN_FIRST_RUN` (`1`): let Horus listen on the network, if "other computers may connect" is on, even before the first admin exists. The Proxmox installers set it in the service so you can create the first account in the browser. Without it Horus stays on this computer until an admin exists.
 - `HORUS_AUTH_DISABLED` (`1` turns the login off; only behind something that handles sign-in for you, such as a reverse proxy with SSO).
 - `HORUS_UPDATE_URL`: release address for "Check for updates" (otherwise set in Settings).
+- `HORUS_ALLOW_SELF_RESTART` (`1`, containers only): switches on Settings > Maintenance > Restart inside a container (see below). It does nothing outside a container.
 - `HORUS_CONTAINER` (`1`): tells Horus it runs in a container, so Restart and Shut down are disabled (also detected automatically in Docker and Kubernetes).
 
 ## Settings page
@@ -20,7 +21,7 @@ In **Settings > Network** you can change the HTTP port and choose whether other 
 - `HORUS_PORT` and `HORUS_HOST` override the settings (the page then shows them as locked).
 - Opening Horus to other computers is only possible once an admin account exists.
 - **Settings > Maintenance** also has **Restart** and **Shut down** (admins only). Shut down stops Horus until you start it again yourself.
-- In Docker or Kubernetes the container owns the port, restart and stop, so those controls are switched off: change the port mapping and restart the container instead.
+- In Docker or Kubernetes the container owns the port, restart and stop, so those controls are switched off: change the port mapping and restart the container instead. To get a **Restart** button in a container, set `HORUS_ALLOW_SELF_RESTART=1`: Horus then restarts its own process inside the running container. Shut down and the port always stay with Docker.
 
 ### Backups
 Backups are zips of the database plus `horus.key`, written to a `backups` folder next to the database, either by hand or automatically (every whole number of days at a time you choose, 03:00 by default, with retention).

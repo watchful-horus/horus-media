@@ -236,3 +236,33 @@ def test_installers_can_open_the_first_run_screen_to_the_network(api, monkeypatc
     assert listen.resolve(conn).host == "0.0.0.0"
     app_settings.update(conn, {"listen_all": False})
     assert listen.resolve(conn).host == "127.0.0.1"  # still needs 'other computers may connect'
+
+
+def test_a_container_can_allow_restart_but_never_shutdown_or_a_new_port(api, monkeypatch):
+    client, _ = api
+    fired = []
+
+    class Immediate:
+        def __init__(self, delay, fn):
+            self.fn = fn
+
+        def start(self):
+            self.fn()
+
+    monkeypatch.setattr(routes_settings.threading, "Timer", Immediate)
+    monkeypatch.setattr(routes_settings, "_restart_process", lambda: fired.append("restart"))
+    monkeypatch.setenv("HORUS_CONTAINER", "1")
+    monkeypatch.setenv("HORUS_ALLOW_SELF_RESTART", "1")
+    got = info(client)
+    assert got["in_container"] and got["can_restart"] and got["self_restart"]
+    assert not got["can_shutdown"]
+    assert client.post("/api/restart").json() == {"restarting": True}
+    assert fired == ["restart"]
+    assert client.post("/api/shutdown").status_code == 409
+
+
+def test_self_restart_setting_does_nothing_outside_a_container(api, monkeypatch):
+    client, _ = api
+    monkeypatch.setattr(listen, "in_container", lambda: False)
+    monkeypatch.setenv("HORUS_ALLOW_SELF_RESTART", "1")
+    assert info(client)["self_restart"] is False

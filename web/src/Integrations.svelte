@@ -6,10 +6,7 @@
   let kinds = $state([])
   let channels = $state([])
   let form = $state({ name: '', kind: 'discord', url: '', events: ['server_down', 'server_up'] })
-  let seerr = $state({ configured: false, url: '' })
-  let seerrForm = $state({ url: '', api_key: '' })
   let results = $state({}) // channel id -> test outcome
-  let seerrResult = $state(null)
   let message = $state(null)
   let busy = $state(false)
 
@@ -36,8 +33,6 @@
     events = n.events
     kinds = n.kinds
     channels = n.channels
-    seerr = await api.seerr()
-    seerrForm.url = seerr.url
   }
   onMount(() => guard(load))
 
@@ -89,28 +84,6 @@
       reportNote = 'Sent to every channel that has the report ticked.'
     })
 
-  const saveSeerr = () =>
-    guard(async () => {
-      seerr = await api.saveSeerr({ url: seerrForm.url, api_key: seerrForm.api_key || undefined })
-      seerrForm.api_key = ''
-      seerrResult = null
-      window.dispatchEvent(new Event('horus:seerr'))
-    })
-  const testSeerr = () =>
-    guard(async () => {
-      const r = await api.testSeerr()
-      seerrResult = r.ok ? `Connected (Seerr ${r.version}).` : r.error
-    })
-  const removeSeerr = () => {
-    if (!confirm('Disconnect Seerr? Horus forgets the address and key.')) return
-    guard(async () => {
-      await api.deleteSeerr()
-      seerrForm = { url: '', api_key: '' }
-      seerrResult = null
-      await load()
-      window.dispatchEvent(new Event('horus:seerr'))
-    })
-  }
 </script>
 
 <section class="card">
@@ -179,29 +152,6 @@
     <div class="actions"><button class="primary" disabled={busy || form.events.length === 0}>Add channel</button></div>
   </form>
   {#if message}<p class="bad">{message}</p>{/if}
-</section>
-
-<section class="card">
-  <h2>Seerr requests</h2>
-  <p class="hint">
-    Connect Overseerr or Jellyseerr to see recent media requests in Horus (a Requests tab appears).
-    Horus only reads from Seerr. Find the key in Seerr under Settings &gt; General.
-  </p>
-  <form onsubmit={(e) => { e.preventDefault(); saveSeerr() }}>
-    <label>Seerr address<input type="url" bind:value={seerrForm.url} required placeholder="http://seerr:5055" /></label>
-    <label>API key
-      <input type="password" bind:value={seerrForm.api_key} autocomplete="off"
-        placeholder={seerr.configured ? 'Saved. Leave blank to keep it.' : 'Paste the Seerr API key'} />
-    </label>
-    <div class="actions">
-      <button class="primary" disabled={busy}>{seerr.configured ? 'Save' : 'Connect'}</button>
-      {#if seerr.configured}
-        <button type="button" disabled={busy} onclick={testSeerr}>Test</button>
-        <button type="button" disabled={busy} onclick={removeSeerr}>Disconnect</button>
-      {/if}
-      {#if seerrResult}<span class="small">{seerrResult}</span>{/if}
-    </div>
-  </form>
 </section>
 
 <style>

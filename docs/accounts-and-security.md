@@ -37,7 +37,7 @@ Usernames are 3 to 64 letters, numbers, dots, dashes, underscores, `@` or `+`, s
 ## Privacy between users
 Users on a normal account can see everyone's Activity and Graphs, including other people's names and what they watched. Only give accounts to people you are happy to show that.
 
-To limit this, turn on *Normal users see only their own activity* under **Settings > General**. Normal users (and their API keys) then see only plays by one Plex/Emby name. Link that name to each account under **Settings > Users**. Without a linked name they see nothing. Admins always see everything. Server-wide bandwidth is hidden from limited users, because it would reveal what others are watching.
+To limit this, turn on *Normal users see only their own activity* under **Settings > Users**. Normal users (and their API keys) then see only plays by one Plex/Emby name. Link that name to each account under **Settings > Users**. Without a linked name they see nothing. Admins always see everything. Server-wide bandwidth is hidden from limited users, because it would reveal what others are watching.
 
 ## API keys and control keys
 Every signed-in person can create their own API keys under **Account**; a key acts as its owner and can only use the read-only data API. Admins can also see and revoke every key under **Settings > API**.

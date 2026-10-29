@@ -1,4 +1,4 @@
-"""Notification channels and the Seerr connection (admin only: neither is on the user allow-list)."""
+"""Notification channels and reports (admin only: not on the user allow-list)."""
 
 import logging
 from collections.abc import Callable
@@ -9,7 +9,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
-from . import app_settings, notifications, reports, seerr
+from . import app_settings, notifications, reports
 from .store import ServerStore
 
 log = logging.getLogger(__name__)
@@ -25,11 +25,6 @@ class ChannelIn(BaseModel):
 class ChannelChange(BaseModel):
     enabled: bool | None = None
     events: list[str] | None = None
-
-
-class SeerrIn(BaseModel):
-    url: str
-    api_key: str | None = None  # left out when only the address changes
 
 
 def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> APIRouter:
@@ -110,56 +105,5 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
             row["kind"], store.cipher.decrypt(row["url"]), "test", "Horus test",
             "This is a test message from Horus.", transport)
         return {"ok": problem is None, "error": problem}
-
-    # --- Seerr ---
-
-    def client(store: ServerStore) -> seerr.SeerrClient:
-        cfg = seerr.get_config(store.conn, store.cipher)
-        if cfg is None:
-            raise HTTPException(404, "Seerr is not set up")
-        return seerr.SeerrClient(*cfg, transport=transport)
-
-    @router.get("/seerr")
-    def seerr_status(store: Store):
-        return seerr.public(store.conn)
-
-    @router.put("/seerr")
-    def seerr_save(body: SeerrIn, store: Store):
-        try:
-            seerr.save_config(store.conn, store.cipher, body.url, body.api_key)
-        except seerr.SeerrError as e:
-            raise HTTPException(422, str(e)) from None
-        log.info("Seerr connection saved")
-        return seerr.public(store.conn)
-
-    @router.delete("/seerr", status_code=204)
-    def seerr_remove(store: Store):
-        seerr.clear_config(store.conn)
-        return Response(status_code=204)
-
-    @router.post("/seerr/test")
-    def seerr_test(store: Store):
-        http = client(store)
-        try:
-            return {"ok": True, "version": http.status()}
-        except httpx.HTTPStatusError as e:
-            bad = e.response.status_code in (401, 403)
-            return {"ok": False, "error": "API key not accepted" if bad
-                    else f"HTTP {e.response.status_code}"}
-        except (httpx.HTTPError, ValueError):
-            return {"ok": False, "error": "Could not connect or unexpected response"}
-        finally:
-            http.close()
-
-    @router.get("/seerr/requests")
-    def seerr_requests(store: Store):
-        http = client(store)
-        try:
-            return http.requests()
-        except (httpx.HTTPError, ValueError, KeyError, TypeError) as e:
-            log.warning("Seerr requests failed: %s", type(e).__name__)
-            raise HTTPException(502, "Could not read requests from Seerr") from None
-        finally:
-            http.close()
 
     return router

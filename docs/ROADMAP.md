@@ -37,7 +37,7 @@ Status as of 2026-10-29: version 0.3.0. The original v1 scope is complete and th
 - Backups: manual and scheduled zips (with a time of day) and retention, token-free export, restore from the UI or an uploaded file (validates first, saves the current state first), delete backups
 - Application logging: rotating file and console, secret scrubbing, level setting, Settings > Logs viewer
 - Update check with install-specific update steps; an admin-only Update now button for a Proxmox container that can write to its own environment (Docker and manual installs are never updated by Horus)
-- Notification channels (Discord, ntfy, webhook), optional alerts, weekly/monthly summary reports with CSV, read-only Seerr requests tab
+- Notification channels (Discord, ntfy, webhook), optional alerts, weekly/monthly summary reports with CSV. (A read-only Seerr requests tab was added and then removed on 2026-10-29: it had nothing to do with plays or stats)
 - Auto / light / dark theme toggle; Windows "start at login"; `create-admin` and `configure` commands
 
 **Installing and project**
@@ -47,7 +47,7 @@ Status as of 2026-10-29: version 0.3.0. The original v1 scope is complete and th
 - MIT licence, `CONTRIBUTING.md`, `SECURITY.md`, issue and pull request templates, Dependabot, CODEOWNERS
 - Public repository with secret scanning, private vulnerability reporting, CodeQL, Dependabot alerts, protected `main`, SHA-pinned Actions
 - CI (tests, lint, Docker image, web build) on every push and pull request
-- 249 tests (fake responses, no live servers), `ruff` clean; README and docs
+- 250 tests (fake responses, no live servers), `ruff` clean; README and docs
 
 **Verified**
 - Backup Download then Restore across installs (Proxmox container to Docker); Emby history import; lint and the full suite on real Linux; the Docker image in CI and a real Docker host, including an anonymous pull; all tests on emulated aarch64
@@ -59,7 +59,7 @@ Status as of 2026-10-29: version 0.3.0. The original v1 scope is complete and th
 - [ ] Real-server test run by hand (a real Plex and Emby in a throwaway setup) to catch API changes the fakes can't
 - [ ] arm64 Docker image (the app and its tests pass on aarch64 under emulation; the image build is untried)
 - [ ] Not yet tried on real hardware: restoring a backup that is older than the current database version
-- [ ] Seerr: create requests / approvals (Horus is read-only for now); more notification kinds
+- [ ] More notification kinds
 - [ ] GitHub Discussions
 - [ ] Community-scripts submission is a long way off: a new app must be 6+ months old, actively maintained and have 600+ stars with release tarballs. The `ct/`, `install/` and `json/` files are kept in their format so it stays possible
 - [ ] A `horus-media` console command (not `horus`: another package already installs that name)

@@ -118,4 +118,8 @@ MIGRATIONS: list[str] = [
     ALTER TABLE api_keys ADD COLUMN scope TEXT NOT NULL DEFAULT 'read';
     ALTER TABLE api_keys ADD COLUMN expires_at TEXT;
     """,
+    # The Seerr requests view was removed; forget any stored Seerr address and API key.
+    """
+    DROP TABLE IF EXISTS seerr;
+    """,
 ]

@@ -11,7 +11,7 @@ A self-hosted dashboard for Plex and Emby. See what is playing on both servers r
 - Play history recorded locally (SQLite) from the moment you add a server, with optional import of past history
 - Graphs: plays over time by hour, day, week or month; direct play vs transcode; bandwidth; plays by user, platform, hour and weekday; media types
 - Accounts with admin and user roles (an email address works as a username), API keys, and a read-only data API for Grafana and Prometheus
-- Notifications (Discord, ntfy, webhook), optional alerts, weekly or monthly summary reports, and a Seerr requests tab
+- Notifications (Discord, ntfy, webhook), optional alerts, and weekly or monthly summary reports
 - Backups and restore, application logs, restart / shut down from the web UI, and an **Update now** button for a Proxmox container
 - Light and dark themes
 - Reads from your servers and changes nothing, with one exception: an admin can press **Stop stream** on the Activity page to end a stream (a signed-in admin only, never an API key or control key; Plex needs Plex Pass for this). Paused streams show an amber **Paused** badge, and a summary at the top adds up the streams and bandwidth per server and in total, split into local and remote (a paused stream counts as a stream but adds no bandwidth)
@@ -46,7 +46,7 @@ Horus starts recording plays as soon as a server is added. See [Servers, history
 | [Installing](docs/install.md) | Docker, Proxmox container, from source, start at login, moving to a new install |
 | [Configuration](docs/configuration.md) | Environment variables, Settings, port and network, backups, update checks, logs |
 | [Accounts and security](docs/accounts-and-security.md) | First account, roles, privacy between users, API keys |
-| [Servers, history and integrations](docs/servers-and-integrations.md) | Adding servers, importing history, notifications, alerts, reports, Seerr |
+| [Servers, history and integrations](docs/servers-and-integrations.md) | Adding servers, importing history, notifications, alerts, reports |
 | [API](docs/api.md) | Data API for Grafana, Prometheus metrics, control keys |
 | [Roadmap](docs/ROADMAP.md) and [Changelog](CHANGELOG.md) | What is done and what is next |
 

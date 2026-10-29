@@ -221,3 +221,40 @@ def test_unreachable_server_log_line_has_no_url_credentials(tmp_path, caplog):
         now=T0)
     formatter = logging_setup.ScrubbingFormatter("%(message)s")
     assert all("pw123" not in formatter.format(r) for r in caplog.records)
+
+
+def test_unreachable_says_why_and_how_long(tmp_path, monkeypatch, caplog):
+    monkeypatch.setenv("HORUS_DB_PATH", str(tmp_path / "horus.db"))
+    conn = connect(tmp_path / "horus.db")
+    migrate(conn)
+    cipher = TokenCipher.for_db(tmp_path / "horus.db")
+    from horus_media.store import ServerStore
+    ServerStore(conn, cipher).add("emby", "Emby", "http://emby", TOKEN)
+    poller._server_up.clear()
+    poller._down_since.clear()
+    caplog.set_level(logging.INFO, logger="horus_media")
+
+    def refuse(request):
+        raise httpx.ConnectError("connection refused to http://emby secret", request=request)
+
+    def slow(request):
+        raise httpx.ReadTimeout("took too long", request=request)
+
+    up = httpx.MockTransport(lambda r: httpx.Response(200, json=[]))
+    poller.poll_once(conn, cipher, up, now=T0)
+    poller.poll_once(conn, cipher, httpx.MockTransport(refuse), now=T0 + timedelta(minutes=1))
+    poller.poll_once(conn, cipher, up, now=T0 + timedelta(minutes=2))
+    poller.poll_once(conn, cipher, httpx.MockTransport(slow), now=T0 + timedelta(minutes=3))
+    messages = [r.getMessage() for r in caplog.records]
+    assert any("is unreachable: Could not connect: connection refused or host not reachable" in m
+               for m in messages)
+    assert any("is unreachable: Could not connect: timed out" in m for m in messages)
+    assert any("reachable again (was unreachable for " in m for m in messages)
+    assert not any("secret" in m or "http://emby" in m for m in messages)
+
+
+def test_duration_wording():
+    assert poller._duration(8) == "8 s"
+    assert poller._duration(80) == "80 s"
+    assert poller._duration(300) == "5 min"
+    assert poller._duration(7200) == "2 h 0 min"

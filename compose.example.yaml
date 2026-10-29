@@ -11,6 +11,7 @@ services:
       - "8000:8000"        # change the left number to use another port on the host
     environment:
       TZ: Europe/London    # your time zone: decides which day/hour plays count toward
+      # HORUS_ALLOW_SELF_RESTART: "1"                  # gives Settings > Maintenance a Restart button (Horus restarts inside the container)
       # HORUS_ADMIN_USER: admin                          # the first admin, created at start if none exists
       # HORUS_ADMIN_PASSWORD_FILE: /run/secrets/horus_admin_password   # first line of this file is the password
     volumes:

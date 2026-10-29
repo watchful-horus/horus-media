@@ -41,6 +41,12 @@ def in_container() -> bool:
             or bool(os.environ.get("HORUS_CONTAINER")))
 
 
+def self_restart_allowed() -> bool:
+    """In a container, Restart is off unless HORUS_ALLOW_SELF_RESTART=1: then Horus restarts its own
+    process in place (the container keeps running). Shut down and the port stay with the container."""
+    return in_container() and os.environ.get("HORUS_ALLOW_SELF_RESTART") == "1"
+
+
 @dataclass
 class Listen:
     host: str

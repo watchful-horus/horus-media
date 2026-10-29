@@ -30,6 +30,3 @@ Three optional alerts (**Settings > Alerts and reports**, all off by default) us
 
 ## Summary reports
 The same section can send a weekly or monthly summary report. **Integrations > Report** shows one on screen, downloads it as CSV, or sends it now.
-
-## Seerr
-Connecting Overseerr or Jellyseerr adds a **Requests** tab listing recent media requests. Horus only reads from Seerr.

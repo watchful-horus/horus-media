@@ -51,11 +51,6 @@ export const api = {
   updateChannel: (id, changes) => request('PATCH', `/api/notifications/${id}`, changes),
   deleteChannel: (id) => request('DELETE', `/api/notifications/${id}`),
   testChannel: (id) => request('POST', `/api/notifications/${id}/test`),
-  seerr: () => request('GET', '/api/seerr'),
-  saveSeerr: (s) => request('PUT', '/api/seerr', s),
-  deleteSeerr: () => request('DELETE', '/api/seerr'),
-  testSeerr: () => request('POST', '/api/seerr/test'),
-  seerrRequests: () => request('GET', '/api/seerr/requests'),
   keys: () => request('GET', '/api/keys'),
   createKey: (name, scope = 'read', days = null) =>
     request('POST', '/api/keys', { name, scope, expires_in_days: scope === 'control' ? days : null }),

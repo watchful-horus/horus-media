@@ -65,7 +65,8 @@
   const restart = () =>
     guard(async () => {
       if (!confirm('Restart Horus now? The page will reload when it is back.')) return
-      const port = listen.port_source === 'environment' ? listen.port_running : saved.http_port
+      // In a container the port people use is Docker's mapping, which is the one in the address bar.
+      const port = listen.in_container ? usedPort : listen.port_source === 'environment' ? listen.port_running : saved.http_port
       await api.restart()
       message = 'Restarting... this page will reload when Horus is back.'
       messageOk = true
@@ -222,11 +223,7 @@
         <input type="number" min="0" max="3650" step="1" bind:value={form.retention_days} />
         <span class="hint">0 keeps everything. Older plays and bandwidth samples are deleted automatically.</span>
       </label>
-      <label class="check">
-        <input type="checkbox" bind:checked={form.hide_others_activity} />
-        Normal users see only their own activity
-      </label>
-      <span class="hint">When on, a normal user sees only plays by the Plex/Emby name you link to their account under Users (and no server-wide bandwidth). With no name linked they see nothing. Admins always see everything. Their API keys follow the same rule.</span>
+      <p class="hint">Who may see only their own activity is set under Users.</p>
     </section>
     {/if}
 
@@ -356,11 +353,15 @@
         <ul class="files">
           {#each backups as b}
             <li>
-              <code>{b.name}</code>
-              <span class="muted">{when(b.created_at)} &middot; {size(b.size)}</span>
-              <a class="button small-btn" href="/api/backups/{b.name}/download" download>Download</a>
-              <button type="button" class="small-btn" disabled={busy} onclick={() => restore(b)}>Restore</button>
-              <button type="button" class="small-btn" disabled={busy} onclick={() => removeBackup(b)}>Delete</button>
+              <div class="info">
+                <code>{b.name}</code>
+                <span class="muted">{when(b.created_at)} &middot; {size(b.size)}</span>
+              </div>
+              <div class="btns">
+                <a class="button small-btn" href="/api/backups/{b.name}/download" download>Download</a>
+                <button type="button" class="small-btn" disabled={busy} onclick={() => restore(b)}>Restore</button>
+                <button type="button" class="small-btn" disabled={busy} onclick={() => removeBackup(b)}>Delete</button>
+              </div>
             </li>
           {/each}
         </ul>
@@ -466,7 +467,15 @@
         </div>
         <p class="hint">
           {#if listen.in_container}
-            Horus is running in a container: restart or stop the container instead.
+            <strong>This is a Docker container.</strong>
+            {#if listen.self_restart}
+              Restart restarts Horus inside the container. To stop it, or to change the port, use Docker
+              (<code>docker compose stop</code>, or the port mapping in your compose file).
+            {:else}
+              Docker owns its start, stop and port: restart it with <code>docker compose restart</code>
+              and change the port in your compose file. To get a Restart button here, set
+              <code>HORUS_ALLOW_SELF_RESTART=1</code> on the container.
+            {/if}
           {:else}
             Restart applies the port and network settings above. Shut down stops Horus; it stays
             off until you start it again yourself.
@@ -512,7 +521,13 @@
   a.button, label.button { background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
     padding: 6px 12px; color: var(--text); text-decoration: none; cursor: pointer; display: inline-block; }
   a.button:hover, label.button:hover { border-color: var(--accent); }  .files { margin: 8px 0; padding-left: 0; list-style: none; font-size: 13px; }
-  .files li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 4px 0; }
+  .files li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 16px; padding: 6px 0;
+    border-top: 1px solid var(--border); }
+  .files li:first-child { border-top: none; }
+  .files .info { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; min-width: 0; }
+  .files .btns { display: grid; grid-template-columns: repeat(3, 84px); gap: 6px; }
+  .files .btns > * { text-align: center; box-sizing: border-box; }
+  @media (max-width: 720px) { .files li { grid-template-columns: 1fr; } }
   .small-btn { padding: 2px 10px; font-size: 12.5px; }
   h3 { margin: 18px 0 6px; font-size: 14px; }
   .notice { display: flex; align-items: center; justify-content: space-between; gap: 12px;

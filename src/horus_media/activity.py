@@ -10,6 +10,17 @@ from .models import ServerActivity
 log = logging.getLogger(__name__)
 
 
+def _reason(e: Exception) -> str:
+    """A short reason a server could not be reached, safe to show: never the address or a token."""
+    if isinstance(e, httpx.TimeoutException):
+        return "timed out"
+    if isinstance(e, httpx.ConnectError):
+        return "connection refused or host not reachable"
+    if isinstance(e, httpx.NetworkError | httpx.RemoteProtocolError):
+        return "connection dropped"
+    return "unexpected response" if isinstance(e, ValueError | KeyError | TypeError) else "network error"
+
+
 def fetch_server_activity(
     row: sqlite3.Row, token: str, transport: httpx.BaseTransport | None = None
 ) -> ServerActivity:
@@ -24,8 +35,8 @@ def fetch_server_activity(
         return ServerActivity(**base, ok=False, error=msg)
     except (httpx.HTTPError, ValueError, KeyError, TypeError) as e:
         log.debug("%s: %s: %s", row["name"], type(e).__name__, e)
-        # Deliberately generic: exception text can contain the request URL.
-        return ServerActivity(**base, ok=False, error="Could not connect or unexpected response")
+        # Only a short reason, never the exception text: that can contain the request URL.
+        return ServerActivity(**base, ok=False, error=f"Could not connect: {_reason(e)}")
     finally:
         client.close()
 

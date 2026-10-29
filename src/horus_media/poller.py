@@ -20,6 +20,15 @@ log = logging.getLogger(__name__)
 
 # Last known reachability per server id, so only changes are logged (not every poll).
 _server_up: dict[int, bool] = {}
+_down_since: dict[int, float] = {}  # when each unreachable server first failed (monotonic seconds)
+
+
+def _duration(seconds: float) -> str:
+    seconds = int(seconds)
+    if seconds < 90:
+        return f"{seconds} s"
+    minutes = round(seconds / 60)
+    return f"{minutes} min" if minutes < 90 else f"{minutes // 60} h {minutes % 60} min"
 
 
 # Which threshold alerts are currently firing, per (server id, alert), so each one is sent once
@@ -125,14 +134,17 @@ def poll_once(
         was_up = _server_up.get(result.id)
         if not result.ok:
             if was_up is not False:
+                _down_since[result.id] = time.monotonic()
                 log.warning("server %s is unreachable: %s", result.name, result.error)
             if was_up is True:  # only a real change, not a server that was down at startup
                 emit("server_down", f"{result.name} is unreachable", result.error or "")
             _server_up[result.id] = False
             continue  # unreachable: leave open plays alone rather than guess they ended
         if was_up is False:
-            log.info("server %s is reachable again", result.name)
-            emit("server_up", f"{result.name} is back", "It is answering again.")
+            since = _down_since.pop(result.id, None)
+            gone = f" (was unreachable for {_duration(time.monotonic() - since)})" if since else ""
+            log.info("server %s is reachable again%s", result.name, gone)
+            emit("server_up", f"{result.name} is back", f"It is answering again{gone}.")
         _server_up[result.id] = True
         log.debug("polled %s: %d session(s)", result.name, len(result.sessions))
         _check_limits(result, cfg, emit)

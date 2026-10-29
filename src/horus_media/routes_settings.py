@@ -72,8 +72,10 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
             "host_editable": run["host_source"] != "environment",
             "started_via_module": run["can_restart"],
             "in_container": boxed,
-            # Containers own their start/stop; elsewhere Horus can restart or stop itself.
-            "can_restart": not boxed,
+            # Containers own their start/stop; elsewhere Horus can restart or stop itself. A container
+            # may allow Restart only (HORUS_ALLOW_SELF_RESTART=1).
+            "can_restart": not boxed or listen.self_restart_allowed(),
+            "self_restart": boxed and listen.self_restart_allowed(),
             "can_shutdown": not boxed,
             "restart_needed": listen.restart_needed(cfg),
         }
@@ -251,7 +253,7 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
     def restart(request: Request):
         """Restart Horus so a new port or network setting takes effect. Always starts a fresh
         `python -m horus_media`, which reads the saved settings, whatever started this process."""
-        if listen.in_container():
+        if listen.in_container() and not listen.self_restart_allowed():
             raise HTTPException(409, "Horus is running in a container: restart the container "
                                      "instead (and change the port mapping there)")
         log.warning("restart requested from the web UI by %s", actor(request))
