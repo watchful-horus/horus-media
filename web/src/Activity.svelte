@@ -178,7 +178,7 @@
           <span class="tname">{r.name}</span>
           <strong>{streamsText(r.count)}</strong>
           <span class="tbw">{r.count ? bandwidth(r.kbps) : '—'}</span>
-          {#if r.paused}<span class="tkinds">{r.paused} paused (no bandwidth counted)</span>{/if}
+          {#if r.paused}<span class="tkinds">{r.paused} paused (Bandwidth Not Counted)</span>{/if}
           {#if r.count}
             <span class="tkinds">
               Local {r.local.count}{r.local.count ? ` · ${bandwidth(r.local.kbps)}` : ''}
