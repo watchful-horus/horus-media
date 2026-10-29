@@ -143,6 +143,19 @@
     })
   }
 
+  // Copy button for the update commands (falls back to selecting the text where the clipboard
+  // is not available, such as plain http on another computer).
+  let copied = $state('')
+  async function copyCommand(text) {
+    try {
+      await navigator.clipboard.writeText(text)
+      copied = text
+      setTimeout(() => { if (copied === text) copied = '' }, 2000)
+    } catch {
+      const el = [...document.querySelectorAll('.howto code')].find((c) => c.textContent === text)
+      if (el) getSelection().selectAllChildren(el)
+    }
+  }
   const checkUpdates = () =>
     guard(async () => {
       update = await api.updateCheck()
@@ -356,7 +369,7 @@
       </div>
       {#if update}
         {#if !update.configured}
-          <p class="muted">No release address is set yet, so there is nothing to check. Add one above once Horus is published.</p>
+          <p class="muted">No release address is set yet, so there is nothing to check. Add one above.</p>
         {:else}
           <p class={update.newer ? 'ok' : 'muted'}>
             {update.newer ? `Version ${update.latest} is available.` : `You are up to date (latest is ${update.latest}).`}
@@ -364,6 +377,32 @@
               <a href={update.release_url} target="_blank" rel="noopener noreferrer">Release notes</a>
             {/if}
           </p>
+          {#if update.how}
+            <div class="howto">
+              <h4>{update.how.title}</h4>
+              {#each update.how.notes as note}<p class="hint">{note}</p>{/each}
+              {#each update.how.commands as c}
+                <div class="cmd">
+                  <span class="muted small">{c.label}</span>
+                  <div class="copyrow">
+                    <code>{c.command}</code>
+                    <button type="button" onclick={() => copyCommand(c.command)}>{copied === c.command ? 'Copied' : 'Copy'}</button>
+                  </div>
+                </div>
+              {/each}
+              {#each update.how.after ?? [] as note}<p class="hint">{note}</p>{/each}
+              {#each update.how.after_commands ?? [] as c}
+                <div class="cmd">
+                  <span class="muted small">{c.label}</span>
+                  <div class="copyrow">
+                    <code>{c.command}</code>
+                    <button type="button" onclick={() => copyCommand(c.command)}>{copied === c.command ? 'Copied' : 'Copy'}</button>
+                  </div>
+                </div>
+              {/each}
+              <p class="hint">Horus never updates itself; it only shows the steps.</p>
+            </div>
+          {/if}
         {/if}
       {/if}
 
@@ -407,6 +446,13 @@
   .two { display: flex; gap: 16px; max-width: 460px; }
   .two label { flex: 1; }
   .hint { color: var(--muted); font-size: 12.5px; }
+  .howto { border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin: 8px 0; max-width: 640px; }
+  .howto h4 { margin: 0 0 4px; font-size: 14px; }
+  .howto p.hint { margin: 4px 0 6px; }
+  .cmd { margin: 6px 0; }
+  .copyrow { display: flex; gap: 8px; align-items: center; margin-top: 2px; }
+  .copyrow code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; padding: 6px 10px;
+    border: 1px solid var(--border); border-radius: 6px; font: 12.5px ui-monospace, Consolas, monospace; }
   p.hint { margin: 6px 0 12px; max-width: 620px; }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0 0 8px; }
   dt { color: var(--muted); }

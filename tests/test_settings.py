@@ -238,3 +238,29 @@ def test_daily_check_runs_once_a_day_and_can_be_turned_off(db, monkeypatch):
     maintenance.run(conn, path, cfg, now, t)
     maintenance.run(conn, path, cfg, now + timedelta(hours=2), t)
     assert len(calls) == 1  # once a day
+
+
+def test_update_check_explains_how_to_update_for_this_install(tmp_path, monkeypatch):
+    from horus_media import install_info
+
+    docker = install_info.update_help("0.1.4", "docker")
+    assert docker["kind"] == "docker"
+    assert docker["commands"][0]["command"] == "docker compose pull && docker compose up -d"
+    assert any("ghcr.io/watchful-horus/horus-media:0.1.4" in n for n in docker["notes"])
+    assert install_info.update_help("v0.1.4", "docker")["notes"] == docker["notes"]  # a leading v is dropped
+
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/local/bin/update-horus" if name == "update-horus" else None)
+    assert install_info.update_help("0.1.4", "proxmox")["commands"][0]["command"] == "update-horus"
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    assert "horus-lxc.sh update" in install_info.update_help("0.1.4", "proxmox")["commands"][0]["command"]
+    other = install_info.update_help("0.1.4", "other")
+    assert "0.1.4" in other["commands"][0]["command"]
+
+
+def test_only_a_newer_release_comes_with_steps(db, monkeypatch):
+    monkeypatch.setenv("HORUS_UPDATE_URL", "https://example.test/latest")
+    for tag, newer in (("9.9.9", True), ("0.0.1", False)):
+        page = httpx.MockTransport(lambda r, t=tag: httpx.Response(200, json={"tag_name": t}))
+        body = TestClient(create_app(transport=page)).get("/api/update-check").json()
+        assert body["newer"] is newer
+        assert ("how" in body) is newer

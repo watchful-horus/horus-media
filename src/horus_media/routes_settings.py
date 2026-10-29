@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import ValidationError
 
-from . import __version__, app_settings, auth, backup, listen, logging_setup, updates
+from . import __version__, app_settings, auth, backup, install_info, listen, logging_setup, updates
 from .config import db_path
 from .poller import DB_WORK
 from .restore_upload import restore_upload
@@ -201,7 +201,8 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
         log.info("update check: latest is %s, newer=%s", result["latest"], result["newer"])
         app_settings.set_state(store.conn, "update_latest", result["latest"])
         app_settings.set_state(store.conn, "last_update_check", datetime.now(UTC).isoformat())
-        return {"configured": True, **result}
+        how = install_info.update_help(result["latest"]) if result["newer"] else None
+        return {"configured": True, **result, **({"how": how} if how else {})}
 
     def actor(request: Request) -> str:
         user = getattr(request.state, "user", None)
