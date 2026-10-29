@@ -3,7 +3,7 @@
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
 ## Unreleased
-- **Settings > General is split into four tabs:** General, Alerts and reports, Network, and Maintenance (backups, updates, version, restart). One shared Save button; the address bar keeps the tab (`#settings/general/network`).
+- **Settings is easier to scan:** the long General page is split into four entries in the left list: General, Alerts and reports, Network and Maintenance (backups, updates, version, restart). They share one Save button. Old bookmarks such as `#settings/general/network` still work.
 
 ## 0.3.0 (2026-10-29)
 - **First admin from the environment (Docker):** `HORUS_ADMIN_USER` with `HORUS_ADMIN_PASSWORD_FILE` (or `HORUS_ADMIN_PASSWORD`) creates the first admin when the container starts, so there is no open first-run screen on the network. Ignored once an admin exists.

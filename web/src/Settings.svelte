@@ -2,10 +2,9 @@
   import { onMount } from 'svelte'
   import { api } from './api.js'
 
-  // Which part of General is showing (General, Alerts and reports, Network, Maintenance). The form and
-  // its Save button are shared, so a change made on one tab is saved together with the others.
-  let { tab = 'general', ontab = () => {} } = $props()
-  const SUBTABS = [['general', 'General'], ['alerts', 'Alerts and reports'], ['network', 'Network'], ['maintenance', 'Maintenance']]
+  // Settings > General, Alerts and reports, Network and Maintenance are four pages of one form with one
+  // Save button (they share this component, so a change made on one stays while you open another).
+  let { part = 'general' } = $props()
 
   let info = $state(null)
   let form = $state(null) // editable copy of the settings
@@ -203,13 +202,8 @@
 {#if !form}
   <p class={message ? 'bad' : 'muted'}>{message ?? 'Loading...'}</p>
 {:else}
-  <div class="subtabs" role="tablist" aria-label="General settings">
-    {#each SUBTABS as [id, text]}
-      <button type="button" role="tab" aria-selected={tab === id} class:active={tab === id} onclick={() => ontab(id)}>{text}</button>
-    {/each}
-  </div>
   <form onsubmit={(e) => { e.preventDefault(); save() }}>
-    {#if tab === 'general'}
+    {#if part === 'general'}
     <section class="card">
       <h2>General</h2>
       <label>
@@ -236,7 +230,7 @@
     </section>
     {/if}
 
-    {#if tab === 'alerts'}
+    {#if part === 'alerts'}
     <section class="card">
       <h2>Alerts and reports</h2>
       <p class="hint">All off by default. An alert only reaches you through a notification channel that has it ticked (Integrations &gt; Notifications). Each one is sent once when the limit is crossed, and again only after it has dropped back below.</p>
@@ -266,7 +260,7 @@
     </section>
     {/if}
 
-    {#if tab === 'network'}
+    {#if part === 'network'}
     <section class="card">
       <h2>Network</h2>
       {#if listen.in_container}
@@ -326,7 +320,7 @@
     </section>
     {/if}
 
-    {#if tab === 'maintenance'}
+    {#if part === 'maintenance'}
     <section class="card">
       <h2>Backups</h2>
       <p class="hint">
@@ -492,10 +486,6 @@
 {/if}
 
 <style>
-  .subtabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
-  .subtabs button { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none;
-    padding: 8px 14px; color: var(--muted); }
-  .subtabs button.active { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
     padding: 16px 20px; margin-bottom: 16px; }
   h2 { margin: 0 0 12px; font-size: 17px; }

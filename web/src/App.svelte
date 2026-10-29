@@ -18,15 +18,14 @@
   // The address bar (#activity, #graphs, #account, #settings/servers ...) records where you are,
   // so a reload or a bookmark returns to the same page.
   const TABS = ['activity', 'graphs', 'requests', 'account', 'settings']
-  const SECTIONS = ['general', 'servers', 'users', 'api', 'integrations', 'logs']
-  const SUBS = ['general', 'alerts', 'network', 'maintenance'] // the parts of Settings > General
+  const SECTIONS = ['general', 'alerts', 'network', 'maintenance', 'servers', 'users', 'api', 'integrations', 'logs']
 
   function fromHash() {
-    const [tab, section, sub] = location.hash.replace(/^#\/?/, '').split('/')
+    let [tab, section, sub] = location.hash.replace(/^#\/?/, '').split('/')
+    if (section === 'general' && SECTIONS.includes(sub)) section = sub // an older address: #settings/general/network
     return {
       tab: TABS.includes(tab) ? tab : 'activity',
       section: SECTIONS.includes(section) ? section : 'general',
-      sub: SUBS.includes(sub) ? sub : 'general',
     }
   }
 
@@ -36,10 +35,9 @@
   // Settings are for admins. (With the login turned off there are no accounts, so everything shows.)
   const isAdmin = $derived(!!auth && (auth.auth_disabled || auth.user?.role === 'admin'))
 
-  function go(tab, section = 'general', sub = 'general') {
-    where = { tab, section, sub }
-    const more = section === 'general' && sub !== 'general' ? `/${sub}` : ''
-    history.replaceState(null, '', tab === 'settings' ? `#settings/${section}${more}` : `#${tab}`)
+  function go(tab, section = 'general') {
+    where = { tab, section }
+    history.replaceState(null, '', tab === 'settings' ? `#settings/${section}` : `#${tab}`)
   }
 
   let seerrOn = $state(false)
@@ -107,7 +105,7 @@
         <button class:active={where.tab === 'requests'} onclick={() => go('requests')}>Requests</button>
       {/if}
       {#if isAdmin}
-        <button class:active={where.tab === 'settings'} onclick={() => go('settings', where.section, where.sub)}>Settings</button>
+        <button class:active={where.tab === 'settings'} onclick={() => go('settings', where.section)}>Settings</button>
       {/if}
     </nav>
     <div class="me">
@@ -136,7 +134,7 @@
     {:else if where.tab === 'account' && auth.user}
       <Account user={auth.user} />
     {:else if where.tab === 'settings' && isAdmin}
-      <SettingsPage section={where.section} onsection={(s) => go('settings', s)} sub={where.sub} onsub={(t) => go('settings', 'general', t)} me={auth.user} />
+      <SettingsPage section={where.section} onsection={(s) => go('settings', s)} me={auth.user} />
     {/if}
   </main>
 {/if}

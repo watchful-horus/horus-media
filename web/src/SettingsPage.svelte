@@ -6,9 +6,9 @@
   import Servers from './Servers.svelte'
   import Users from './Users.svelte'
 
-  let { section, onsection, sub = 'general', onsub = () => {}, me } = $props()
+  let { section, onsection, me } = $props()
 
-  const SECTIONS = [['general', 'General'], ['servers', 'Servers'], ['users', 'Users'], ['api', 'API'], ['integrations', 'Integrations'], ['logs', 'Logs']]
+  const SECTIONS = [['general', 'General'], ['alerts', 'Alerts and reports'], ['network', 'Network'], ['maintenance', 'Maintenance'], ['servers', 'Servers'], ['users', 'Users'], ['api', 'API'], ['integrations', 'Integrations'], ['logs', 'Logs']]
 </script>
 
 <div class="layout">
@@ -31,7 +31,7 @@
     {:else if section === 'logs'}
       <Logs />
     {:else}
-      <General tab={sub} ontab={onsub} />
+      <General part={section} />
     {/if}
   </div>
 </div>

@@ -11,15 +11,15 @@
 - `HORUS_CONTAINER` (`1`): tells Horus it runs in a container, so Restart and Shut down are disabled (also detected automatically in Docker and Kubernetes).
 
 ## Settings page
-Time zone, poll interval, history retention, automatic backups, the daily update check, the HTTP port and network access are set in **Settings > General** and saved in the database. That page has four tabs: **General** (time zone, polling, retention, privacy), **Alerts and reports**, **Network**, and **Maintenance** (backups, update check, version, restart and shut down). They share one **Save settings** button, so a change on one tab is kept while you look at another. Servers, users, API keys and logs have their own tabs under Settings.
+Time zone, poll interval, history retention, automatic backups, the daily update check, the HTTP port and network access are set in **Settings > General** and saved in the database. These are four entries in the left list of Settings: **General** (time zone, polling, retention, privacy), **Alerts and reports**, **Network**, and **Maintenance** (backups, update check, version, restart and shut down), next to Servers, Users, API, Integrations and Logs. The four share one **Save settings** button, so a change on one is kept while you open another of them. Servers, users, API keys and logs have their own tabs under Settings.
 
 ### Port, network access, restart and shut down
-In **Settings > General > Network** you can change the HTTP port and choose whether other computers may connect. By default Horus listens on this computer only (`127.0.0.1`, port 8000). Changes apply after a restart, and the page has a **Restart now** button for that.
+In **Settings > Network** you can change the HTTP port and choose whether other computers may connect. By default Horus listens on this computer only (`127.0.0.1`, port 8000). Changes apply after a restart, and the page has a **Restart now** button for that.
 
 - It works however you started Horus. A restart always relaunches Horus as `python -m horus_media`, which uses the port saved in Settings, so if you started it with `uvicorn ... --port` the first restart after changing the port switches it over. Starting it with `python -m horus_media` in the first place is simplest.
 - `HORUS_PORT` and `HORUS_HOST` override the settings (the page then shows them as locked).
 - Opening Horus to other computers is only possible once an admin account exists.
-- **Settings > General > Maintenance** also has **Restart** and **Shut down** (admins only). Shut down stops Horus until you start it again yourself.
+- **Settings > Maintenance** also has **Restart** and **Shut down** (admins only). Shut down stops Horus until you start it again yourself.
 - In Docker or Kubernetes the container owns the port, restart and stop, so those controls are switched off: change the port mapping and restart the container instead.
 
 ### Backups
@@ -31,7 +31,7 @@ Backups are zips of the database plus `horus.key`, written to a `backups` folder
 - By hand: stop Horus, unzip over `horus.db` and `horus.key` in the data folder, start it again.
 
 ### Update checks
-Update checks only contact the *Release address* in Settings > General > Maintenance (or `HORUS_UPDATE_URL`), a GitHub-style "latest release" URL. On a new install the address of the Horus project is filled in and Horus looks for a newer release once a day (at 04:00 by default; change the time in Settings). It only reads the latest-release page, sends nothing about you or your servers, and never installs anything. Untick *Check for updates once a day*, or clear the address, to turn it off.
+Update checks only contact the *Release address* in Settings > Maintenance (or `HORUS_UPDATE_URL`), a GitHub-style "latest release" URL. On a new install the address of the Horus project is filled in and Horus looks for a newer release once a day (at 04:00 by default; change the time in Settings). It only reads the latest-release page, sends nothing about you or your servers, and never installs anything. Untick *Check for updates once a day*, or clear the address, to turn it off.
 
 When a newer version exists, Settings shows the update steps for how your copy runs (Docker, a Proxmox container, or a manual install) with a Copy button. On a Proxmox container that can write to its own environment, an **Update now** button appears instead (see [Installing](install.md#updating)). Docker and manual installs are never updated by Horus itself.
 

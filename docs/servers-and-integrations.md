@@ -26,7 +26,7 @@ If the import says the plugin was not found, Emby answered "not found" (usually 
 ## Notifications and alerts
 **Settings > Integrations** can post a message to a Discord channel webhook, an ntfy topic, or any web address (JSON) when someone starts or finishes playing, or a server becomes unreachable or comes back. Channel addresses are secrets: they are stored encrypted and never shown again. Tick the matching event on a channel to receive it.
 
-Three optional alerts (**Settings > General > Alerts and reports**, all off by default) use the same channels: too many transcodes at once, a server's bandwidth over a limit, and someone Horus has never seen starting to play. Each is sent once when the limit is crossed.
+Three optional alerts (**Settings > Alerts and reports**, all off by default) use the same channels: too many transcodes at once, a server's bandwidth over a limit, and someone Horus has never seen starting to play. Each is sent once when the limit is crossed.
 
 ## Summary reports
 The same section can send a weekly or monthly summary report. **Integrations > Report** shows one on screen, downloads it as CSV, or sends it now.
