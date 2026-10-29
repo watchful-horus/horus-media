@@ -190,7 +190,7 @@
   <h2>Add a Plex server</h2>
   {#if link.phase === 'idle'}
     <p class="muted small">
-      The easiest way: sign in with your Plex account and pick a server. Horus only reads from it.
+      The easiest way: sign in with your Plex account and pick a server. Horus reads from it; the only action it can take is stopping a stream when an admin presses Stop.
     </p>
     <button class="primary" disabled={busy} onclick={startLink}>Sign in with Plex</button>
   {:else if link.phase === 'waiting'}

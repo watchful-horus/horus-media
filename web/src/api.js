@@ -63,6 +63,7 @@ export const api = {
   restart: () => request('POST', '/api/restart'),
   shutdown: () => request('POST', '/api/shutdown'),
   activity: () => request('GET', '/api/activity'),
+  stopStream: (body) => request('POST', '/api/activity/stop', body),
   plexLinkStart: () => request('POST', '/api/plex/link'),
   plexLinkStatus: (pin) => request('GET', `/api/plex/link/${pin}`),
   plexLinkAdd: (pin, body) => request('POST', `/api/plex/link/${pin}/add`, body),

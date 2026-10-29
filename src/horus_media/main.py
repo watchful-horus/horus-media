@@ -30,6 +30,7 @@ from .models import (
     ServerRenameIn,
     ServerTestIn,
     ServerType,
+    StopIn,
     TestResult,
 )
 from .plex_auth import PlexLinker, PlexLinkError, client_identifier
@@ -233,6 +234,39 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
             for s in servers:
                 s.sessions = [x for x in s.sessions if x.user.casefold() == only.casefold()]
         return Activity(servers=servers, sessions=[x for s in servers for x in s.sessions])
+
+    @app.post("/api/activity/stop", status_code=204)
+    def stop_stream(body: StopIn, request: Request, store: Store):
+        """End one playing stream. Admins only, from a signed-in session: an API key, even a
+        control key, can never do this. The stream is looked up again on the server, so only a
+        stream that is playing right now can be stopped."""
+        if getattr(request.state, "via_key", None):
+            raise HTTPException(403, "Stopping a stream needs a signed-in admin, not an API key")
+        found = store.get_with_token(body.server_id)
+        if found is None:
+            raise HTTPException(404, "Server not found")
+        row, token = found
+        client = make_client(row["type"], row["name"], row["url"], token, transport=transport)
+        who = request.state.user["username"] if getattr(request.state, "user", None) else "someone"
+        try:
+            target = next((s for s in client.get_sessions() if s.session_key == body.session_key), None)
+            if target is None or not target.native_id:
+                raise HTTPException(404, "That stream has already ended")
+            client.stop_session(target.native_id, body.reason)
+        except httpx.HTTPStatusError as e:
+            code = e.response.status_code
+            log.warning("stopping a stream on %s was refused (HTTP %d)", row["name"], code)
+            if code in (401, 403):
+                raise HTTPException(502, f"{row['name']} refused to stop the stream. Plex needs Plex Pass "
+                                         "and an owner token for this; check the token's permissions.") from e
+            raise HTTPException(502, f"{row['name']} could not stop the stream (HTTP {code})") from e
+        except (httpx.HTTPError, ValueError) as e:
+            log.warning("could not stop a stream on %s: %s", row["name"], type(e).__name__)
+            raise HTTPException(502, f"Could not reach {row['name']}") from e
+        finally:
+            client.close()
+        log.info("stream stopped by %s: %s's %s on %s%s", who, target.user, target.title, row["name"],
+                 " (message sent)" if body.reason else "")
 
     @app.post("/api/plex/link", response_model=PlexLinkStart)
     def plex_link_start(store: Store):

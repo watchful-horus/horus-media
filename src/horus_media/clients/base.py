@@ -19,7 +19,8 @@ class ConnectionResult:
 
 
 class MediaServer(ABC):
-    """Read-only client for a media server. Only GET requests are ever issued."""
+    """Client for a media server. It only reads, apart from stop_session, which ends one stream
+    when an admin asks for it."""
 
     def __init__(self, name: str, url: str, token: str,
                  transport: httpx.BaseTransport | None = None):
@@ -37,6 +38,11 @@ class MediaServer(ABC):
 
     @abstractmethod
     def get_sessions(self) -> list[Session]: ...
+
+    def stop_session(self, native_id: str, reason: str = "") -> None:
+        """End one playing stream, optionally showing the viewer a message. `native_id` is the
+        server's own id (Session.native_id)."""
+        raise NotImplementedError
 
     def get_history(self) -> list[HistoryRecord]:
         """Past plays the server itself remembers. Raises NotImplementedError when it can't."""

@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import UTC, datetime
 
@@ -7,6 +8,7 @@ from ..models import HistoryRecord, PlayMethod, Session
 from .base import ConnectionResult, MediaServer
 from .display import channels, rate, resolution, with_label, words
 
+log = logging.getLogger(__name__)
 POSTER_PATH = re.compile(r"^/library/metadata/\d+/(thumb|art)(/\d+)?$")
 
 HISTORY_PAGE = 200
@@ -36,6 +38,15 @@ class PlexClient(MediaServer):
     def get_sessions(self) -> list[Session]:
         mc = self._get("/status/sessions")["MediaContainer"]
         return [self._normalise(item) for item in mc.get("Metadata", [])]
+
+    def stop_session(self, native_id: str, reason: str = "") -> None:
+        """Plex ends a stream with a GET; it needs Plex Pass on the server and an owner token."""
+        params = {"sessionId": native_id}
+        if reason:
+            params["reason"] = reason
+        resp = self._http.get("/status/sessions/terminate", params=params)
+        log.debug("%s GET /status/sessions/terminate -> %d", self.name, resp.status_code)
+        resp.raise_for_status()
 
     def get_history(self) -> list[HistoryRecord]:
         """Every play in Plex's own history, newest first. Read-only."""
@@ -99,6 +110,7 @@ class PlexClient(MediaServer):
         details = self._details(item, player, transcode or {})
         return Session(
             session_key=str(item.get("sessionKey") or item.get("Session", {}).get("id") or ""),
+            native_id=str(item.get("Session", {}).get("id") or ""),
             server=self.name,
             user=item.get("User", {}).get("title", "Unknown"),
             title=title,

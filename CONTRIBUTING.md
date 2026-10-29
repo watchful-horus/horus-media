@@ -12,8 +12,9 @@ looked after by one person in their spare time, so a few ground rules keep it ma
 ## Ground rules
 These protect the people who run Horus, so they are not negotiable.
 
-1. **Read-only against Plex and Emby.** Horus only reads from the servers. No changes, no deletes,
-   no playback control.
+1. **Read-only against Plex and Emby**, with one exception: an admin can stop a playing stream
+   (`stop_session`, from a signed-in session only, never from an API key). No other changes, no
+   deletes, no other playback control.
 2. **Server tokens are secrets.** They are encrypted at rest, and they must never be logged, shown
    in the UI or an API response, or printed in an error message. If your change touches tokens,
    say so in the pull request.

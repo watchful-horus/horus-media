@@ -1,4 +1,5 @@
 import ipaddress
+import logging
 import re
 from datetime import UTC, datetime
 
@@ -8,7 +9,9 @@ from ..models import HistoryRecord, PlayMethod, Session
 from .base import ConnectionResult, MediaServer
 from .display import channels, rate, resolution, with_label, words
 
+log = logging.getLogger(__name__)
 POSTER_PATH = re.compile(r"^/Items/[0-9A-Za-z]+/Images/Primary$")
+SESSION_ID = re.compile(r"^[0-9A-Za-z_-]+$")
 TICKS_PER_MS = 10_000
 HISTORY_DAYS = 3650
 
@@ -81,6 +84,19 @@ class EmbyClient(MediaServer):
         info = self._get("/System/Info/Public")
         return ConnectionResult(info.get("ServerName") or self.name, info.get("Version"))
 
+    def stop_session(self, native_id: str, reason: str = "") -> None:
+        if not SESSION_ID.fullmatch(native_id):
+            raise ValueError("unexpected session id")
+        if reason:  # best effort: a message that cannot be shown must not stop the stop
+            try:
+                self._http.post(f"/Sessions/{native_id}/Message",
+                                json={"Header": "Playback stopped", "Text": reason, "TimeoutMs": 8000})
+            except httpx.HTTPError:
+                log.debug("%s: could not show the stop message", self.name)
+        resp = self._http.post(f"/Sessions/{native_id}/Playing/Stop")
+        log.debug("%s POST /Sessions/<id>/Playing/Stop -> %d", self.name, resp.status_code)
+        resp.raise_for_status()
+
     def get_sessions(self) -> list[Session]:
         return [self._normalise(s) for s in self._get("/Sessions") if s.get("NowPlayingItem")]
 
@@ -140,6 +156,7 @@ class EmbyClient(MediaServer):
             title = f"{item['SeriesName']} - {title}"
         return Session(
             session_key=f"{s.get('Id', '')}:{item.get('Id', '')}",
+            native_id=str(s.get("Id") or ""),
             server=self.name,
             user=s.get("UserName", "Unknown"),
             title=title,

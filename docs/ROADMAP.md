@@ -5,7 +5,7 @@ Status as of 2026-10-28. The app is feature-complete for the original v1 scope a
 ## Done
 
 **Connections**
-- Plex and Emby clients behind one read-only `MediaServer` interface (`test_connection`, `get_sessions`, posters)
+- Plex and Emby clients behind one `MediaServer` interface (`test_connection`, `get_sessions`, posters; reads only, apart from the admin-only `stop_session`)
 - "Sign in with Plex" (plex.tv PIN flow: pick a server, no token hunting); manual token / API key entry still works
 - Server tokens encrypted at rest (Fernet, key next to the database); never logged, never returned by the API
 
@@ -59,6 +59,7 @@ Status as of 2026-10-28. The app is feature-complete for the original v1 scope a
 - [x] Re-scan tracked files for personal details (homelab addresses, usernames, paths) before the visibility change (done 2026-10-28; repeat right before switching the repo to public)
 
 **Features**
+- [x] Stop stream (2026-10-29): an admin can end a playing stream from the Activity page, with a confirmation and an optional message for the viewer (Plex terminate, needs Plex Pass; Emby Playing/Stop). Signed-in admins only: never an API key or control key. Logged by name. Paused streams show an amber Paused badge. Tested with fake servers and a scratch copy only, not against a real Plex or Emby.
 - [x] Rename a server (everything follows, since history joins on the id); optional alerts (transcodes, bandwidth, new person); weekly/monthly summary report with an on-screen view and CSV (2026-10-28). Watchlist view was dropped
 - [ ] Seerr: create requests / approvals (Horus is read-only for now); more notification kinds
 - [x] Control keys (2026-10-28): API keys that can run Horus as their admin owner for testing and automation. Off by default (Settings > API), always expiring, never able to touch users, keys or sign-in, every use logged. `scripts/horusctl.py` calls the API with such a key without printing it

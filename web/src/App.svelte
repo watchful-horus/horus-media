@@ -117,7 +117,7 @@
   </header>
   <main>
     {#if where.tab === 'activity'}
-      <Activity onsetup={() => go('settings', 'servers')} canSetup={isAdmin} />
+      <Activity onsetup={() => go('settings', 'servers')} canSetup={isAdmin} isAdmin={isAdmin} />
     {:else if where.tab === 'graphs'}
       <Graphs />
     {:else if where.tab === 'requests' && seerrOn}

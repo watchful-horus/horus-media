@@ -31,6 +31,19 @@ class Session(BaseModel):
     location: str | None = None
     position_ms: int | None = None
     duration_ms: int | None = None
+    # The server's own id for this stream, used to stop it. Never sent to the browser.
+    native_id: str = Field("", exclude=True)
+
+
+class StopIn(BaseModel):
+    server_id: int
+    session_key: str = Field(min_length=1, max_length=200)
+    reason: str = Field("", max_length=200)  # optional message shown to the viewer
+
+    @field_validator("reason")
+    @classmethod
+    def _tidy(cls, v: str) -> str:
+        return v.strip()
 
 
 class HistoryRecord(BaseModel):

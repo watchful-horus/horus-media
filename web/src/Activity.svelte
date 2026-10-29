@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { api } from './api.js'
 
-  let { onsetup, canSetup = true } = $props()
+  let { onsetup, canSetup = true, isAdmin = false } = $props()
   let data = $state(null)
   let error = $state(null)
   let refreshing = $state(false)
@@ -78,6 +78,32 @@
     }
   }
 
+  // Stopping a stream (admins only): the Stop button opens a small confirmation with an optional
+  // message for the viewer; the stream is found again on the server, so a stale card is refused.
+  let stopping = $state(null) // `${serverId}:${sessionKey}` of the card being confirmed
+  let stopMessage = $state('')
+  let stopBusy = $state(false)
+  let stopError = $state(null)
+  const stopId = (server, s) => `${server.id}:${s.session_key}`
+  function askToStop(server, s) {
+    stopping = stopId(server, s)
+    stopMessage = ''
+    stopError = null
+  }
+  async function stopNow(server, s) {
+    stopBusy = true
+    stopError = null
+    try {
+      await api.stopStream({ server_id: server.id, session_key: s.session_key, reason: stopMessage })
+      stopping = null
+      await refresh()
+    } catch (e) {
+      stopError = e.message
+    } finally {
+      stopBusy = false
+    }
+  }
+
   onMount(refresh)
 
   $effect(() => {
@@ -135,7 +161,7 @@
                 <div class="poster"></div>
               {/if}
               <div class="body">
-                <h3>{s.title}{#if s.state === 'paused'} <span class="badge">paused</span>{/if}</h3>
+                <h3>{s.title}{#if s.state === 'paused'} <span class="badge paused"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><rect x="2" y="1" width="3" height="10" rx="1" /><rect x="7" y="1" width="3" height="10" rx="1" /></svg>Paused</span>{/if}</h3>
                 <p class="who">{s.user}</p>
 
                 {#if s.position_ms != null && s.duration_ms}
@@ -154,6 +180,25 @@
                     <dd class:warn={label === 'Stream' && s.play_method === 'transcode'}>{value}</dd>
                   {/each}
                 </dl>
+
+                {#if isAdmin && s.session_key}
+                  {#if stopping === stopId(server, s)}
+                    <div class="stop-box">
+                      <p>Stop this stream? {s.user} will lose playback right away.</p>
+                      <input type="text" maxlength="200" placeholder="Optional message for the viewer"
+                        bind:value={stopMessage} aria-label="Message for the viewer" />
+                      <div class="stop-actions">
+                        <button class="danger" disabled={stopBusy} onclick={() => stopNow(server, s)}>
+                          {stopBusy ? 'Stopping...' : 'Stop stream'}
+                        </button>
+                        <button disabled={stopBusy} onclick={() => (stopping = null)}>Cancel</button>
+                      </div>
+                      {#if stopError}<p class="bad small">{stopError}</p>{/if}
+                    </div>
+                  {:else}
+                    <button class="stop" onclick={() => askToStop(server, s)}>Stop stream</button>
+                  {/if}
+                {/if}
               </div>
             </article>
           {/each}
@@ -194,6 +239,16 @@
   .badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border);
     color: var(--muted); white-space: nowrap; font-weight: 400; vertical-align: middle; }
   .badge.bad { color: var(--bad); border-color: var(--bad); }
+  .badge.paused { display: inline-flex; align-items: center; gap: 5px; margin-left: 6px; padding: 3px 10px;
+    font-size: 13px; font-weight: 600; color: var(--warn); border-color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 14%, transparent); }
+  .badge.paused svg { fill: currentColor; }
+  button.stop { margin-top: 14px; }
+  .stop-box { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--bad); border-radius: 8px; }
+  .stop-box p { margin: 0 0 8px; font-size: 13.5px; }
+  .stop-box input { width: 100%; margin-bottom: 8px; }
+  .stop-actions { display: flex; gap: 8px; }
+  button.danger { color: var(--bad); border-color: var(--bad); font-weight: 600; }
   .bad { color: var(--bad); }
   @media (max-width: 560px) {
     .sessions { grid-template-columns: 1fr; }

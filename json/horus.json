@@ -17,7 +17,7 @@
   "website": "https://github.com/watchful-horus/horus-media",
   "repository": "https://github.com/watchful-horus/horus-media",
   "logo": "https://raw.githubusercontent.com/watchful-horus/horus-media/main/docs/logo.svg",
-  "description": "Horus is a self-hosted dashboard for Plex and Emby. It shows live activity from both servers in one list and records playback history for graphs: plays per day, by user, platform and hour, direct play versus transcode, and bandwidth. It only reads from the servers and never controls playback.",
+  "description": "Horus is a self-hosted dashboard for Plex and Emby. It shows live activity from both servers in one list and records playback history for graphs: plays per day, by user, platform and hour, direct play versus transcode, and bandwidth. It reads from the servers and changes nothing, except that an admin can stop a playing stream.",
   "install_methods": [
     {
       "type": "default",
@@ -42,7 +42,7 @@
       "type": "info"
     },
     {
-      "text": "Add your Plex and Emby servers under Servers after signing in. Horus only reads from them.",
+      "text": "Add your Plex and Emby servers under Servers after signing in. Horus reads from them; the only action it can take is stopping a stream when an admin asks.",
       "type": "info"
     }
   ],
