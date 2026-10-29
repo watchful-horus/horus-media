@@ -336,6 +336,13 @@
         <input type="checkbox" bind:checked={form.update_check} disabled={!form.update_url && !info.update_url_from_env} />
         Check for updates once a day
       </label>
+      {#if form.update_check}
+        <label>
+          Check at
+          <input type="time" bind:value={form.update_check_time} required />
+          <span class="hint">Time of day, in the time zone set above (or this machine's own). Horus also checks when it starts for the first time.</span>
+        </label>
+      {/if}
       <div class="actions">
         <button type="button" disabled={busy || dirty} onclick={checkUpdates}>Check for updates</button>
         {#if dirty}<span class="muted small">Save your changes first.</span>{/if}

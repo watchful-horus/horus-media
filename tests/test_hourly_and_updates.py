@@ -160,3 +160,31 @@ def test_daily_check_uses_the_saved_address_and_stops_when_turned_off(db, monkey
     cfg = app_settings.update(conn, {"update_check": True})
     maintenance.run(conn, path, cfg, now, transport)
     assert calls == ["https://example.test/latest"]
+
+
+def test_daily_update_check_waits_for_the_chosen_time(db):
+    path, conn = db
+    calls: list[str] = []
+    transport = httpx.MockTransport(lambda r: calls.append(str(r.url)) or httpx.Response(
+        200, json={"tag_name": "2.0"}))
+    cfg = app_settings.update(conn, {"update_url": "https://example.test/latest",
+                                     "update_check_time": "04:00", "timezone": "UTC"})
+    day = datetime(2026, 3, 10, tzinfo=UTC)
+    maintenance.run(conn, path, cfg, day + timedelta(hours=1), transport)
+    assert len(calls) == 1  # nothing recorded yet: the first look is at once
+    maintenance.run(conn, path, cfg, day + timedelta(hours=3), transport)
+    assert len(calls) == 1  # 04:00 has not come round again
+    maintenance.run(conn, path, cfg, day + timedelta(hours=4, minutes=1), transport)
+    assert len(calls) == 2  # 04:00 passed since the last look
+    maintenance.run(conn, path, cfg, day + timedelta(hours=20), transport)
+    assert len(calls) == 2  # once per day
+    maintenance.run(conn, path, cfg, day + timedelta(days=1, hours=4, minutes=1), transport)
+    assert len(calls) == 3
+
+
+def test_update_check_time_is_validated(db):
+    _, conn = db
+    for bad in ("4pm", "24:00", "04:60", "", "4:00"):
+        with pytest.raises(ValueError):
+            app_settings.update(conn, {"update_check_time": bad})
+    assert app_settings.update(conn, {"update_check_time": " 06:30 "}).update_check_time == "06:30"

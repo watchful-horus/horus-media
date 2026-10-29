@@ -15,7 +15,6 @@ from .crypto import TokenCipher
 log = logging.getLogger(__name__)
 
 PRUNE_EVERY = timedelta(hours=1)
-UPDATE_EVERY = timedelta(days=1)
 
 
 def _due(conn: sqlite3.Connection, key: str, every: timedelta, now: datetime) -> bool:
@@ -24,6 +23,23 @@ def _due(conn: sqlite3.Connection, key: str, every: timedelta, now: datetime) ->
         return True
     try:
         return now - datetime.fromisoformat(last) >= every
+    except ValueError:
+        return True
+
+
+def due_daily(conn: sqlite3.Connection, key: str, hhmm: str, tz, now: datetime) -> bool:
+    """True once the most recent HH:MM (in `tz`, or this machine's zone) has passed with no run since.
+    A first run (nothing recorded yet) is due at once."""
+    last = app_settings.get_state(conn, key)
+    if not last:
+        return True
+    local = now.astimezone(tz)
+    hour, minute = (int(n) for n in hhmm.split(":"))
+    slot = local.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if slot > local:
+        slot -= timedelta(days=1)
+    try:
+        return datetime.fromisoformat(last) < slot
     except ValueError:
         return True
 
@@ -85,7 +101,9 @@ def run(
         send_scheduled_report(conn, db_file, cfg, now, transport)
 
     url = updates.effective_url(cfg.update_url)
-    if cfg.update_check and url and _due(conn, "last_update_check", UPDATE_EVERY, now):
+    if cfg.update_check and url and due_daily(
+        conn, "last_update_check", cfg.update_check_time, cfg.zone(), now
+    ):
         app_settings.set_state(conn, "last_update_check", now.isoformat())  # even on failure
         try:
             result = updates.check(url, transport)

@@ -20,6 +20,7 @@ class Settings(BaseModel):
     poll_seconds: float = Field(default_factory=poll_seconds, ge=0, le=3600)  # 0 = don't record
     retention_days: int = Field(0, ge=0, le=3650)  # 0 = keep everything
     update_check: bool = True  # daily look for a newer release; it never installs anything
+    update_check_time: str = "04:00"  # time of day (in the time zone above) for that daily look
     backup_enabled: bool = False
     backup_interval_hours: int = Field(24, ge=1, le=720)
     backup_keep: int = Field(7, ge=1, le=100)
@@ -41,6 +42,14 @@ class Settings(BaseModel):
     def _known_zone(cls, v: str) -> str:
         if v and v not in available_timezones():
             raise ValueError("unknown time zone")
+        return v
+
+    @field_validator("update_check_time")
+    @classmethod
+    def _clock_time(cls, v: str) -> str:
+        v = v.strip()
+        if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", v):
+            raise ValueError("must be a time like 04:00")
         return v
 
     @field_validator("update_url")
