@@ -28,7 +28,7 @@ These protect the people who run Horus, so they are not negotiable.
 6. **Tests use recorded or fake responses.** Never require a live Plex or Emby server.
 
 ## Setting up
-The README's Development section has the steps. In short:
+[docs/install.md](docs/install.md) (From source) has the full steps. In short:
 
 ```bash
 python -m venv .venv
@@ -43,7 +43,7 @@ ruff check .
 pytest -q
 cd web && npm run build
 ```
-The same checks run on GitHub for every pull request, and they must pass before a change is merged.
+The same checks run on GitHub for every pull request, and the maintainer will not merge a change while they fail.
 
 ## Pull requests
 - Keep each one small and about one thing.

@@ -30,7 +30,8 @@ Things that matter most, because Horus stores credentials for people's media ser
 ## What doesn't
 - Problems in Plex, Emby or other software that Horus talks to.
 - Issues that need an admin account to start with, or physical access to the machine.
-- Missing hardening on a setup the README advises against.
+- Missing hardening on a setup the documentation advises against. For example, until the first account exists anyone who can open the page can create it (Docker listens on the network from the start); the docs say to create the account straight away.
+- A setup with `HORUS_AUTH_DISABLED=1`, which turns the login off on purpose.
 
 ## A note on exposure
 Horus is meant for a home network. If you make it reachable from the internet, put it behind a
