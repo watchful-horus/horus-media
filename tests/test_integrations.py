@@ -228,7 +228,7 @@ def test_report_text_csv_and_scheduled_send(tmp_path):
     assert csv_text.splitlines()[0] == "date,Emby,total"
     assert "2026-03-10,1,1" in csv_text
 
-    cfg = app_settings.update(conn, {"report_schedule": "weekly"})
+    cfg = app_settings.update(conn, {"report_schedule": "weekly", "update_check": False})
     maintenance.run(conn, db, cfg, now=t0, transport=transport)
     assert SENT == []  # switching it on does not send at once
     maintenance.run(conn, db, cfg, now=t0 + timedelta(days=3), transport=transport)

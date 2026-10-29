@@ -189,7 +189,7 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
 
     @router.get("/update-check")
     def update_check(store: Store):
-        """Only runs when you ask for it (or the opt-in daily check is on)."""
+        """Runs when you ask for it, and once a day while the daily check is on."""
         url = updates.effective_url(app_settings.load(store.conn).update_url)
         if not url:
             return {"configured": False}

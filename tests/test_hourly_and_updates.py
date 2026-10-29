@@ -147,16 +147,16 @@ def test_environment_address_wins_over_the_saved_one(db, monkeypatch):
     assert seen == ["https://env.example.test/latest"]
 
 
-def test_daily_check_uses_the_saved_address_and_only_when_opted_in(db, monkeypatch):
+def test_daily_check_uses_the_saved_address_and_stops_when_turned_off(db, monkeypatch):
     path, conn = db
     monkeypatch.delenv("HORUS_UPDATE_URL", raising=False)
     calls: list[str] = []
     transport = httpx.MockTransport(lambda r: calls.append(str(r.url)) or httpx.Response(
         200, json={"tag_name": "2.0"}))
     now = datetime(2026, 3, 10, tzinfo=UTC)
-    cfg = app_settings.update(conn, {"update_url": "https://example.test/latest"})
+    cfg = app_settings.update(conn, {"update_url": "https://example.test/latest", "update_check": False})
     maintenance.run(conn, path, cfg, now, transport)
-    assert calls == []  # an address alone is not consent to a daily check
+    assert calls == []  # switched off: nothing is contacted
     cfg = app_settings.update(conn, {"update_check": True})
     maintenance.run(conn, path, cfg, now, transport)
     assert calls == ["https://example.test/latest"]

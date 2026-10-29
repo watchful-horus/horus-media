@@ -19,7 +19,7 @@ class Settings(BaseModel):
     timezone: str = ""  # "" = the machine's own time zone
     poll_seconds: float = Field(default_factory=poll_seconds, ge=0, le=3600)  # 0 = don't record
     retention_days: int = Field(0, ge=0, le=3650)  # 0 = keep everything
-    update_check: bool = False
+    update_check: bool = True  # daily look for a newer release; it never installs anything
     backup_enabled: bool = False
     backup_interval_hours: int = Field(24, ge=1, le=720)
     backup_keep: int = Field(7, ge=1, le=100)

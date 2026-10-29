@@ -38,7 +38,7 @@ def api(tmp_path, monkeypatch):
 def test_defaults_then_update_persists(api):
     first = api.get("/api/settings").json()
     assert first["settings"]["retention_days"] == 0
-    assert first["settings"]["update_check"] is False  # opt-in
+    assert first["settings"]["update_check"] is True  # on for new installs; it only looks
     assert first["info"]["port"]  # whatever port the browser used
     assert "America/New_York" in first["info"]["timezones"]
 
@@ -198,14 +198,15 @@ def test_update_check_with_source(tmp_path, monkeypatch):
     assert down.get("/api/update-check").status_code == 502
 
 
-def test_daily_check_only_when_opted_in(db, monkeypatch):
+def test_daily_check_runs_once_a_day_and_can_be_turned_off(db, monkeypatch):
     path, conn = db
     monkeypatch.setenv("HORUS_UPDATE_URL", "https://example.test/latest")
     calls = []
     t = httpx.MockTransport(lambda r: calls.append(r) or httpx.Response(200, json={"tag_name": "2.0"}))
     now = datetime(2026, 3, 10, tzinfo=UTC)
-    maintenance.run(conn, path, app_settings.load(conn), now, t)
-    assert calls == []  # off by default
+    off = app_settings.update(conn, {"update_check": False})
+    maintenance.run(conn, path, off, now, t)
+    assert calls == []  # switched off
     cfg = app_settings.update(conn, {"update_check": True})
     maintenance.run(conn, path, cfg, now, t)
     maintenance.run(conn, path, cfg, now + timedelta(hours=2), t)
