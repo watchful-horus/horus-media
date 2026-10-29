@@ -181,8 +181,8 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
     # one (the login gate treats every route not on the user allow-list as admin-only).
     @router.get("/backups/{name}/download")
     def download_backup(name: str):
-        path = backup.backup_dir(db_path()) / name
-        if not backup.NAME_RE.fullmatch(name) or not path.is_file():
+        path = backup.find_backup(db_path(), name)
+        if path is None:
             raise HTTPException(404, "Backup not found")
         log.info("downloaded backup %s", name)
         return FileResponse(path, filename=name, media_type="application/zip")

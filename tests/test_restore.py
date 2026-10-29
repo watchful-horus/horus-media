@@ -189,3 +189,15 @@ def test_restore_function_rejects_traversal_directly(tmp_path):
     with pytest.raises(backup.RestoreError):
         backup.restore(db, "../horus.db")
     assert backup.NAME_RE.fullmatch(datetime(2026, 1, 1, tzinfo=UTC).strftime("horus-%Y%m%d-%H%M%S.zip"))
+
+
+def test_find_backup_only_returns_files_in_the_backups_folder(tmp_path):
+    db = tmp_path / "horus.db"
+    folder = backup.backup_dir(db)
+    folder.mkdir()
+    (folder / "horus-20260101-000000.zip").write_bytes(b"x")
+    (tmp_path / "horus-20260102-000000.zip").write_bytes(b"x")  # next to the database, not in backups
+    assert backup.find_backup(db, "horus-20260101-000000.zip").parent == folder
+    for name in ("horus-20260102-000000.zip", "../horus-20260102-000000.zip", "..\\horus.zip",
+                 "/etc/passwd", "horus-20260101-000000.zip/", "horus-1.zip"):
+        assert backup.find_backup(db, name) is None

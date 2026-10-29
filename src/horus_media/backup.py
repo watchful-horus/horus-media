@@ -79,6 +79,15 @@ def write_safe_export(db_file: Path, dest_dir: Path) -> Path:
     return dest
 
 
+def find_backup(db_file: Path, name: str) -> Path | None:
+    """The saved backup called `name`, or None. It is found by listing the backups folder, never by
+    building a path from the request, so a crafted name cannot point anywhere else."""
+    folder = backup_dir(db_file)
+    if not NAME_RE.fullmatch(name) or not folder.is_dir():
+        return None
+    return next((f for f in folder.iterdir() if f.name == name and f.is_file()), None)
+
+
 def list_backups(db_file: Path) -> list[dict]:
     folder = backup_dir(db_file)
     if not folder.is_dir():
@@ -159,15 +168,15 @@ def restore(db_file: Path, name: str) -> dict:
     The current state is backed up first, so a restore can itself be undone. Call with the
     background poller paused. Only a zip from the backups folder is accepted, by name.
     """
-    source = backup_dir(db_file) / name
-    if not NAME_RE.fullmatch(name) or not source.is_file():
+    source = find_backup(db_file, name)
+    if source is None:
         raise RestoreError("Backup not found")
     return restore_file(db_file, source, name)
 
 
 def delete_backup(db_file: Path, name: str) -> bool:
-    path = backup_dir(db_file) / name
-    if not NAME_RE.fullmatch(name) or not path.is_file():
+    path = find_backup(db_file, name)
+    if path is None:
         return False
     path.unlink()
     log.info("backup deleted: %s", name)

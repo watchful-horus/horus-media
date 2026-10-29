@@ -49,6 +49,8 @@ def _b64(raw: bytes) -> str:
 
 
 def _sha(text: str) -> str:
+    """Fingerprint of a session token or API key. Both are long random strings (secrets.token_urlsafe),
+    so a fast hash is right and lets us look them up; passwords never come here (they use scrypt)."""
     return hashlib.sha256(text.encode()).hexdigest()
 
 
