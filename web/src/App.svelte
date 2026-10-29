@@ -54,6 +54,10 @@
   }
 
   onMount(checkAuth)
+  $effect(() => {
+    addEventListener('horus:me', checkAuth) // your own details were changed on the Users page
+    return () => removeEventListener('horus:me', checkAuth)
+  })
 
   $effect(() => {
     if (auth?.authenticated && !isAdmin && where.tab === 'settings') go('activity')
@@ -95,7 +99,7 @@
     </div>
     {#if auth.user}
       <div class="me2">
-        <button class:active={where.tab === 'account'} onclick={() => go('account')} title="Your account">{auth.user.username}</button>
+        <button class:active={where.tab === 'account'} onclick={() => go('account')} title="Your account">{auth.user.display_name || auth.user.username}</button>
         <button class="signout" onclick={signOut}>Sign out</button>
       </div>
     {/if}
@@ -112,7 +116,7 @@
         <p class="bad">Could not load the graphs. Reload the page to try again.</p>
       {/await}
     {:else if where.tab === 'account' && auth.user}
-      <Account user={auth.user} />
+      <Account user={auth.user} onchanged={checkAuth} />
     {:else if where.tab === 'settings' && isAdmin}
       <SettingsPage section={where.section} onsection={(s) => go('settings', s)} me={auth.user} />
     {/if}

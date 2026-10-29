@@ -248,12 +248,19 @@ def test_unreachable_at_startup_is_not_a_notification(tmp_path):
 
 
 def test_a_stored_seerr_connection_is_forgotten_when_upgrading(tmp_path):
+    from horus_media.migrations import MIGRATIONS
+
     conn = connect(tmp_path / "old.db")
-    last = migrate(conn)
-    # Make it look like an install from before the Seerr view was removed.
-    conn.execute("CREATE TABLE seerr (id INTEGER PRIMARY KEY, url TEXT NOT NULL, api_key TEXT NOT NULL)")
+    # An install from before the Seerr view was removed: only the migrations up to and including
+    # the one that created the table (the one before the DROP), and a stored connection.
+    conn.execute("CREATE TABLE schema_version (version INTEGER NOT NULL)")
+    upto = next(n for n, sql in enumerate(MIGRATIONS, 1) if "DROP TABLE IF EXISTS seerr" in sql) - 1
+    for version, sql in enumerate(MIGRATIONS[:upto], start=1):
+        for statement in sql.split(";"):
+            if statement.strip():
+                conn.execute(statement)
+        conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
     conn.execute("INSERT INTO seerr VALUES (1, 'http://seerr:5055', 'encrypted-key')")
-    conn.execute("DELETE FROM schema_version WHERE version = ?", (last,))
     conn.commit()
     migrate(conn)
     assert conn.execute("SELECT name FROM sqlite_master WHERE name = 'seerr'").fetchone() is None

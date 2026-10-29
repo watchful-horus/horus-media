@@ -45,19 +45,29 @@
       await load()
     }, 'User added.')
 
-  const setRole = (u, role) =>
-    guard(async () => {
-      await api.updateUser(u.id, { role })
-      await load()
-    }, `${u.username} is now ${role === 'admin' ? 'an admin' : 'a normal user'}.`)
+  // Clicking a name opens that person's panel; `draft` is what is being edited there.
+  let openId = $state(null)
+  let draft = $state({})
+  const openPanel = (u) => {
+    if (openId === u.id) { openId = null; return }
+    openId = u.id
+    resetFor = null
+    draft = { username: u.username, display_name: u.display_name ?? '', media_username: u.media_username ?? '', role: u.role }
+  }
+  const changed = (u) =>
+    draft.username?.trim() !== u.username || draft.display_name !== (u.display_name ?? '') ||
+    draft.media_username !== (u.media_username ?? '') || draft.role !== u.role
 
-  let linkDraft = $state({}) // user id -> text being typed
-  const saveLink = (u) =>
+  const saveDetails = (u) =>
     guard(async () => {
-      await api.updateUser(u.id, { media_username: linkDraft[u.id] ?? u.media_username ?? '' })
-      delete linkDraft[u.id]
+      const changes = { username: draft.username, display_name: draft.display_name, media_username: draft.media_username }
+      if (u.id !== me.id && draft.role !== u.role) changes.role = draft.role
+      await api.updateUser(u.id, changes)
       await load()
-    }, `Saved the Plex/Emby name for ${u.username}.`)
+      if (u.id === me.id) window.dispatchEvent(new Event('horus:me')) // the top bar shows your name
+      const fresh = users.find((x) => x.id === u.id)
+      if (fresh) draft = { username: fresh.username, display_name: fresh.display_name ?? '', media_username: fresh.media_username ?? '', role: fresh.role }
+    }, `Saved the details for ${draft.display_name || draft.username}.`)
 
   const reset = (u) =>
     guard(async () => {
@@ -75,7 +85,8 @@
   }
 
   const when = (iso) => (iso ? new Date(iso).toLocaleString() : 'never')
-  const initial = (u) => (u.username || '?').trim().charAt(0).toUpperCase()
+  const shown = (u) => u.display_name || u.username
+  const initial = (u) => (shown(u) || '?').trim().charAt(0).toUpperCase()
 </script>
 
 <section class="card">
@@ -88,43 +99,61 @@
 
   <ul class="people">
     {#each users as u (u.id)}
-      <li class="person">
+      <li class="person" class:open={openId === u.id}>
         <span class="avatar" class:admin={u.role === 'admin'} aria-hidden="true">{initial(u)}</span>
         <div class="main">
           <div class="name">
-            <strong>{u.username}</strong>
+            <button type="button" class="namebtn" aria-expanded={openId === u.id} onclick={() => openPanel(u)}>{shown(u)}</button>
+            {#if u.display_name}<span class="muted small">{u.username}</span>{/if}
             {#if u.id === me.id}<span class="badge">you</span>{/if}
             <span class="badge" class:admin={u.role === 'admin'}>{u.role === 'admin' ? 'Admin' : 'User'}</span>
           </div>
-          <div class="muted small">{u.last_login_at ? `Last signed in ${when(u.last_login_at)}` : 'Has not signed in yet'}</div>
-          {#if u.role !== 'admin'}
-            <form class="link" onsubmit={(e) => { e.preventDefault(); saveLink(u) }}>
-              <input value={linkDraft[u.id] ?? u.media_username ?? ''} oninput={(e) => (linkDraft[u.id] = e.currentTarget.value)}
-                placeholder="Plex/Emby name (needed for private activity)" aria-label="Plex or Emby name for {u.username}" maxlength="100" />
-              {#if (linkDraft[u.id] ?? u.media_username ?? '') !== (u.media_username ?? '')}
-                <button disabled={busy}>Save name</button>
+          <div class="muted small">{u.last_login_at ? `Last signed in ${when(u.last_login_at)}` : 'Has not signed in yet'}{u.media_username ? ` · Plex/Emby: ${u.media_username}` : ''}</div>
+        </div>
+        <button type="button" class="manage" aria-expanded={openId === u.id} onclick={() => openPanel(u)}>{openId === u.id ? 'Close' : 'Edit'}</button>
+
+        {#if openId === u.id}
+          <div class="panel">
+            <form class="details" onsubmit={(e) => { e.preventDefault(); saveDetails(u) }}>
+              <label>Username
+                <input bind:value={draft.username} required minlength="3" maxlength="64" autocomplete="off" />
+              </label>
+              <label>Display name (optional)
+                <input bind:value={draft.display_name} maxlength="60" autocomplete="off" placeholder="Shown instead of the username" />
+              </label>
+              <label>Plex/Emby name
+                <input bind:value={draft.media_username} maxlength="100" autocomplete="off" placeholder="Needed when users only see their own activity" />
+              </label>
+              {#if u.id !== me.id}
+                <label>Role
+                  <select bind:value={draft.role}>
+                    <option value="user">User: Activity and Graphs only</option>
+                    <option value="admin">Admin: everything</option>
+                  </select>
+                </label>
               {/if}
+              <div class="actions left">
+                <button class="primary" disabled={busy || !changed(u)}>Save details</button>
+              </div>
             </form>
-          {/if}
-        </div>
-        <div class="actions">
-          {#if u.id !== me.id}
-            <select value={u.role} disabled={busy} onchange={(e) => setRole(u, e.currentTarget.value)} aria-label="Role for {u.username}">
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </select>
-            <button disabled={busy} onclick={() => { resetFor = u.id; resetPassword = '' }}>Reset password</button>
-            <button class="danger" disabled={busy} onclick={() => remove(u)}>Delete</button>
-          {:else}
-            <span class="muted small">Change your own password under Account.</span>
-          {/if}
-        </div>
-        {#if resetFor === u.id}
-          <form class="reset" onsubmit={(e) => { e.preventDefault(); reset(u) }}>
-            <input type="password" bind:value={resetPassword} placeholder="New password (8+ characters)" autocomplete="new-password" required aria-label="New password for {u.username}" />
-            <button class="primary" disabled={busy}>Set password</button>
-            <button type="button" onclick={() => { resetFor = null; resetPassword = '' }}>Cancel</button>
-          </form>
+
+            <div class="more">
+              {#if u.id === me.id}
+                <p class="muted small">Your password and API keys are on your <a href="#account">Account page</a>.</p>
+              {:else}
+                {#if resetFor === u.id}
+                  <form class="reset" onsubmit={(e) => { e.preventDefault(); reset(u) }}>
+                    <input type="password" bind:value={resetPassword} placeholder="New password (8+ characters)" autocomplete="new-password" required aria-label="New password for {u.username}" />
+                    <button class="primary" disabled={busy}>Set password</button>
+                    <button type="button" onclick={() => { resetFor = null; resetPassword = '' }}>Cancel</button>
+                  </form>
+                {:else}
+                  <button disabled={busy} onclick={() => { resetFor = u.id; resetPassword = '' }}>Reset password</button>
+                {/if}
+                <button class="danger" disabled={busy} onclick={() => remove(u)}>Delete person</button>
+              {/if}
+            </div>
+          </div>
         {/if}
       </li>
     {/each}
@@ -183,15 +212,22 @@
   .avatar.admin { color: var(--accent); border-color: var(--accent); }
   .main { min-width: 0; }
   .name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; overflow-wrap: anywhere; }
+  .namebtn { background: none; border: none; padding: 0; font: inherit; font-weight: 700; color: var(--text); cursor: pointer;
+    text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; }
+  .namebtn:hover, .namebtn:focus-visible { text-decoration-color: var(--accent); color: var(--accent); }
   .badge { font-size: 11.5px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--border);
     color: var(--muted); }
   .badge.admin { color: var(--accent); border-color: var(--accent); }
-  .actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
-  .actions select { width: auto; }
+  .manage { justify-self: end; }
+  .panel { grid-column: 2 / -1; margin-top: 8px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg); display: grid; gap: 14px; }
+  .details { display: grid; gap: 12px; max-width: 460px; }
+  .details select { width: 100%; }
+  .more { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--border); }
+  .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .actions.left { justify-content: flex-start; }
   button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad); }
-  .link { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .link input { width: 100%; max-width: 340px; }
-  .reset { grid-column: 2 / -1; display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .reset { display: flex; gap: 8px; flex-wrap: wrap; }
   .reset input { width: 260px; max-width: 100%; }
   .add { display: grid; gap: 12px; max-width: 460px; }
   label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
@@ -201,7 +237,7 @@
   .bad { color: var(--bad); }
   @media (max-width: 720px) {
     .person { grid-template-columns: 40px minmax(0, 1fr); }
-    .actions { grid-column: 1 / -1; justify-content: flex-start; }
-    .reset { grid-column: 1 / -1; }
+    .manage { grid-column: 2; justify-self: start; }
+    .panel { grid-column: 1 / -1; }
   }
 </style>

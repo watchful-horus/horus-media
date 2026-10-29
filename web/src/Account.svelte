@@ -2,7 +2,33 @@
   import { api } from './api.js'
   import MyKeys from './MyKeys.svelte'
 
-  let { user } = $props()
+  let { user, onchanged = () => {} } = $props()
+
+  // Your details: sign-in name, a friendly display name and (admins only) your Plex/Emby name.
+  let details = $state({ username: user.username, display_name: user.display_name ?? '', media_username: user.media_username ?? '' })
+  let detailsMsg = $state(null)
+  let detailsOk = $state(true)
+  const detailsChanged = $derived(
+    details.username.trim() !== user.username || details.display_name !== (user.display_name ?? '') ||
+      (user.role === 'admin' && details.media_username !== (user.media_username ?? '')))
+
+  async function saveDetails() {
+    detailsMsg = null
+    busy = true
+    try {
+      const changes = { username: details.username, display_name: details.display_name }
+      if (user.role === 'admin') changes.media_username = details.media_username
+      await api.updateMe(changes)
+      await onchanged()
+      detailsMsg = 'Saved.'
+      detailsOk = true
+    } catch (e) {
+      detailsMsg = e.message
+      detailsOk = false
+    } finally {
+      busy = false
+    }
+  }
 
   let pw = $state({ current: '', next: '', again: '' })
   let message = $state(null)
@@ -29,11 +55,28 @@
 </script>
 
 <section class="card">
-  <h2>Your account</h2>
-  <dl>
-    <dt>Username</dt><dd>{user.username}</dd>
-    <dt>Role</dt><dd>{user.role === 'admin' ? 'Admin' : 'User'}</dd>
-  </dl>
+  <h2>Your details</h2>
+  <form onsubmit={(e) => { e.preventDefault(); saveDetails() }}>
+    <label>Username
+      <input bind:value={details.username} required minlength="3" maxlength="64" autocomplete="username" />
+      <span class="hint">What you sign in with. An email address works. Your other browsers stay signed in.</span>
+    </label>
+    <label>Display name (optional)
+      <input bind:value={details.display_name} maxlength="60" autocomplete="name" placeholder="Shown in the top bar instead of your username" />
+    </label>
+    {#if user.role === 'admin'}
+      <label>Your Plex/Emby name (optional)
+        <input bind:value={details.media_username} maxlength="100" placeholder="So your own plays can be matched to you" />
+      </label>
+    {:else}
+      <dl><dt>Plex/Emby name</dt><dd>{user.media_username || 'Not set (an admin sets it)'}</dd></dl>
+    {/if}
+    <dl><dt>Role</dt><dd>{user.role === 'admin' ? 'Admin' : 'User'}</dd></dl>
+    <div class="actions">
+      <button class="primary" disabled={busy || !detailsChanged}>Save details</button>
+      {#if detailsMsg}<span class={detailsOk ? 'okmsg' : 'bad'}>{detailsMsg}</span>{/if}
+    </div>
+  </form>
 </section>
 
 <section class="card">
@@ -63,6 +106,7 @@
   form { display: grid; gap: 12px; }
   label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
   .actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .hint { font-size: 12px; }
   .okmsg { color: var(--ok); }
   .bad { color: var(--bad); }
 </style>

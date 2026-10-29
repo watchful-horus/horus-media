@@ -40,6 +40,7 @@ export const api = {
   updateUser: (id, changes) => request('PATCH', `/api/users/${id}`, changes),
   deleteUser: (id) => request('DELETE', `/api/users/${id}`),
   logout: () => request('POST', '/api/auth/logout'),
+  updateMe: (changes) => request('PATCH', '/api/auth/me', changes),
   changePassword: (current, next) => request('POST', '/api/auth/password', { current, new: next }),
   myKeys: () => request('GET', '/api/my-keys'),
   createMyKey: (name) => request('POST', '/api/my-keys', { name }),

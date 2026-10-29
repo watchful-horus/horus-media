@@ -122,4 +122,8 @@ MIGRATIONS: list[str] = [
     """
     DROP TABLE IF EXISTS seerr;
     """,
+    # A friendly name people can choose for themselves (shown instead of the sign-in name).
+    """
+    ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT '';
+    """,
 ]

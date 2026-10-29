@@ -95,7 +95,7 @@ def check_new_password(password: str) -> None:
 def _public(row: sqlite3.Row) -> dict:
     return {"id": row["id"], "username": row["username"], "role": row["role"],
             "created_at": row["created_at"], "last_login_at": row["last_login_at"],
-            "media_username": row["media_username"]}
+            "media_username": row["media_username"], "display_name": row["display_name"]}
 
 
 def admin_exists(conn: sqlite3.Connection) -> bool:
@@ -137,7 +137,7 @@ def admin_from_environment(conn: sqlite3.Connection) -> str | None:
 
 def list_users(conn: sqlite3.Connection) -> list[dict]:
     rows = conn.execute(
-        "SELECT id, username, role, created_at, last_login_at, media_username FROM users "
+        "SELECT id, username, role, created_at, last_login_at, media_username, display_name FROM users "
         "ORDER BY username"
     ).fetchall()
     return [_public(r) for r in rows]
@@ -145,17 +145,22 @@ def list_users(conn: sqlite3.Connection) -> list[dict]:
 
 def get_user(conn: sqlite3.Connection, user_id: int) -> dict | None:
     row = conn.execute(
-        "SELECT id, username, role, created_at, last_login_at, media_username FROM users "
+        "SELECT id, username, role, created_at, last_login_at, media_username, display_name FROM users "
         "WHERE id = ?", (user_id,)
     ).fetchone()
     return _public(row) if row else None
 
 
-def create_user(conn: sqlite3.Connection, username: str, password: str, role: str) -> dict:
+def _valid_username(username: str) -> str:
     username = username.strip()
     if not USERNAME_RE.fullmatch(username):
         raise UserError("Usernames are 3 to 64 letters, numbers, dots, dashes, underscores, @ or +. "
                         "An email address works")
+    return username
+
+
+def create_user(conn: sqlite3.Connection, username: str, password: str, role: str) -> dict:
+    username = _valid_username(username)
     if role not in ROLES:
         raise UserError("Role must be admin or user")
     check_new_password(password)
@@ -174,7 +179,7 @@ def authenticate(conn: sqlite3.Connection, username: str, password: str) -> dict
     """The user if the credentials are right. Takes the same time whether or not the username
     exists, so the response does not reveal which usernames are real."""
     row = conn.execute(
-        "SELECT id, username, role, created_at, last_login_at, media_username, password_hash "
+        "SELECT id, username, role, created_at, last_login_at, media_username, display_name, password_hash "
         "FROM users "
         "WHERE username = ?", (username.strip(),)
     ).fetchone()
@@ -201,6 +206,25 @@ def set_user_password(conn: sqlite3.Connection, user_id: int, password: str) -> 
     with conn:
         conn.execute("UPDATE users SET password_hash = ? WHERE id = ?",
                      (hash_password(password), user_id))
+
+
+def set_username(conn: sqlite3.Connection, user_id: int, username: str) -> None:
+    """Rename a sign-in. Sessions and API keys follow the person (they point at the id)."""
+    username = _valid_username(username)
+    try:
+        with conn:
+            conn.execute("UPDATE users SET username = ? WHERE id = ?", (username, user_id))
+    except sqlite3.IntegrityError:
+        raise UserError("That username is already taken") from None
+
+
+def set_display_name(conn: sqlite3.Connection, user_id: int, name: str) -> None:
+    """A friendly name shown instead of the sign-in name. Blank goes back to the sign-in name."""
+    name = " ".join(name.split())
+    if len(name) > 60:
+        raise UserError("That name is too long (60 characters at most)")
+    with conn:
+        conn.execute("UPDATE users SET display_name = ? WHERE id = ?", (name, user_id))
 
 
 def set_media_username(conn: sqlite3.Connection, user_id: int, name: str) -> None:
@@ -257,7 +281,7 @@ def session_user(conn: sqlite3.Connection, token: str | None) -> dict | None:
     if not token:
         return None
     row = conn.execute(
-        "SELECT u.id, u.username, u.role, u.created_at, u.last_login_at, u.media_username, "
+        "SELECT u.id, u.username, u.role, u.created_at, u.last_login_at, u.media_username, u.display_name, "
         "s.expires_at "
         "FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?", (_sha(token),)
     ).fetchone()
@@ -409,6 +433,8 @@ def role_allows(role: str, method: str, path: str) -> bool:
     if path == "/api/my-keys" and method in ("GET", "POST"):
         return True
     if method == "DELETE" and _MY_KEY.fullmatch(path):
+        return True
+    if method == "PATCH" and path == "/api/auth/me":
         return True
     return method == "POST" and path == "/api/auth/password"
 

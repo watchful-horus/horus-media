@@ -20,12 +20,16 @@ There are two roles. Admins add people in **Settings > Users** and choose each p
 | | Admin | User |
 |---|---|---|
 | Activity and Graphs | yes | yes |
-| Change own password and create own API keys (Account) | yes | yes |
+| Change own password, username and display name, and create own API keys (Account) | yes | yes |
+| Set own Plex/Emby name | yes | no (an admin sets it) |
+| Edit anyone's details (click their name under Settings > Users) | yes | no |
 | Servers, settings, backups, logs, restart | yes | no |
 | Add or remove people, see and revoke everyone's API keys, control keys | yes | no |
 | Stop a stream | yes (signed in) | no |
 
 Usernames are 3 to 64 letters, numbers, dots, dashes, underscores, `@` or `+`, so an email address works, and they are not case-sensitive. Usernames show up in the log (for example "login: name from address"), so treat a shared log as personal data. There is always at least one admin: the last one cannot be deleted or demoted, and you cannot delete or demote yourself. Anything added to Horus later is admin-only until it is deliberately opened to users.
+
+**Your details.** Click your name in the top bar to open your **Account** page: change your username (your other browsers stay signed in), set an optional display name that the top bar and the Users list show instead of the username, and change your password. Admins can also set their own Plex/Emby name there. Admins can open anyone's details by clicking their name under **Settings > Users**: username, display name, Plex/Emby name, role, password reset and delete. A normal user can't set a Plex/Emby name, because with privacy on it decides whose plays they can see. Control keys can't change any of this.
 
 ## What is protected
 - Passwords are stored as scrypt hashes; session tokens and API keys only as SHA-256 hashes. Repeated wrong passwords are slowed down, and sign-in errors do not say whether the username or the password was wrong.

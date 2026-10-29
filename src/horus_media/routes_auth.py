@@ -44,6 +44,14 @@ class UserChange(BaseModel):
     role: Role | None = None
     password: str | None = None
     media_username: str | None = None
+    username: str | None = None
+    display_name: str | None = None
+
+
+class MyDetails(BaseModel):
+    username: str | None = None
+    display_name: str | None = None
+    media_username: str | None = None  # admins only: it decides what a limited person may see
 
 
 class KeyName(BaseModel):
@@ -161,6 +169,25 @@ def make_router(get_store: Callable) -> APIRouter:
         log.info("password changed: %s; their other sessions were signed out", user["username"])
         return {"ok": True}
 
+    @router.patch("/auth/me")
+    def change_my_details(body: MyDetails, request: Request, store: Store):
+        """Your own username and display name. A normal user may not set their Plex/Emby name:
+        with "see only their own activity" on, it decides whose plays they can see."""
+        user = me(request)
+        if body.media_username is not None and user["role"] != "admin":
+            raise HTTPException(403, "Only an admin can set the Plex/Emby name")
+        try:
+            if body.username is not None and body.username.strip() != user["username"]:
+                auth.set_username(store.conn, user["id"], body.username)
+                log.info("username changed: %s is now %s", user["username"], body.username.strip())
+            if body.display_name is not None:
+                auth.set_display_name(store.conn, user["id"], body.display_name)
+            if body.media_username is not None:
+                auth.set_media_username(store.conn, user["id"], body.media_username)
+        except auth.UserError as e:
+            raise refuse(e, 409 if "taken" in str(e) else 422) from e
+        return auth.get_user(store.conn, user["id"])
+
     # --- user accounts (admins only) ---
 
     @router.get("/users")
@@ -194,6 +221,12 @@ def make_router(get_store: Callable) -> APIRouter:
                 auth.set_role(store.conn, user_id, body.role)
                 log.info("role changed: %s is now %s (by %s)", target["username"], body.role,
                          actor["username"])
+            if body.username is not None and body.username.strip() != target["username"]:
+                auth.set_username(store.conn, user_id, body.username)
+                log.info("username changed: %s is now %s (by %s)", target["username"],
+                         body.username.strip(), actor["username"])
+            if body.display_name is not None:
+                auth.set_display_name(store.conn, user_id, body.display_name)
             if body.media_username is not None:
                 auth.set_media_username(store.conn, user_id, body.media_username)
                 log.info("media name linked: %s (by %s)", target["username"], actor["username"])
@@ -205,7 +238,7 @@ def make_router(get_store: Callable) -> APIRouter:
                     request.cookies.get(auth.SESSION_COOKIE) if user_id == actor["id"] else None)
                 log.info("password reset: %s (by %s)", target["username"], actor["username"])
         except auth.UserError as e:
-            raise refuse(e, 409 if "admin" in str(e) else 422) from e
+            raise refuse(e, 409 if ("admin" in str(e) or "taken" in str(e)) else 422) from e
         return auth.get_user(store.conn, user_id)
 
     @router.delete("/users/{user_id}", status_code=204)
