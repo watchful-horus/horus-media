@@ -329,7 +329,7 @@
         <label>
           Release address
           <input type="url" bind:value={form.update_url} placeholder="https://api.github.com/repos/owner/repo/releases/latest" />
-          <span class="hint">A web address that returns the latest release, such as a GitHub "latest release" link. Horus contacts only this address, sends nothing about you or your servers, and never installs anything. Leave it empty until Horus is published.</span>
+          <span class="hint">A web address that returns the latest release, such as a GitHub "latest release" link. Horus contacts only this address, sends nothing about you or your servers, and never installs anything. The address of the Horus project is filled in for you; clear it to turn update checks off.</span>
         </label>
       {/if}
       <label class="check">

@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from horus_media import app_settings, maintenance
+from horus_media.config import DEFAULT_UPDATE_URL
 from horus_media.crypto import TokenCipher
 from horus_media.db import connect, migrate
 from horus_media.main import create_app
@@ -108,7 +109,8 @@ def release_app(seen):
 def test_update_address_is_validated_and_saved(db, monkeypatch):
     monkeypatch.delenv("HORUS_UPDATE_URL", raising=False)
     client = TestClient(create_app())
-    assert client.get("/api/settings").json()["settings"]["update_url"] == ""
+    assert client.get("/api/settings").json()["settings"]["update_url"] == DEFAULT_UPDATE_URL
+    client.put("/api/settings", json={"update_url": ""})
     assert client.get("/api/update-check").json() == {"configured": False}
     for bad in ("ftp://example.test/x", "javascript:alert(1)", "example.test/latest",
                 "http://has space.test", "https://" + "a" * 600):
@@ -125,6 +127,7 @@ def test_check_for_updates_uses_the_saved_address(db, monkeypatch):
     monkeypatch.delenv("HORUS_UPDATE_URL", raising=False)
     seen: list[str] = []
     client = release_app(seen)
+    client.put("/api/settings", json={"update_url": ""})
     assert client.get("/api/update-check").json() == {"configured": False}
     assert seen == []  # nothing is contacted until an address is set
     client.put("/api/settings", json={"update_url": "https://example.test/latest"})

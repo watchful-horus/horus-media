@@ -176,6 +176,7 @@ def test_version_comparison():
 
 
 def test_update_check_unconfigured_contacts_nothing(api):
+    api.put("/api/settings", json={"update_url": ""})
     assert api.get("/api/update-check").json() == {"configured": False}
 
 

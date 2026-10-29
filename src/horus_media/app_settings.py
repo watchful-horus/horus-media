@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo, available_timezones
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
-from .config import poll_seconds
+from .config import DEFAULT_UPDATE_URL, poll_seconds
 
 
 class Settings(BaseModel):
@@ -25,7 +25,7 @@ class Settings(BaseModel):
     backup_keep: int = Field(7, ge=1, le=100)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     http_port: int = Field(8000, ge=1024, le=65535)  # applied at the next start
-    update_url: str = Field("", max_length=500)  # where "check for updates" looks; empty = none
+    update_url: str = Field(DEFAULT_UPDATE_URL, max_length=500)  # where "check for updates" looks; empty = none
     hide_others_activity: bool = False  # normal users see only their own plays
     listen_all: bool = False  # accept connections from other computers (needs an admin login)
     control_keys_enabled: bool = False  # API keys that can control Horus (off unless an admin allows it)
