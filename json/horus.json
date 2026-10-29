@@ -9,6 +9,10 @@
   "updateable": true,
   "privileged": false,
   "interface_port": 8000,
+  "architectures": [
+    "amd64",
+    "arm64"
+  ],
   "documentation": "https://github.com/watchful-horus/horus-media#readme",
   "website": "https://github.com/watchful-horus/horus-media",
   "repository": "https://github.com/watchful-horus/horus-media",

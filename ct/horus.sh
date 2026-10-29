@@ -15,7 +15,7 @@ var_disk="${var_disk:-4}"
 var_os="${var_os:-debian}"
 var_version="${var_version:-13}"
 var_unprivileged="${var_unprivileged:-1}"
-#var_arm64="${var_arm64:-yes}" # unset = ask the user; Horus is pure Python but has not been run on arm64 yet
+var_arm64="${var_arm64:-yes}" # tests pass on aarch64 Python 3.12 under QEMU emulation; not yet run on real arm64 hardware
 
 export var_admin_user="${var_admin_user:-}"
 export var_admin_pass="${var_admin_pass:-}"
