@@ -13,7 +13,7 @@ A self-hosted dashboard for Plex and Emby. See what is playing on both servers r
 - Accounts with admin and user roles (an email address works as a username), API keys, and a read-only data API for Grafana
 - Optional control keys for testing and automation: off by default, always expiring, and never able to manage users or keys
 - Backups and restore, application logs, and restart / shut down from the web UI
-- Reads from your servers and changes nothing, with one exception: an admin can press **Stop stream** on the Activity page to end a stream (a signed-in admin only, never an API key or control key; Plex needs Plex Pass for this). Paused streams show an amber **Paused** badge
+- Reads from your servers and changes nothing, with one exception: an admin can press **Stop stream** on the Activity page to end a stream (a signed-in admin only, never an API key or control key; Plex needs Plex Pass for this). Paused streams show an amber **Paused** badge, and a summary at the top adds up the streams and bandwidth per server and in total
 - Light and dark themes
 
 The Docker image (`ghcr.io/watchful-horus/horus-media`) and the release downloads are public and tested.

@@ -64,6 +64,29 @@
     ].filter(([, v]) => v)
   }
 
+  // One line per server and one for everything: how many streams are playing, how they are
+  // being served, and the bandwidth they add up to. Unreachable servers are left out.
+  const streamsText = (n) => `${n} stream${n === 1 ? '' : 's'}`
+  function tally(name, sessions) {
+    const by = { direct_play: 0, direct_stream: 0, transcode: 0 }
+    let kbps = 0
+    let known = false
+    for (const s of sessions) {
+      by[s.play_method] = (by[s.play_method] ?? 0) + 1
+      if (s.bandwidth_kbps != null) { kbps += s.bandwidth_kbps; known = true }
+    }
+    const kinds = Object.entries(by).filter(([, n]) => n).map(([k, n]) => `${n} ${METHOD[k]}`)
+    return { name, count: sessions.length, kinds: kinds.join(', '), kbps: known ? kbps : sessions.length ? null : 0 }
+  }
+  const totals = $derived.by(() => {
+    if (!data) return null
+    const live = data.servers.filter((s) => s.ok)
+    if (live.length === 0) return null
+    const rows = live.map((s) => tally(s.name, s.sessions))
+    const all = tally('Total', live.flatMap((s) => s.sessions))
+    return { rows, all, showTotal: live.length > 1 }
+  })
+
   async function refresh() {
     if (refreshing) return
     refreshing = true
@@ -138,6 +161,25 @@
     {/if}
   </div>
 {:else}
+  {#if totals}
+    <div class="totals" aria-label="Streams now">
+      {#each totals.rows as r}
+        <div class="tot">
+          <span class="tname">{r.name}</span>
+          <strong>{streamsText(r.count)}</strong>
+          <span class="tbw">{r.count ? bandwidth(r.kbps) : '—'}</span>
+        </div>
+      {/each}
+      {#if totals.showTotal}
+        <div class="tot total">
+          <span class="tname">Total</span>
+          <strong>{streamsText(totals.all.count)}</strong>
+          <span class="tbw">{totals.all.count ? bandwidth(totals.all.kbps) : '—'}</span>
+          {#if totals.all.kinds}<span class="tkinds">{totals.all.kinds}</span>{/if}
+        </div>
+      {/if}
+    </div>
+  {/if}
   {#each data.servers as server (server.id)}
     <section class="server">
       <h2>
@@ -215,6 +257,15 @@
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
     padding: 16px 20px; margin-bottom: 16px; }
   .empty { text-align: center; }
+  .totals { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+  .tot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 10px 14px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; min-width: 150px; }
+  .tot .tname { flex-basis: 100%; font-size: 12px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--muted); }
+  .tot strong { font-size: 18px; }
+  .tot .tbw { font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tot .tkinds { flex-basis: 100%; font-size: 12.5px; color: var(--muted); }
+  .tot.total { border-color: var(--accent); }
   .server { margin-bottom: 28px; }
   h2 { margin: 0 0 12px; font-size: 17px; display: flex; align-items: center; gap: 8px; }
   .type { font-size: 12px; text-transform: uppercase; color: var(--muted); font-weight: 400; }
