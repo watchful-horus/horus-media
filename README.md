@@ -16,7 +16,7 @@ A self-hosted dashboard for Plex and Emby. See what is playing on both servers r
 - Read-only: Horus never changes anything on your servers
 - Light and dark themes
 
-The Docker image and the release downloads are built and tested; they will be published when the project is made public.
+The Docker image (`ghcr.io/watchful-horus/horus-media`) and the release downloads are public and tested.
 
 ## Screenshots
 Graphs in the dark theme, and in the light theme. The data shown is invented.

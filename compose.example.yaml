@@ -3,8 +3,7 @@
 # on the network from the start, so until it exists anyone who can reach the page could create it.
 services:
   horus:
-    build: .
-    # image: ghcr.io/watchful-horus/horus-media:0.1.2   # once the package is public (then drop `build: .`)
+    image: ghcr.io/watchful-horus/horus-media:0.1.2   # to build from this folder instead, use `build: .` here
     container_name: horus
     restart: unless-stopped
     ports:
