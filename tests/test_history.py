@@ -107,6 +107,10 @@ def test_stats_aggregation(env):
         "transcode": 1, "direct_stream": 1}
     assert sum(data["by_hour"]) == 2 and sum(data["by_weekday"]["data"]) == 2
     assert data["bandwidth"][0]["points"]
+    stacked = data["by_weekday"]["by_type"]  # the same plays, split by media type
+    assert sum(sum(t["data"]) for t in stacked) == 2
+    assert [sum(col) for col in zip(*(t["data"] for t in stacked), strict=True)] == data["by_weekday"]["data"]
+    assert data["bandwidth_since"]  # when the first bandwidth sample was recorded
     assert data["earliest"] == local_day.isoformat()
     by_method = {m["name"]: m["data"] for m in data["methods_per_day"]}
     assert sum(by_method["transcode"]) == 1 and sum(by_method["direct_stream"]) == 1

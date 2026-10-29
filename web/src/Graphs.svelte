@@ -102,9 +102,11 @@
     return `${esc(header(params[0]))}<br/>${rows.join('<br/>')}`
   }
 
-  // The Total line: dashed, in neutral ink, drawn above the others and without an area fill.
+  // Lines are solid and gently smoothed, with no dots until you hover. The Total line is the
+  // same but in neutral ink, a little thicker, drawn above the others and without an area fill.
+  const SMOOTH = { smooth: 0.25, smoothMonotone: 'x' }
   const totalLine = (name, data) => ({
-    name, type: 'line', data, showSymbol: false, z: 5, lineStyle: { width: 2, type: 'dashed' },
+    name, type: 'line', data, showSymbol: false, z: 5, lineStyle: { width: 2.5 }, ...SMOOTH,
     emphasis: { focus: 'series' },
   })
   const withTotal = (series) =>
@@ -115,14 +117,13 @@
 
   const timeLines = (keys, series, g, extra = {}) => ({
     xAxis: { type: 'time' },
-    yAxis: { type: 'value', minInterval: 1 },
+    yAxis: { type: 'value', minInterval: 1, min: 0 },
     tooltip: tip((p) => nice(p.value[0], g), (p) => p.value[1]),
     dataZoom: [{ type: 'inside' }], // scroll to zoom, drag to pan; no slider bar
     series: series.map((s) => (s.total ? totalLine(s.name, keys.map((k, i) => [k, s.data[i]])) : {
       name: s.name, type: 'line', data: keys.map((k, i) => [k, s.data[i]]),
-      showSymbol: keys.length <= 45, symbolSize: 8, lineStyle: { width: 2 },
-      itemStyle: { borderWidth: 2, borderColor: 'transparent' }, areaStyle: { opacity: 0.08 },
-      emphasis: { focus: 'series' }, ...extra,
+      showSymbol: false, symbolSize: 8, lineStyle: { width: 2 }, ...SMOOTH,
+      areaStyle: { opacity: 0.08 }, emphasis: { focus: 'series' }, ...extra,
     })),
   })
 
@@ -171,7 +172,7 @@
       bandwidth: {
         option: {
           xAxis: { type: 'time' },
-          yAxis: { type: 'value', axisLabel: { formatter: (v) => kbps(v) } },
+          yAxis: { type: 'value', min: 0, axisLabel: { formatter: (v) => kbps(v) } },
           tooltip: {
             trigger: 'axis',
             formatter: (params) => {
@@ -182,9 +183,8 @@
           },
           dataZoom: [{ type: 'inside' }],
           series: data.bandwidth.map((s) => ({
-            name: s.server, type: 'line', data: s.points, showSymbol: s.points.length <= 45, symbolSize: 8,
-            lineStyle: { width: 2 }, itemStyle: { borderWidth: 2, borderColor: 'transparent' },
-            areaStyle: { opacity: 0.08 }, emphasis: { focus: 'series' },
+            name: s.server, type: 'line', data: s.points, showSymbol: false, symbolSize: 8,
+            lineStyle: { width: 2 }, ...SMOOTH, areaStyle: { opacity: 0.08 }, emphasis: { focus: 'series' },
           })).concat(
             data.bandwidth.length > 1 ? [totalLine('Total', data.bandwidth_total)] : [],
           ),
@@ -211,19 +211,36 @@
         table: { head: ['Hour', 'Plays'], rows: hours.map((h, i) => [h, data.by_hour[i]]) },
       },
       weekday: {
+        // Each bar is the day's plays stacked by media type; the tooltip adds up the total.
         option: {
-          legend: { show: false },
-          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+          tooltip: {
+            trigger: 'axis', axisPointer: { type: 'shadow' },
+            formatter: (params) => `${esc(params[0].axisValueLabel)}<br/>` +
+              params.map((p) => `${p.marker} ${esc(p.seriesName)} <b>${p.value}</b>`).join('<br/>') +
+              (params.length > 1 ? `<br/>Total <b>${params.reduce((n, p) => n + p.value, 0)}</b>` : ''),
+          },
           xAxis: { type: 'category', data: data.by_weekday.labels },
           yAxis: { type: 'value', minInterval: 1 },
-          series: [{ name: 'Plays', type: 'bar', data: data.by_weekday.data, barMaxWidth: 36,
-            itemStyle: { borderRadius: [4, 4, 0, 0] } }],
+          series: data.by_weekday.by_type.map((t) => ({
+            name: label(t.name), type: 'bar', stack: 'plays', data: t.data, barMaxWidth: 36,
+            itemStyle: { borderColor: 'transparent', borderWidth: 1 }, emphasis: { focus: 'series' },
+          })),
         },
-        table: { head: ['Day', 'Plays'], rows: data.by_weekday.labels.map((d, i) => [d, data.by_weekday.data[i]]) },
+        table: {
+          head: ['Day', ...data.by_weekday.by_type.map((t) => label(t.name)), 'Total'],
+          rows: data.by_weekday.labels.map((d, i) =>
+            [d, ...data.by_weekday.by_type.map((t) => t.data[i]), data.by_weekday.data[i]]),
+        },
       },
     }
   })
 
+  // A note under the bandwidth chart when recording started part-way through the range.
+  const bandwidthNote = $derived(
+    data?.bandwidth_since && data.bandwidth_since.slice(0, 10) > data.range.start
+      ? `Bandwidth is only recorded while Horus is running. The first sample is from ${nice(data.bandwidth_since, 'day')}.`
+      : data && !data.bandwidth_since && data.servers.length ? 'No bandwidth has been recorded yet.' : null,
+  )
   const serverSlots = $derived(data ? data.servers.map((_, i) => i) : [])
   // With two or more servers every time chart also gets a neutral 'ink' slot for its Total line.
   const serverSlotsWithTotal = $derived(serverSlots.length > 1 ? [...serverSlots, 'ink'] : serverSlots)
@@ -279,11 +296,12 @@
     <section class="card wide">
       <h2>Bandwidth over time</h2>
       <Chart option={built.bandwidth.option} table={built.bandwidth.table} slots={serverSlotsWithTotal} height={300} />
+      {#if bandwidthNote}<p class="muted note">{bandwidthNote}</p>{/if}
     </section>
     <section class="card"><h2>Plays by user</h2><Chart option={built.user.option} table={built.user.table} slots={[0]} height={built.user.height} /></section>
     <section class="card"><h2>Plays by platform</h2><Chart option={built.platform.option} table={built.platform.table} slots={[0]} height={built.platform.height} /></section>
     <section class="card"><h2>Plays by hour of day</h2><Chart option={built.hour.option} table={built.hour.table} slots={[0]} /></section>
-    <section class="card"><h2>Plays by weekday</h2><Chart option={built.weekday.option} table={built.weekday.table} slots={[0]} /></section>
+    <section class="card"><h2>Plays by weekday</h2><Chart option={built.weekday.option} table={built.weekday.table} slots={[0, 1, 2, 3, 4, 5]} /></section>
     <section class="card"><h2>Media type</h2><Chart option={built.types.option} table={built.types.table} slots={[0]} height={built.types.height} /></section>
   </div>
 {/if}
@@ -295,6 +313,7 @@
   form input { width: auto; }
   button.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
   .summary { margin: 0 0 12px; }
+  .note { margin: 6px 0 0; font-size: 12.5px; }
   .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
     padding: 14px 18px; min-width: 0; }

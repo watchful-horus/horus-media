@@ -35,12 +35,14 @@ def _bucket(extent: timedelta) -> timedelta:
     still draws a line instead of collapsing into one hourly point."""
     if extent <= timedelta(hours=3):
         return timedelta(minutes=1)
-    if extent <= timedelta(hours=48):
+    if extent <= timedelta(hours=24):
         return timedelta(minutes=5)
-    if extent <= timedelta(days=7):
+    if extent <= timedelta(days=3):
         return timedelta(minutes=15)
-    if extent <= timedelta(days=31):
+    if extent <= timedelta(days=14):
         return timedelta(hours=1)
+    if extent <= timedelta(days=62):
+        return timedelta(hours=3)
     return timedelta(days=1)
 
 
@@ -74,6 +76,7 @@ def compute_stats(
     per_day = {sid: Counter() for sid in names}
     by_user, by_platform, methods, types = Counter(), Counter(), Counter(), Counter()
     by_hour, by_weekday = [0] * 24, [0] * 7
+    weekday_types: dict[str, list[int]] = {}
     per_day_method = {m: Counter() for m in METHODS}
     per_hour: dict[int, Counter] = {sid: Counter() for sid in names}
     per_hour_method = {m: Counter() for m in METHODS}
@@ -93,6 +96,7 @@ def compute_stats(
             if p["play_method"] in per_hour_method:
                 per_hour_method[p["play_method"]][key] += 1
         by_weekday[local.weekday()] += 1
+        weekday_types.setdefault(p["media_type"] or UNKNOWN, [0] * 7)[local.weekday()] += 1
 
     samples = conn.execute(
         "SELECT server_id, ts, kbps FROM bandwidth_samples WHERE ts >= ? AND ts < ? ORDER BY ts",
@@ -126,6 +130,8 @@ def compute_stats(
         bandwidth.append({"server": name, "points": points})
 
     first = conn.execute("SELECT MIN(started_at) FROM history").fetchone()[0]
+    first_sample = conn.execute("SELECT MIN(ts) FROM bandwidth_samples").fetchone()[0]
+    bandwidth_since = _local(first_sample, tz).isoformat() if first_sample else None
     hourly_data: dict = {}
     if hourly:
         hours: list[str] = []
@@ -164,9 +170,19 @@ def compute_stats(
         "by_user": _ranked(by_user),
         "by_platform": _ranked(by_platform),
         "by_hour": by_hour,
-        "by_weekday": {"labels": WEEKDAYS, "data": by_weekday},
+        "by_weekday": {
+            "labels": WEEKDAYS,
+            "data": by_weekday,
+            # The same plays split by media type, busiest type first, so the chart can stack them.
+            "by_type": [
+                {"name": name, "data": counts}
+                for name, counts in sorted(weekday_types.items(), key=lambda kv: -sum(kv[1]))
+            ],
+        },
         "play_methods": _ranked(methods),
         "media_types": _ranked(types),
         "bandwidth": bandwidth,
         "bandwidth_total": bandwidth_total,
+        # When the first bandwidth sample was ever recorded (imported history has none).
+        "bandwidth_since": bandwidth_since,
     }
