@@ -12,7 +12,7 @@ Open port 8000 and **create the first account straight away**: the container lis
 
 - It is a wizard (default or advanced settings, with menus for storage and network). It does not create a login: when it finishes it prints the address, and you open it and **create the administrator account yourself** (your own username and password). Do that straight away, because until the account exists anyone on your network could. For automation, `ADMIN_USER` and `ADMIN_PASSWORD` create the account during the install instead.
 - The install shows one line per step with a spinner and keeps the full output in a log file (`HORUS_VERBOSE=1` prints everything instead).
-- Point `HORUS_PACKAGE` at a Horus wheel and copy it to the host first, for example `HORUS_PACKAGE=/root/horus_media-0.2.0-py3-none-any.whl bash horus-lxc.sh`. Build a wheel with `cd web && npm run build && cd .. && pip wheel . --no-deps -w dist`.
+- Point `HORUS_PACKAGE` at a Horus wheel and copy it to the host first, for example `HORUS_PACKAGE=/root/horus_media-0.3.0-py3-none-any.whl bash horus-lxc.sh`. Build a wheel with `cd web && npm run build && cd .. && pip wheel . --no-deps -w dist`.
 - CPU, RAM, disk, storage, network and port can be set with environment variables (listed at the top of the script).
 - Update later with `bash horus-lxc.sh update <container id>`; the data is kept.
 - Restart and shut down work from the web UI.

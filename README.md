@@ -4,7 +4,7 @@
 
 A self-hosted dashboard for Plex and Emby. See what is playing on both servers right now, and how your libraries get watched over time.
 
-> Status: early release (0.2.0), public and tested with Docker and a Proxmox container. Works with Plex and Emby (not affiliated with either).
+> Status: early release (0.3.0), public and tested with Docker and a Proxmox container. Works with Plex and Emby (not affiliated with either).
 
 ## Features
 - Live activity from Plex and Emby in one view, with posters and full stream details

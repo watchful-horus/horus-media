@@ -1,6 +1,6 @@
 # Roadmap
 
-Status as of 2026-10-29: version 0.2.0 released; the items under "Unreleased" in the changelog are in the working tree for 0.3.0. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
+Status as of 2026-10-29: version 0.3.0. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
 
 ## Done
 
@@ -55,6 +55,7 @@ Status as of 2026-10-29: version 0.2.0 released; the items under "Unreleased" in
 ## Next
 
 - [ ] Run `ct/horus.sh` on a Proxmox host
+- [ ] Install fresh with `ct/horus.sh` on a Proxmox host and create the first admin in the browser (needs 0.3.0)
 - [ ] Try Stop stream on a real Plex or Emby (never without the author's say-so)
 - [ ] Try Update now on a real Proxmox container (unit-tested with fakes only), and the new Docker admin variables in a real container
 - [ ] Real-server test run by hand (a real Plex and Emby in a throwaway setup) to catch API changes the fakes can't

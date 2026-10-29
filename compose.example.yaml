@@ -4,7 +4,7 @@
 # uncomment the HORUS_ADMIN_* lines below so the account exists before anyone can open the page.
 services:
   horus:
-    image: ghcr.io/watchful-horus/horus-media:0.2.0   # to build from this folder instead, use `build: .` here
+    image: ghcr.io/watchful-horus/horus-media:0.3.0   # to build from this folder instead, use `build: .` here
     container_name: horus
     restart: unless-stopped
     ports:
