@@ -43,7 +43,7 @@ Status as of 2026-10-29: version 0.3.0. The original v1 scope is complete and th
 **Installing and project**
 - `Dockerfile`, `compose.example.yaml` and the image on ghcr.io (amd64), published by a tag workflow
 - Proxmox installer wizard (`scripts/proxmox/horus-lxc.sh`), run on a real host; the first admin is created in the browser (or optionally during the install with `ADMIN_USER`/`ADMIN_PASSWORD`)
-- Community-scripts style installer (`ct/horus.sh`, `install/horus-install.sh`, `json/horus.json`) and a release workflow that builds the web UI and wheel on a `v*` tag (its install steps ran in a throwaway container; `ct/horus.sh` itself has not run on a Proxmox host)
+- Community-scripts style installer (`ct/horus.sh`, `install/horus-install.sh`, `json/horus.json`) and a release workflow that builds the web UI and wheel on a `v*` tag (its install steps ran in a throwaway container; `ct/horus.sh` itself ran on a real Proxmox host on 2026-10-29: 0.3.0 installed, first admin created in the browser, Plex added, history imported)
 - MIT licence, `CONTRIBUTING.md`, `SECURITY.md`, issue and pull request templates, Dependabot, CODEOWNERS
 - Public repository with secret scanning, private vulnerability reporting, CodeQL, Dependabot alerts, protected `main`, SHA-pinned Actions
 - CI (tests, lint, Docker image, web build) on every push and pull request
@@ -54,8 +54,6 @@ Status as of 2026-10-29: version 0.3.0. The original v1 scope is complete and th
 
 ## Next
 
-- [ ] Run `ct/horus.sh` on a Proxmox host
-- [ ] Install fresh with `ct/horus.sh` on a Proxmox host and create the first admin in the browser (needs 0.3.0)
 - [ ] Try Stop stream on a real Plex or Emby (never without the author's say-so)
 - [ ] Try Update now on a real Proxmox container (unit-tested with fakes only), and the new Docker admin variables in a real container
 - [ ] Real-server test run by hand (a real Plex and Emby in a throwaway setup) to catch API changes the fakes can't
