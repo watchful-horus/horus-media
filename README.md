@@ -19,10 +19,10 @@ A self-hosted dashboard for Plex and Emby. See what is playing on both servers r
 The Docker image (`ghcr.io/watchful-horus/horus-media`) and the release downloads are public and tested.
 
 ## Screenshots
-Graphs in the dark theme, and in the light theme. The data shown is invented.
+Graphs in the dark theme, and in the light theme, then bandwidth and the hour and weekday breakdowns. The data shown is invented.
 
 <p align="center"><img src="docs/screenshots/graphs-dark.png" width="48%" alt="Horus graphs, dark theme"> <img src="docs/screenshots/graphs-light.png" width="48%" alt="Horus graphs, light theme"></p>
-<p align="center"><img src="docs/screenshots/graphs-breakdowns-dark.png" width="60%" alt="Bandwidth, plays by user, platform, hour and weekday"></p>
+<p align="center"><img src="docs/screenshots/graphs-bandwidth-dark.png" width="48%" alt="Bandwidth over time"> <img src="docs/screenshots/graphs-breakdowns-dark.png" width="48%" alt="Plays by hour of day and by weekday, stacked by media type"></p>
 
 ## Development
 ```bash
@@ -110,7 +110,7 @@ In Grafana, install the **Infinity** data source, add it with *Bearer Token* aut
 ## Installing without a development setup
 **Docker** (needs Docker with Compose): copy `compose.example.yaml` to `compose.yaml`, set your time zone, and run `docker compose up -d`. Open port 8000 and create the first account straight away: the container listens on the network from the start, so until the account exists anyone who can reach the page could create it. Data (database, key, backups, logs) lives in the `horus-data` volume. Restart and shut down are done with Docker, not the web UI.
 
-**Proxmox VE container:** `scripts/proxmox/horus-lxc.sh` creates a small Debian 13 container, installs Horus as a service and prints the address. It is a wizard (default or advanced settings, with menus for storage and network) that also asks for the administrator username and password and creates that account before Horus starts, so the first-run setup code is never needed; leave the password blank and it generates one and shows it at the end. The install shows one line per step with a spinner and keeps the full output in a log file (`HORUS_VERBOSE=1` prints everything instead). Run it on the Proxmox host as root, pointing `HORUS_PACKAGE` at a Horus wheel (build one with `cd web && npm run build && cd .. && pip wheel . --no-deps -w dist`), for example `HORUS_PACKAGE=/root/horus_media-0.1.2-py3-none-any.whl bash horus-lxc.sh`. CPU, RAM, disk, storage, network and port can be set with environment variables (listed at the top of the script). Update later with `bash horus-lxc.sh update <container id>`; the data is kept. Restart and shut down work from the web UI.
+**Proxmox VE container:** `scripts/proxmox/horus-lxc.sh` creates a small Debian 13 container, installs Horus as a service and prints the address. It is a wizard (default or advanced settings, with menus for storage and network) that also asks for the administrator username and password and creates that account before Horus starts, so the first-run setup code is never needed; leave the password blank and it generates one and shows it at the end. The install shows one line per step with a spinner and keeps the full output in a log file (`HORUS_VERBOSE=1` prints everything instead). Run it on the Proxmox host as root, pointing `HORUS_PACKAGE` at a Horus wheel (build one with `cd web && npm run build && cd .. && pip wheel . --no-deps -w dist`), for example `HORUS_PACKAGE=/root/horus_media-0.1.3-py3-none-any.whl bash horus-lxc.sh`. CPU, RAM, disk, storage, network and port can be set with environment variables (listed at the top of the script). Update later with `bash horus-lxc.sh update <container id>`; the data is kept. Restart and shut down work from the web UI.
 
 ## Moving to a new install
 On a fresh install the first screen has **Already use Horus? Restore from a backup instead**. Choose a backup zip (Settings > Backups > Download on the old install) and your accounts, servers and history come back. In an existing install use **Restore from a file...** under Settings > Backups. Backups can be deleted from the same list.
