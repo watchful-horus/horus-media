@@ -27,21 +27,24 @@ def _due(conn: sqlite3.Connection, key: str, every: timedelta, now: datetime) ->
         return True
 
 
-def due_daily(conn: sqlite3.Connection, key: str, hhmm: str, tz, now: datetime) -> bool:
-    """True once the most recent HH:MM (in `tz`, or this machine's zone) has passed with no run since.
+def due_daily(conn: sqlite3.Connection, key: str, hhmm: str, tz, now: datetime, days: int = 1) -> bool:
+    """True when a run at HH:MM (in `tz`, or this machine's zone) is due, every `days` day(s).
     A first run (nothing recorded yet) is due at once."""
     last = app_settings.get_state(conn, key)
     if not last:
         return True
-    local = now.astimezone(tz)
     hour, minute = (int(n) for n in hhmm.split(":"))
-    slot = local.replace(hour=hour, minute=minute, second=0, microsecond=0)
-    if slot > local:
-        slot -= timedelta(days=1)
+
+    def slot_at_or_before(moment: datetime) -> datetime:
+        local = moment.astimezone(tz)
+        slot = local.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        return slot - timedelta(days=1) if slot > local else slot
+
     try:
-        return datetime.fromisoformat(last) < slot
+        previous = datetime.fromisoformat(last)
     except ValueError:
         return True
+    return slot_at_or_before(now) - slot_at_or_before(previous) >= timedelta(days=days)
 
 
 def prune_history(conn: sqlite3.Connection, days: int, now: datetime) -> None:
@@ -89,8 +92,12 @@ def run(
         prune_history(conn, cfg.retention_days, now)
         app_settings.set_state(conn, "last_prune", now.isoformat())
 
-    if cfg.backup_enabled and _due(
-        conn, "last_backup", timedelta(hours=cfg.backup_interval_hours), now
+    # Whole days (24, 48, ...) run at the chosen time of day; any other number of hours is a plain interval.
+    on_the_clock = cfg.backup_interval_hours % 24 == 0
+    if cfg.backup_enabled and (
+        due_daily(conn, "last_backup", cfg.backup_time, cfg.zone(), now, cfg.backup_interval_hours // 24)
+        if on_the_clock
+        else _due(conn, "last_backup", timedelta(hours=cfg.backup_interval_hours), now)
     ):
         made = backup.write_full_backup(db_file, now)
         backup.prune(db_file, cfg.backup_keep)

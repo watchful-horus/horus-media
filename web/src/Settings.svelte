@@ -283,6 +283,13 @@
           <label>Every (hours)<input type="number" min="1" max="720" bind:value={form.backup_interval_hours} /></label>
           <label>Keep the last<input type="number" min="1" max="100" bind:value={form.backup_keep} /></label>
         </div>
+        {#if form.backup_interval_hours % 24 === 0}
+          <label>
+            Back up at
+            <input type="time" bind:value={form.backup_time} required />
+            <span class="hint">Time of day, in the time zone set above (or this machine's own). Used when the interval is a whole number of days (24, 48, ...); other intervals count hours from the last backup.</span>
+          </label>
+        {/if}
       {/if}
       <div class="actions">
         <button type="button" disabled={busy} onclick={backUpNow}>Back up now</button>

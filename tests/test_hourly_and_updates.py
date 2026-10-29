@@ -187,4 +187,6 @@ def test_update_check_time_is_validated(db):
     for bad in ("4pm", "24:00", "04:60", "", "4:00"):
         with pytest.raises(ValueError):
             app_settings.update(conn, {"update_check_time": bad})
+        with pytest.raises(ValueError):
+            app_settings.update(conn, {"backup_time": bad})
     assert app_settings.update(conn, {"update_check_time": " 06:30 "}).update_check_time == "06:30"

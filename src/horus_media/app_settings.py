@@ -23,6 +23,7 @@ class Settings(BaseModel):
     update_check_time: str = "04:00"  # time of day (in the time zone above) for that daily look
     backup_enabled: bool = False
     backup_interval_hours: int = Field(24, ge=1, le=720)
+    backup_time: str = "03:00"  # time of day for backups that run every whole number of days
     backup_keep: int = Field(7, ge=1, le=100)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     http_port: int = Field(8000, ge=1024, le=65535)  # applied at the next start
@@ -44,7 +45,7 @@ class Settings(BaseModel):
             raise ValueError("unknown time zone")
         return v
 
-    @field_validator("update_check_time")
+    @field_validator("update_check_time", "backup_time")
     @classmethod
     def _clock_time(cls, v: str) -> str:
         v = v.strip()

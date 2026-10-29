@@ -150,7 +150,7 @@ def test_scheduled_backup_and_retention(db):
             "platform, play_method, started_at, last_seen_at) "
             "VALUES (1,'b','u','playing now','movie','d','p','direct_play',?,?)", (old, old))
     cfg = app_settings.update(conn, {"retention_days": 30, "backup_enabled": True,
-                                     "backup_interval_hours": 24})
+                                     "backup_interval_hours": 24, "timezone": "UTC"})
     maintenance.run(conn, path, cfg, now)
     assert [r[0] for r in conn.execute("SELECT title FROM history")] == ["playing now"]  # open play kept
     assert conn.execute("SELECT COUNT(*) FROM bandwidth_samples").fetchone()[0] == 0
@@ -160,6 +160,33 @@ def test_scheduled_backup_and_retention(db):
     assert len(backup.list_backups(path)) == 1
     maintenance.run(conn, path, cfg, now + timedelta(hours=25))
     assert len(backup.list_backups(path)) == 2
+
+
+def test_backups_run_at_the_chosen_time_of_day(db):
+    path, conn = db
+    cfg = app_settings.update(conn, {"backup_enabled": True, "backup_interval_hours": 24,
+                                     "backup_time": "03:00", "timezone": "UTC"})
+    day = datetime(2026, 3, 10, tzinfo=UTC)
+    maintenance.run(conn, path, cfg, day + timedelta(hours=1), None)
+    assert len(backup.list_backups(path)) == 1  # first one at once
+    maintenance.run(conn, path, cfg, day + timedelta(hours=2, minutes=59), None)
+    assert len(backup.list_backups(path)) == 1  # 03:00 has not come round again
+    maintenance.run(conn, path, cfg, day + timedelta(hours=3, minutes=1), None)
+    assert len(backup.list_backups(path)) == 2  # 03:00 passed
+    maintenance.run(conn, path, cfg, day + timedelta(hours=22), None)
+    assert len(backup.list_backups(path)) == 2  # once a day
+    # every 2 days: skips tomorrow's 03:00, runs on the next one
+    cfg = app_settings.update(conn, {"backup_interval_hours": 48})
+    maintenance.run(conn, path, cfg, day + timedelta(days=1, hours=3, minutes=1), None)
+    assert len(backup.list_backups(path)) == 2
+    maintenance.run(conn, path, cfg, day + timedelta(days=2, hours=3, minutes=1), None)
+    assert len(backup.list_backups(path)) == 3
+    # not a whole number of days: plain hours since the last backup, no time of day
+    cfg = app_settings.update(conn, {"backup_interval_hours": 6})
+    maintenance.run(conn, path, cfg, day + timedelta(days=2, hours=5), None)
+    assert len(backup.list_backups(path)) == 3
+    maintenance.run(conn, path, cfg, day + timedelta(days=2, hours=10), None)
+    assert len(backup.list_backups(path)) == 4
 
 
 def test_nothing_runs_when_features_off(db):
