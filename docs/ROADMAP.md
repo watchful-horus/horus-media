@@ -16,7 +16,7 @@ Status as of 2026-10-29: version 0.3.0. The original v1 scope is complete and th
 - Live sessions from every server in one view, large cards with poster, quality, stream, container, video, audio, subtitle, location, bandwidth, progress and ETA
 - Totals per server and overall, split into local and remote; amber Paused badge
 - "Nothing playing" state per server; manual refresh and a choice of auto-refresh interval
-- Stop stream (admin only, signed-in session only, logged; Plex needs Plex Pass). Tested with fake servers only, not on a real Plex or Emby
+- Stop stream (admin only, signed-in session only, logged; Plex needs Plex Pass). Tested with fake servers, and the author confirmed it works on a real Plex (2026-10-29); not tried on a real Emby
 
 **History and graphs**
 - Background poller records plays and bandwidth samples (`HORUS_POLL_SECONDS`, default 15); optional retention
@@ -54,7 +54,7 @@ Status as of 2026-10-29: version 0.3.0. The original v1 scope is complete and th
 
 ## Next
 
-- [ ] Try Stop stream on a real Plex or Emby (never without the author's say-so)
+- [ ] Try Stop stream on a real Emby (never without the author's say-so)
 - [ ] Try Update now on a real Proxmox container (unit-tested with fakes only), and the new Docker admin variables in a real container
 - [ ] Real-server test run by hand (a real Plex and Emby in a throwaway setup) to catch API changes the fakes can't
 - [ ] arm64 Docker image (the app and its tests pass on aarch64 under emulation; the image build is untried)
