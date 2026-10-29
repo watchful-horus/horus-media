@@ -179,7 +179,7 @@
 {:else}
   {#if totals}
     <div class="totals" aria-label="Streams now">
-      {#each [...totals.rows, ...(totals.showTotal ? [totals.all] : [])] as r}
+      {#each [...(totals.showTotal ? [totals.all] : []), ...totals.rows] as r}
         <div class="tot">
           <span class="tname">{r.name}</span>
           <strong>{streamsText(r.count)}</strong>

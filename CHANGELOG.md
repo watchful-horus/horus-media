@@ -3,6 +3,7 @@
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
 ## Unreleased
+- **Activity:** the Total box is now the first one, at the far left of the totals strip.
 - **Your details, and everyone's:** click a name under Settings > Users to open that person's panel (username, display name, Plex/Emby name, role, password reset, delete). The Account page now has a **Your details** card: change your own username and an optional display name (shown in the top bar and the Users list). Only admins set a Plex/Emby name. Needs migration 11 (display name).
 - **Removed the Seerr requests tab and its Integrations section.** It only listed Overseerr/Jellyseerr requests and was not connected to plays or stats. On upgrade, any stored Seerr address and API key are deleted (migration 10). A backup made after this change cannot be restored into an older Horus.
 - **Users page:** cleaner rows (avatar, name, role and last sign-in, actions lined up on the right), and the "Normal users see only their own activity" setting now lives there instead of in General.
