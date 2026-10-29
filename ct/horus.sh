@@ -17,9 +17,6 @@ var_version="${var_version:-13}"
 var_unprivileged="${var_unprivileged:-1}"
 var_arm64="${var_arm64:-yes}" # tests pass on aarch64 Python 3.12 under QEMU emulation; not yet run on real arm64 hardware
 
-export var_admin_user="${var_admin_user:-}"
-export var_admin_pass="${var_admin_pass:-}"
-
 header_info "$APP"
 variables
 color
@@ -70,3 +67,5 @@ msg_ok "Completed Successfully!\n"
 echo -e "${CREATING}${GN}${APP} setup has been successfully initialized!${CL}"
 echo -e "${INFO}${YW}Access it using the following URL:${CL}"
 echo -e "${GATEWAY}${BGN}http://${IP}:8000${CL}"
+echo -e "${INFO}${YW}Open it now and create the admin account (your own username and password).${CL}"
+echo -e "${INFO}${YW}Until you do, anyone on your network could create it, so do it straight away.${CL}"

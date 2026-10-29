@@ -42,12 +42,12 @@ Status as of 2026-10-29: version 0.2.0 released; the items under "Unreleased" in
 
 **Installing and project**
 - `Dockerfile`, `compose.example.yaml` and the image on ghcr.io (amd64), published by a tag workflow
-- Proxmox installer wizard (`scripts/proxmox/horus-lxc.sh`), run on a real host; creates the admin during the install, so nobody else can claim the first account
+- Proxmox installer wizard (`scripts/proxmox/horus-lxc.sh`), run on a real host; the first admin is created in the browser (or optionally during the install with `ADMIN_USER`/`ADMIN_PASSWORD`)
 - Community-scripts style installer (`ct/horus.sh`, `install/horus-install.sh`, `json/horus.json`) and a release workflow that builds the web UI and wheel on a `v*` tag (its install steps ran in a throwaway container; `ct/horus.sh` itself has not run on a Proxmox host)
 - MIT licence, `CONTRIBUTING.md`, `SECURITY.md`, issue and pull request templates, Dependabot, CODEOWNERS
 - Public repository with secret scanning, private vulnerability reporting, CodeQL, Dependabot alerts, protected `main`, SHA-pinned Actions
 - CI (tests, lint, Docker image, web build) on every push and pull request
-- 248 tests (fake responses, no live servers), `ruff` clean; README and docs
+- 249 tests (fake responses, no live servers), `ruff` clean; README and docs
 
 **Verified**
 - Backup Download then Restore across installs (Proxmox container to Docker); Emby history import; lint and the full suite on real Linux; the Docker image in CI and a real Docker host, including an anonymous pull; all tests on emulated aarch64

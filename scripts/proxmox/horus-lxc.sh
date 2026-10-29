@@ -19,8 +19,8 @@
 #   CTID=<next free>  CT_NAME=horus  CORES=1  RAM=512 (MB)  DISK=4 (GB)  BRIDGE=<first bridge found>
 #   IP=dhcp (or 192.168.1.50/24 with GATEWAY=192.168.1.1)  VLAN=  MTU=  MAC=  DNS=  SEARCHDOMAIN=
 #   HORUS_PORT=8000  UNPRIVILEGED=1  TAGS=horus  ROOT_PASSWORD=  ADD_SSH_KEYS=no
-#   ADMIN_USER=admin  ADMIN_PASSWORD=<8+ characters>  (creates the Horus login during the install;
-#   without a password, a random one is generated and shown at the end)
+#   ADMIN_USER=admin  ADMIN_PASSWORD=<8+ characters>  (optional: creates the Horus login during the install.
+#   Without ADMIN_PASSWORD nothing is created and you make the first account in the browser)
 #   STORAGE=<first storage that can hold containers>  TEMPLATE_STORAGE=<first that holds templates>
 #   TZ=<this host's>
 set -Eeuo pipefail
@@ -160,7 +160,7 @@ BRIDGE="${BRIDGE:-}"; IP="${IP:-dhcp}"; GATEWAY="${GATEWAY:-}"; VLAN="${VLAN:-}"
 MTU="${MTU:-}"; MAC="${MAC:-}"; DNS="${DNS:-}"; SEARCHDOMAIN="${SEARCHDOMAIN:-}"
 UNPRIVILEGED="${UNPRIVILEGED:-1}"; TAGS="${TAGS:-horus}"; ROOT_PASSWORD="${ROOT_PASSWORD:-}"
 ADD_SSH_KEYS="${ADD_SSH_KEYS:-no}"
-ADMIN_USER="${ADMIN_USER:-admin}"; ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"; ADMIN_CREATED=0; GENERATED_PASSWORD=""
+ADMIN_USER="${ADMIN_USER:-admin}"; ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"; ADMIN_CREATED=0
 CT_NAME="${CT_NAME:-horus}"
 STORAGE="${STORAGE:-$(first_storage rootdir)}"
 TEMPLATE_STORAGE="${TEMPLATE_STORAGE:-$(first_storage vztmpl)}"
@@ -228,11 +228,6 @@ valid_bridge() { [[ -d "/sys/class/net/$1/bridge" ]]; }
 
 valid_username() { [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._@+-]{2,63}$ ]]; }  # the same rule as Horus: an email address works
 
-ask_admin() {  # the first Horus account, made during the install so the first-run screen never appears
-  say "Horus administrator account"
-  ask_valid ADMIN_USER "Username for the Horus administrator (an email address, or 3 to 64 letters, numbers, . - _ @ +)" valid_username "Use 3 to 64 letters, numbers, dots, dashes, underscores, @ or +."
-  ask_secret ADMIN_PASSWORD "Password for $ADMIN_USER (at least 8 characters; blank: generate one and show it at the end)" 8
-}
 
 valid_package() { [[ -f "$1" || "$1" =~ ^(https?|git\+https)://[^[:space:]]+$ ]]; }
 
@@ -364,7 +359,7 @@ Create a Horus container with:
   Time zone:      ${TIMEZONE:-container default}
   Root password:  $([[ -n "$ROOT_PASSWORD" ]] && echo set || echo none)
   SSH keys:       $([[ "$ADD_SSH_KEYS" == yes ]] && echo "from $SSH_KEY_FILE" || echo none)
-  Horus login:    administrator $ADMIN_USER, $([[ -n "$GENERATED_PASSWORD" ]] && echo "password generated for you" || echo "password as chosen")
+  Horus login:    $([[ -n "$ADMIN_PASSWORD" ]] && echo "administrator $ADMIN_USER, created during the install" || echo "you create it in the browser on the first visit")
   Installed from: $PACKAGE
 EOF
 }
@@ -391,12 +386,10 @@ check_settings() {  # stops with a clear message before anything is created
   [[ -z "$TIMEZONE" ]] || valid_zone "$TIMEZONE" || die "$TIMEZONE is not a time zone name from /usr/share/zoneinfo."
   [[ "$UNPRIVILEGED" == 0 || "$UNPRIVILEGED" == 1 ]] || die "UNPRIVILEGED must be 1 or 0."
   [[ "$ADD_SSH_KEYS" != yes || -n "$SSH_KEY_FILE" ]] || die "No SSH keys were found on this host to add."
-  valid_username "$ADMIN_USER" || die "The Horus username must be 3 to 64 letters, numbers, dots, dashes, underscores, @ or +."
-  if [[ -z "$ADMIN_PASSWORD" ]]; then  # nothing chosen: make one, so nobody else can claim the first account
-    ADMIN_PASSWORD="$(openssl rand -base64 33 | tr -dc 'A-Za-z0-9' | head -c 16 || true)"
-    GENERATED_PASSWORD="$ADMIN_PASSWORD"
+  if [[ -n "$ADMIN_PASSWORD" ]]; then  # optional: make the account during the install
+    valid_username "$ADMIN_USER" || die "The Horus username must be 3 to 64 letters, numbers, dots, dashes, underscores, @ or +."
+    (( ${#ADMIN_PASSWORD} >= 8 )) || die "The Horus password must be at least 8 characters."
   fi
-  (( ${#ADMIN_PASSWORD} >= 8 )) || die "The Horus password must be at least 8 characters."
 }
 
 find_template() {  # sets TEMPLATE to the newest Debian 13 template for this CPU type, downloading it if needed
@@ -452,6 +445,8 @@ Wants=network-online.target
 [Service]
 User=horus
 Environment=HORUS_DB_PATH=/var/lib/horus/horus.db
+# The first admin is created in the browser, so listen on the network before one exists
+Environment=HORUS_OPEN_FIRST_RUN=1
 ExecStart=/opt/horus/bin/python -m horus_media
 Restart=on-failure
 RestartSec=5
@@ -552,10 +547,11 @@ Go ahead?" || exit 1; fi
 
   say "Horus is running."
   echo "    Open:         http://${addr:-<container address>}:${PORT}"
-  if [[ -n "$GENERATED_PASSWORD" ]]; then
-    echo "    Sign in:      ${ADMIN_USER} / ${GENERATED_PASSWORD}   (generated: save it, and change it under Settings)"
+  if (( ADMIN_CREATED )); then
+    echo "    Sign in:      as ${ADMIN_USER} with the password you set."
   else
-    echo "    Sign in:      as ${ADMIN_USER} with the password you chose."
+    echo "    Next:         open that address NOW and create the administrator account (your own"
+    echo "                  username and password). Until you do, anyone on your network could."
   fi
   echo "    Backups:      to bring over an old install, sign in and use Settings > Backups > upload."
   echo "    Full log:     ${LOG}"
@@ -584,8 +580,8 @@ if (( INTERACTIVE )); then
   case "$ACTION" in
     quit) exit 0 ;;
     update) do_update; exit 0 ;;
-    advanced) ask_package; wizard_settings; ask_admin ;;
-    *) ask_package; ask_admin ;;
+    advanced) ask_package; wizard_settings ;;
+    *) ask_package ;;
   esac
 else
   ask_package

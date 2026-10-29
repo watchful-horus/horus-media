@@ -5,6 +5,7 @@
 - `HORUS_POLL_SECONDS` (default `15`; the Settings page overrides it once saved): how often Horus checks your servers and records plays. `0` turns recording off. Plays are only recorded while Horus is running. Set `TZ` (for example in Docker) so days and hours match your local time.
 - `HORUS_PORT` / `HORUS_HOST` (default `8000` / `127.0.0.1`): where Horus listens. When set, they override the Settings page, which then shows them as locked.
 - `HORUS_ADMIN_USER` with `HORUS_ADMIN_PASSWORD_FILE` (or `HORUS_ADMIN_PASSWORD`): create the first admin at start when none exists (see [Accounts and security](accounts-and-security.md#creating-the-admin-from-the-environment-docker)).
+- `HORUS_OPEN_FIRST_RUN` (`1`): let Horus listen on the network, if "other computers may connect" is on, even before the first admin exists. The Proxmox installers set it in the service so you can create the first account in the browser. Without it Horus stays on this computer until an admin exists.
 - `HORUS_AUTH_DISABLED` (`1` turns the login off; only behind something that handles sign-in for you, such as a reverse proxy with SSO).
 - `HORUS_UPDATE_URL`: release address for "Check for updates" (otherwise set in Settings).
 - `HORUS_CONTAINER` (`1`): tells Horus it runs in a container, so Restart and Shut down are disabled (also detected automatically in Docker and Kubernetes).

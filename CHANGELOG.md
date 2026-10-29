@@ -4,6 +4,7 @@ Newest first. Each version is a tag on GitHub, with a Docker image and a release
 
 ## Unreleased
 - **First admin from the environment (Docker):** `HORUS_ADMIN_USER` with `HORUS_ADMIN_PASSWORD_FILE` (or `HORUS_ADMIN_PASSWORD`) creates the first admin when the container starts, so there is no open first-run screen on the network. Ignored once an admin exists.
+- **Proxmox installers:** they no longer create an admin or generate a password. You open the printed address and create the first account yourself, with your own username and password (`HORUS_OPEN_FIRST_RUN=1` in the service lets Horus listen on the network until then; needs this version or newer). The wizard's optional `ADMIN_USER` / `ADMIN_PASSWORD` still create it during the install.
 - **Update now (Proxmox container only):** an admin-only button (signed-in session; never an API or control key) that backs up, installs the newest release from GitHub and restarts. Shown only when the container can write to its own environment; `horus-lxc.sh` now sets that up. Docker and manual installs still show copy-and-run steps.
 - **Getting started:** a welcome checklist on an empty Activity page, a "what now" hint with an Import history button right after adding a server, and clearer empty-Graphs wording.
 - **Graphs:** a "Plays per month, last 12 months" chart stacked by server; the Graphs page and its chart library load only when opened (first load is about a fifth of the size).

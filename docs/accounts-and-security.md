@@ -7,7 +7,7 @@ The first time you open Horus it asks you to choose a **username** and password.
 
 - A normal install listens only on the computer it runs on until an admin exists.
 - Docker and containers listen on the network from the start, so either create the account straight away or set `HORUS_ADMIN_USER` (see below) so it exists before anyone can open the page.
-- The Proxmox installer avoids the problem by creating the admin during the install.
+- The Proxmox installers (like Docker) open the first-run screen on the network and print the address: open it and create the account straight away. Optionally they can create the admin during the install instead (`ADMIN_USER` and `ADMIN_PASSWORD` for the wizard).
 
 ### Creating the admin from the environment (Docker)
 Set `HORUS_ADMIN_USER` and either `HORUS_ADMIN_PASSWORD_FILE` (a file whose first line is the password; preferred, since it stays out of `docker inspect`) or `HORUS_ADMIN_PASSWORD`. When Horus starts and no admin exists yet, it creates that account, so the first-run screen never appears. Once any admin exists the variables are ignored, so changing the password there later changes nothing and you can remove them. A password that is too short, or a file that can't be read, is logged (never the password) and leaves the normal first-run screen in place. In `compose.example.yaml` the lines are there to uncomment; the container runs as user 10001, so the password file must be readable by it.

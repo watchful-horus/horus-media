@@ -38,26 +38,12 @@
   },
   "notes": [
     {
-      "text": "Unless you set var_admin_pass, the generated admin login is saved to ~/horus.creds inside the container.",
-      "type": "info"
+      "text": "Open Horus right after the install and create the admin account in the browser. Until you do, anyone on your network could create it.",
+      "type": "warning"
     },
     {
       "text": "Add your Plex and Emby servers under Servers after signing in. Horus reads from them; the only action it can take is stopping a stream when an admin asks.",
       "type": "info"
-    }
-  ],
-  "app_vars": [
-    {
-      "name": "var_admin_user",
-      "label": "Admin Username",
-      "type": "text",
-      "default": "admin"
-    },
-    {
-      "name": "var_admin_pass",
-      "label": "Admin Password",
-      "type": "password",
-      "secret": true
     }
   ]
 }

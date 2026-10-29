@@ -53,8 +53,12 @@ def resolve(conn: sqlite3.Connection) -> Listen:
     cfg = app_settings.load(conn)
     host_env, port_env = os.environ.get("HORUS_HOST"), os.environ.get("HORUS_PORT")
     host = host_env or (ALL_INTERFACES if cfg.listen_all else LOCALHOST)
-    if not host_env and host == ALL_INTERFACES and not auth.admin_exists(conn):
-        host = LOCALHOST  # never open to the network before there is a login
+    if (not host_env and host == ALL_INTERFACES and not auth.admin_exists(conn)
+            and os.environ.get("HORUS_OPEN_FIRST_RUN") != "1"):
+        # Never open to the network before there is a login, unless the installer said that the
+        # first account is created in the browser (HORUS_OPEN_FIRST_RUN=1, set by the Proxmox
+        # installers). That choice only matters until the first admin exists.
+        host = LOCALHOST
     return Listen(
         host=host,
         port=int(port_env) if port_env else cfg.http_port,

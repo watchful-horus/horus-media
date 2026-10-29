@@ -10,14 +10,14 @@ Open port 8000 and **create the first account straight away**: the container lis
 ## Proxmox VE container
 `scripts/proxmox/horus-lxc.sh` creates a small Debian 13 container, installs Horus as a service and prints the address. Run it on the Proxmox host as root.
 
-- It is a wizard (default or advanced settings, with menus for storage and network). It also asks for the administrator username and password and creates that account before Horus starts, so nobody else can claim the first account. Leave the password blank and it generates one and shows it at the end.
+- It is a wizard (default or advanced settings, with menus for storage and network). It does not create a login: when it finishes it prints the address, and you open it and **create the administrator account yourself** (your own username and password). Do that straight away, because until the account exists anyone on your network could. For automation, `ADMIN_USER` and `ADMIN_PASSWORD` create the account during the install instead.
 - The install shows one line per step with a spinner and keeps the full output in a log file (`HORUS_VERBOSE=1` prints everything instead).
 - Point `HORUS_PACKAGE` at a Horus wheel and copy it to the host first, for example `HORUS_PACKAGE=/root/horus_media-0.2.0-py3-none-any.whl bash horus-lxc.sh`. Build a wheel with `cd web && npm run build && cd .. && pip wheel . --no-deps -w dist`.
 - CPU, RAM, disk, storage, network and port can be set with environment variables (listed at the top of the script).
 - Update later with `bash horus-lxc.sh update <container id>`; the data is kept.
 - Restart and shut down work from the web UI.
 
-`ct/horus.sh`, `install/horus-install.sh` and `json/horus.json` are the same installer in the community-scripts style, for a possible future submission. `ct/horus.sh` has not been run on a real Proxmox host yet, so use the wizard above.
+`ct/horus.sh`, `install/horus-install.sh` and `json/horus.json` are the same installer in the community-scripts style, for a possible future submission. It also leaves the first account to the browser. (Both installers set `HORUS_OPEN_FIRST_RUN=1` in the service, which lets Horus listen on the network before the first admin exists; this needs Horus 0.3.0 or newer.) `ct/horus.sh` has not been run on a real Proxmox host yet, so use the wizard above.
 
 ## From source (Windows, Linux, macOS)
 Needs Python 3.12+ and, to build the web UI, Node 20+.
@@ -40,7 +40,7 @@ python -m horus_media startup remove
 This adds or removes one entry under your own account's Run key (no administrator rights) that starts Horus without a console window, using the data folder you installed it from.
 
 ## Command line helpers
-- `python -m horus_media create-admin --username NAME` creates the first admin (the password is read from standard input). The installers use it.
+- `python -m horus_media create-admin --username NAME` creates the first admin (the password is read from standard input). Scripts and automation can use it.
 - `python -m horus_media configure --port N [--listen-all]` saves the port and whether other computers may connect, without the web UI. The installers use it. `--db PATH` (before the command) picks another database file.
 
 ## Moving to a new install

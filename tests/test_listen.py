@@ -223,3 +223,16 @@ def test_port_with_lingering_closed_connections_counts_as_free():
         assert not listen.port_is_free("127.0.0.1", holder.getsockname()[1])
     finally:
         holder.close()
+
+
+def test_installers_can_open_the_first_run_screen_to_the_network(api, monkeypatch):
+    _, tmp = api
+    conn = connect(tmp / "horus.db")
+    migrate(conn)
+    from horus_media import app_settings
+    app_settings.update(conn, {"listen_all": True})
+    assert listen.resolve(conn).host == "127.0.0.1"  # the safe default: no admin, stays closed
+    monkeypatch.setenv("HORUS_OPEN_FIRST_RUN", "1")  # set by the Proxmox installers
+    assert listen.resolve(conn).host == "0.0.0.0"
+    app_settings.update(conn, {"listen_all": False})
+    assert listen.resolve(conn).host == "127.0.0.1"  # still needs 'other computers may connect'
