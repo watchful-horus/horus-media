@@ -68,7 +68,7 @@
   // served, and the bandwidth they add up to, split into local (same network) and remote.
   // A paused stream counts as a stream but adds no bandwidth, because nothing is flowing.
   // Unreachable servers are left out.
-  const streamsText = (n) => `${n} stream${n === 1 ? '' : 's'}`
+  const streamsText = (n) => `${n} Stream${n === 1 ? '' : 's'}`
   const sum = (list) => {
     const known = list.filter((s) => s.bandwidth_kbps != null && s.state !== 'paused')
     return known.length ? known.reduce((n, s) => n + s.bandwidth_kbps, 0) : list.length ? null : 0
@@ -178,7 +178,7 @@
           <span class="tname">{r.name}</span>
           <strong>{streamsText(r.count)}</strong>
           <span class="tbw">{r.count ? bandwidth(r.kbps) : '—'}</span>
-          {#if r.paused}<span class="tkinds">{r.paused} paused (Bandwidth Not Counted)</span>{/if}
+          {#if r.paused}<span class="tkinds">{r.paused} Paused (Bandwidth Not Counted)</span>{/if}
           {#if r.count}
             <span class="tkinds">
               Local {r.local.count}{r.local.count ? ` · ${bandwidth(r.local.kbps)}` : ''}
