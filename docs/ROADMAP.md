@@ -66,6 +66,7 @@ Status as of 2026-10-28. The app is feature-complete for the original v1 scope a
 - [ ] Docker: create the first admin from environment variables (for example `HORUS_ADMIN_USER` and a password file), so a container never shows an open first-run screen to the network (the setup code was removed on 2026-10-28)
 
 **After the next changes land**
+- [x] `0.2.0` cut on 2026-10-29: Stop stream (admin only; tested with fake servers, not yet on a real Plex or Emby), an amber Paused badge, and activity totals per server and overall with a local/remote split. Horus is no longer strictly read-only because of Stop stream.
 - [x] `0.1.4` cut on 2026-10-29: Settings shows how to update for the way Horus runs (Docker, Proxmox container or manual install) with Copy buttons; Horus still never updates itself.
 - [x] `0.1.3` cut on 2026-10-29: server rename, optional alerts, weekly/monthly summary reports, Network settings fix for containers, update check on by default with a time of day, a time of day for automatic backups, backup path hardening (CodeQL), redrawn graphs (solid lines, stacked weekday bars, calmer bandwidth), arm64 marked supported in the Proxmox script, SHA-pinned Actions. The repo went public on 2026-10-29.
 - [x] `0.1.2` cut on 2026-10-28 (adds control keys; `0.1.1` added email usernames, no setup code and newer build tools): release and ghcr.io image published by the tag workflows. `v0.1.0` and `v0.1.1` are the older releases. Still to do: `1.0.0` once the Proxmox community install and the published image have had real use
