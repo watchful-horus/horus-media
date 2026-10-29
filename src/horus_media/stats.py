@@ -186,3 +186,37 @@ def compute_stats(
         # When the first bandwidth sample was ever recorded (imported history has none).
         "bandwidth_since": bandwidth_since,
     }
+
+
+def compute_monthly(
+    conn: sqlite3.Connection, tz: tzinfo | None = None, only_user: str | None = None,
+    today: date | None = None, months: int = 12,
+) -> dict:
+    """Plays per calendar month for the last `months` months, this month included, per server.
+    Independent of the date range chosen on the Graphs page."""
+    today = today or datetime.now(tz).date()
+    year, month = today.year, today.month - (months - 1)
+    while month < 1:
+        year, month = year - 1, month + 12
+    first = date(year, month, 1)
+    keys = []
+    for i in range(months):
+        m = month - 1 + i
+        keys.append(date(year + m // 12, m % 12 + 1, 1).isoformat())
+    lo, hi = _bounds(first, today, tz)
+    servers = [dict(r) for r in conn.execute("SELECT id, name FROM servers ORDER BY id")]
+    counts = {s["id"]: Counter() for s in servers}
+    rows = conn.execute(
+        "SELECT server_id, started_at FROM history WHERE started_at >= ? AND started_at < ? "
+        + ("AND user = ? COLLATE NOCASE" if only_user is not None else ""),
+        (lo, hi) if only_user is None else (lo, hi, only_user),
+    ).fetchall()
+    for r in rows:
+        if r["server_id"] in counts:
+            counts[r["server_id"]][_local(r["started_at"], tz).date().replace(day=1).isoformat()] += 1
+    return {
+        "months": keys,
+        "series": [{"server": s["name"], "data": [counts[s["id"]][k] for k in keys]}
+                   for s in servers],
+        "total": len(rows),
+    }

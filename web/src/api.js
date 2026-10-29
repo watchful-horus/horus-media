@@ -76,6 +76,8 @@ export const api = {
     request('GET', `/api/logs?level=${level}&limit=${limit}&q=${encodeURIComponent(q ?? '')}`),
   clearLogs: () => request('DELETE', '/api/logs'),
   updateCheck: () => request('GET', '/api/update-check'),
+  applyUpdate: () => request('POST', '/api/update/apply'),
+  monthly: () => request('GET', '/api/stats/monthly'),
   stats: (start, end, hourly = false) =>
     request('GET', `/api/stats?start=${start}&end=${end}${hourly ? '&hourly=true' : ''}`),
   servers: () => request('GET', '/api/servers'),

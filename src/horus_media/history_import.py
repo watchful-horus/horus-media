@@ -2,10 +2,11 @@
 
 import logging
 import sqlite3
-from datetime import timedelta
+from datetime import datetime, time, timedelta, tzinfo
 
 import httpx
 
+from . import app_settings
 from .clients import make_client
 from .models import HistoryRecord
 from .store import ServerStore
@@ -51,10 +52,20 @@ def import_history(store: ServerStore, server_id: int,
     return store_records(store.conn, server_id, records)
 
 
+def _noon(started: datetime, zone: tzinfo) -> datetime:
+    """A play that only has a date goes at midday in the user's time zone, so it lands on the
+    right day and in a plausible hour rather than at midnight UTC."""
+    return datetime.combine(started.date(), time(12), tzinfo=zone)
+
+
 def store_records(conn: sqlite3.Connection, server_id: int, records: list[HistoryRecord]) -> dict:
     added = skipped = 0
+    zone = app_settings.load(conn).zone() or datetime.now().astimezone().tzinfo
     with conn:
         for r in records:
+            key = r.key  # built from the original time, so plays imported earlier are not repeated
+            if r.date_only:
+                r = r.model_copy(update={"started_at": _noon(r.started_at, zone)})
             lo = (r.started_at - timedelta(minutes=2)).isoformat()
             hi = (r.started_at + timedelta(minutes=2)).isoformat()
             live = conn.execute(
@@ -70,7 +81,7 @@ def store_records(conn: sqlite3.Connection, server_id: int, records: list[Histor
                 "INSERT OR IGNORE INTO history (server_id, session_key, user, title, media_type, "
                 "device, platform, play_method, started_at, last_seen_at, ended_at, imported) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
-                (server_id, f"import:{r.key}", r.user, r.title, r.media_type, r.device,
+                (server_id, f"import:{key}", r.user, r.title, r.media_type, r.device,
                  r.platform, r.play_method, r.started_at.isoformat(), end, end),
             )
             if cur.rowcount:

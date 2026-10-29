@@ -162,6 +162,35 @@
       apply(await api.settings())
     })
 
+  // Update now (Proxmox containers only): Horus backs up, installs the new release and restarts, then
+  // this page waits for the new version to answer and reloads.
+  let updating = $state(false)
+  async function updateNow() {
+    if (!confirm(`Update Horus to ${update.latest}? A backup is made first, then Horus restarts. This takes a minute or two.`)) return
+    updating = true
+    message = null
+    try {
+      await api.applyUpdate()
+    } catch (e) {
+      message = e.message
+      messageOk = false
+      updating = false
+      return
+    }
+    message = `Updated to ${update.latest}. Restarting...`
+    messageOk = true
+    for (let i = 0; i < 60; i++) {
+      await new Promise((r) => setTimeout(r, 2000))
+      try {
+        const h = await fetch('/api/health').then((r) => r.json())
+        if (h.version === update.latest) { location.reload(); return }
+      } catch { /* still restarting */ }
+    }
+    message = 'Horus has not come back yet. Give it a minute and reload the page.'
+    messageOk = false
+    updating = false
+  }
+
   const when = (iso) => (iso ? new Date(iso).toLocaleString() : 'never')
   const size = (b) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`)
 </script>
@@ -377,7 +406,15 @@
               <a href={update.release_url} target="_blank" rel="noopener noreferrer">Release notes</a>
             {/if}
           </p>
-          {#if update.how}
+          {#if update.can_apply}
+            <div class="howto">
+              <h4>Update now</h4>
+              <p class="hint">This container can update itself. Horus makes a backup, installs {update.latest}, and restarts. Your data is kept.</p>
+              <div class="actions">
+                <button type="button" class="primary" disabled={busy || updating} onclick={updateNow}>{updating ? 'Updating...' : `Update to ${update.latest}`}</button>
+              </div>
+            </div>
+          {:else if update.how}
             <div class="howto">
               <h4>{update.how.title}</h4>
               {#each update.how.notes as note}<p class="hint">{note}</p>{/each}

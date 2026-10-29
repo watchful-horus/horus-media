@@ -15,7 +15,17 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import ValidationError
 
-from . import __version__, app_settings, auth, backup, install_info, listen, logging_setup, updates
+from . import (
+    __version__,
+    app_settings,
+    auth,
+    backup,
+    install_info,
+    listen,
+    logging_setup,
+    self_update,
+    updates,
+)
 from .config import db_path
 from .poller import DB_WORK
 from .restore_upload import restore_upload
@@ -202,11 +212,40 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
         app_settings.set_state(store.conn, "update_latest", result["latest"])
         app_settings.set_state(store.conn, "last_update_check", datetime.now(UTC).isoformat())
         how = install_info.update_help(result["latest"]) if result["newer"] else None
-        return {"configured": True, **result, **({"how": how} if how else {})}
+        can_apply = bool(result["newer"] and result.pop("asset_url", None)
+                         and self_update.why_not() is None)
+        result.pop("asset_url", None)
+        return {"configured": True, **result, "can_apply": can_apply,
+                **({"how": how} if how else {})}
 
     def actor(request: Request) -> str:
         user = getattr(request.state, "user", None)
         return user["username"] if user else "someone"
+
+    @router.post("/update/apply")
+    def apply_update(request: Request, store: Store):
+        """Update a Proxmox container in place: back up, install the newest release, restart.
+        A signed-in admin only: no API key, not even a control key, may do this."""
+        if getattr(request.state, "via_key", None):
+            raise HTTPException(403, "Updating needs a signed-in admin, not an API key")
+        reason = self_update.why_not()
+        if reason:
+            raise HTTPException(409, "This copy cannot update itself: " + reason)
+        url = updates.effective_url(app_settings.load(store.conn).update_url)
+        try:
+            found = updates.check(url, transport)
+        except updates.UpdateCheckError as e:
+            raise HTTPException(502, str(e)) from e
+        if not found["newer"] or not found["asset_url"]:
+            raise HTTPException(409, "There is no newer version to install")
+        log.warning("update to %s requested from the web UI by %s", found["latest"], actor(request))
+        try:
+            self_update.apply(found["latest"], found["asset_url"], transport)
+        except self_update.SelfUpdateError as e:
+            log.error("update to %s failed: %s", found["latest"], e)
+            raise HTTPException(502, str(e)) from e
+        threading.Timer(1.5, _restart_process).start()  # after this response has been sent
+        return {"updated_to": found["latest"], "restarting": True}
 
     @router.post("/restart")
     def restart(request: Request):

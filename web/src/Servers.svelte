@@ -62,6 +62,7 @@
       await api.plexLinkAdd(link.pinId, { resource_id: s.id, url: link.picks[s.id] })
       link = { ...link, servers: link.servers.filter((x) => x.id !== s.id) }
       await load()
+      justAdded()
       if (link.servers.length === 0) cancelLink()
       else if (shown.length === 0 && !showShared) message = 'Added. Only shared servers are left; tick the box above to see them.'
     })
@@ -100,6 +101,7 @@
       form = { type: form.type, name: '', url: '', token: '' }
       formResult = null
       await load()
+      justAdded()
     })
 
   const testSaved = (id) =>
@@ -108,6 +110,8 @@
     })
 
   let imported = $state({}) // server id -> message after an import
+  let next = $state(null) // the server just added, while its "what now" hint is showing
+  const justAdded = () => { next = servers.length ? servers[servers.length - 1].id : null }
   const importHistory = (s) => {
     if (!confirm(`Import ${s.name}'s past plays into Horus? Nothing changes on the server. You only need to do this once; running it again adds nothing new.`)) return
     guard(async () => {
@@ -145,6 +149,16 @@
     <p class="muted">None yet. Add one below.</p>
   {/if}
   {#each servers as s (s.id)}
+    {#if next === s.id}
+      <div class="next">
+        <strong>{s.name} is added.</strong> Horus now records every play on it, and the Activity page shows what is playing.
+        To bring in plays from before today, import its history now (once is enough).
+        <div class="actions">
+          <button class="primary" disabled={busy} onclick={() => { const x = s; next = null; importHistory(x) }}>Import history</button>
+          <button onclick={() => (next = null)}>Not now</button>
+        </div>
+      </div>
+    {/if}
     <div class="row">
       <div>
         {#if renaming?.id === s.id}
@@ -261,6 +275,8 @@
 </section>
 
 <style>
+  .next { border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin: 8px 0; font-size: 14px; }
+  .next .actions { margin-top: 8px; }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
     padding: 16px 20px; margin-bottom: 16px; }
   h2 { margin: 0 0 12px; font-size: 17px; }

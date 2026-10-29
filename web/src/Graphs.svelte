@@ -18,6 +18,7 @@
   let data = $state(null)
   let error = $state(null)
   let granChoice = $state(null) // null = pick automatically from the range length
+  let monthly = $state(null) // last 12 calendar months, not tied to the date range
 
   const PRESETS = [[7, '7 days'], [30, '30 days'], [90, '90 days'], [365, '1 year']]
 
@@ -29,7 +30,10 @@
       error = e.message
     }
   }
-  onMount(load)
+  async function loadMonthly() {
+    try { monthly = await api.monthly() } catch { monthly = null }
+  }
+  onMount(() => { load(); loadMonthly() })
 
   const span = $derived(data ? daysBetween(data.range.start, data.range.end) : 30)
   const autoGran = (n) => (n <= 45 ? 'day' : n <= 200 ? 'week' : 'month')
@@ -235,6 +239,33 @@
     }
   })
 
+  const monthLabel = (key) => parse(key).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+  const monthlyChart = $derived.by(() => {
+    if (!monthly) return null
+    const series = withTotal(monthly.series.map((s) => ({ name: s.server, data: s.data })))
+    const servers = series.filter((s) => !s.total)
+    return {
+      option: {
+        tooltip: {
+          trigger: 'axis', axisPointer: { type: 'shadow' },
+          formatter: (params) => `${esc(params[0].axisValueLabel)}<br/>` +
+            params.map((p) => `${p.marker} ${esc(p.seriesName)} <b>${p.value}</b>`).join('<br/>') +
+            (params.length > 1 ? `<br/>Total <b>${params.reduce((n, p) => n + p.value, 0)}</b>` : ''),
+        },
+        xAxis: { type: 'category', data: monthly.months.map(monthLabel) },
+        yAxis: { type: 'value', minInterval: 1 },
+        series: servers.map((s) => ({
+          name: s.name, type: 'bar', stack: 'plays', data: s.data, barMaxWidth: 36,
+          itemStyle: { borderColor: 'transparent', borderWidth: 1 }, emphasis: { focus: 'series' },
+        })),
+      },
+      table: {
+        head: ['Month', ...series.map((s) => label(s.name))],
+        rows: monthly.months.map((k, i) => [monthLabel(k), ...series.map((s) => s.data[i])]),
+      },
+    }
+  })
+
   // A note under the bandwidth chart when recording started part-way through the range.
   const bandwidthNote = $derived(
     data?.bandwidth_since && data.bandwidth_since.slice(0, 10) > data.range.start
@@ -273,7 +304,8 @@
 {:else}
   <p class="muted summary">
     {data.total_plays} plays, {data.range.start} to {data.range.end}.
-    {#if data.total_plays === 0}Nothing recorded in this range. Use the arrows to look further back.{/if}
+    {#if data.total_plays === 0 && !data.earliest}Nothing recorded yet. Horus records plays while it is running, so this fills up as people watch. To bring in older plays, press Import history under Settings &gt; Servers.
+    {:else if data.total_plays === 0}Nothing recorded in this range. Use the arrows to look further back.{/if}
   </p>
   <div class="grid">
     <section class="card wide">
@@ -298,6 +330,12 @@
       <Chart option={built.bandwidth.option} table={built.bandwidth.table} slots={serverSlotsWithTotal} height={300} />
       {#if bandwidthNote}<p class="muted note">{bandwidthNote}</p>{/if}
     </section>
+    {#if monthlyChart}
+      <section class="card wide">
+        <h2>Plays per month, last 12 months</h2>
+        <Chart option={monthlyChart.option} table={monthlyChart.table} slots={serverSlots} />
+      </section>
+    {/if}
     <section class="card"><h2>Plays by user</h2><Chart option={built.user.option} table={built.user.table} slots={[0]} height={built.user.height} /></section>
     <section class="card"><h2>Plays by platform</h2><Chart option={built.platform.option} table={built.platform.table} slots={[0]} height={built.platform.height} /></section>
     <section class="card"><h2>Plays by hour of day</h2><Chart option={built.hour.option} table={built.hour.table} slots={[0]} /></section>

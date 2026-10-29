@@ -4,6 +4,7 @@
 - `HORUS_DB_PATH` (default `./data/horus.db`): SQLite file. An encryption key (`horus.key`) is created next to it on first run; server tokens are stored encrypted with it. Back up both files together and keep the key private.
 - `HORUS_POLL_SECONDS` (default `15`; the Settings page overrides it once saved): how often Horus checks your servers and records plays. `0` turns recording off. Plays are only recorded while Horus is running. Set `TZ` (for example in Docker) so days and hours match your local time.
 - `HORUS_PORT` / `HORUS_HOST` (default `8000` / `127.0.0.1`): where Horus listens. When set, they override the Settings page, which then shows them as locked.
+- `HORUS_ADMIN_USER` with `HORUS_ADMIN_PASSWORD_FILE` (or `HORUS_ADMIN_PASSWORD`): create the first admin at start when none exists (see [Accounts and security](accounts-and-security.md#creating-the-admin-from-the-environment-docker)).
 - `HORUS_AUTH_DISABLED` (`1` turns the login off; only behind something that handles sign-in for you, such as a reverse proxy with SSO).
 - `HORUS_UPDATE_URL`: release address for "Check for updates" (otherwise set in Settings).
 - `HORUS_CONTAINER` (`1`): tells Horus it runs in a container, so Restart and Shut down are disabled (also detected automatically in Docker and Kubernetes).
@@ -31,7 +32,7 @@ Backups are zips of the database plus `horus.key`, written to a `backups` folder
 ### Update checks
 Update checks only contact the *Release address* in Settings > General > System (or `HORUS_UPDATE_URL`), a GitHub-style "latest release" URL. On a new install the address of the Horus project is filled in and Horus looks for a newer release once a day (at 04:00 by default; change the time in Settings). It only reads the latest-release page, sends nothing about you or your servers, and never installs anything. Untick *Check for updates once a day*, or clear the address, to turn it off.
 
-When a newer version exists, Settings shows the update steps for how your copy runs (Docker, a Proxmox container, or a manual install) with a Copy button. Horus never updates itself.
+When a newer version exists, Settings shows the update steps for how your copy runs (Docker, a Proxmox container, or a manual install) with a Copy button. On a Proxmox container that can write to its own environment, an **Update now** button appears instead (see [Installing](install.md#updating)). Docker and manual installs are never updated by Horus itself.
 
 ### Logs
 Horus writes an application log to `logs/horus.log` next to the database (rotating, about 10 MB at most) and to the console. Read it in **Settings > Logs** (filter by level, search, download) or open the file. It records starts and stops, servers added or removed, connection tests, plays starting and ending, servers going unreachable and coming back, sign-ins, user and settings changes, backups and restores. How much is recorded is set on the same page under *Recording detail* (default *Normal*; use *Everything* when troubleshooting).

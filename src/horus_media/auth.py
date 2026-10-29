@@ -102,6 +102,39 @@ def admin_exists(conn: sqlite3.Connection) -> bool:
     return conn.execute("SELECT 1 FROM users WHERE role = 'admin'").fetchone() is not None
 
 
+def admin_from_environment(conn: sqlite3.Connection) -> str | None:
+    """Create the first admin from HORUS_ADMIN_USER plus HORUS_ADMIN_PASSWORD_FILE (or
+    HORUS_ADMIN_PASSWORD), so a container never shows an open first-run screen to the network.
+
+    Does nothing once any admin exists, so changing or removing the variables later is safe and
+    the password in them is never applied again. Returns the username when one was created.
+    Problems are logged (never the password) and leave the normal first-run screen in place."""
+    username = os.environ.get("HORUS_ADMIN_USER", "").strip()
+    if not username or admin_exists(conn):
+        return None
+    password_file = os.environ.get("HORUS_ADMIN_PASSWORD_FILE", "").strip()
+    password = os.environ.get("HORUS_ADMIN_PASSWORD", "")
+    if password_file:
+        try:
+            with open(password_file, encoding="utf-8") as f:
+                password = f.readline().rstrip("\r\n")
+        except OSError as e:
+            log.error("HORUS_ADMIN_PASSWORD_FILE could not be read (%s); no admin was created",
+                      type(e).__name__)
+            return None
+    if not password:
+        log.error("HORUS_ADMIN_USER is set but no HORUS_ADMIN_PASSWORD_FILE or "
+                  "HORUS_ADMIN_PASSWORD; no admin was created")
+        return None
+    try:
+        user = create_user(conn, username, password, "admin")
+    except UserError as e:
+        log.error("The admin account from the environment was not created: %s", e)
+        return None
+    log.info("Admin account '%s' created from HORUS_ADMIN_USER", user["username"])
+    return user["username"]
+
+
 def list_users(conn: sqlite3.Connection) -> list[dict]:
     rows = conn.execute(
         "SELECT id, username, role, created_at, last_login_at, media_username FROM users "

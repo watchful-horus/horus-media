@@ -28,6 +28,7 @@ def serve() -> None:
     conn = connect(db_path())
     try:
         migrate(conn)
+        auth.admin_from_environment(conn)  # before resolving: an admin lets Horus open to the network
         where = listen.resolve(conn)
     finally:
         conn.close()

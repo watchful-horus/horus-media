@@ -5,7 +5,7 @@ Pick one. All three keep your data (database, encryption key, backups, logs) in 
 ## Docker
 Needs Docker with Compose. Copy `compose.example.yaml` to `compose.yaml`, set your time zone, and run `docker compose up -d`. The image is `ghcr.io/watchful-horus/horus-media` (amd64).
 
-Open port 8000 and **create the first account straight away**: the container listens on the network from the start, so until the account exists anyone who can reach the page could create it. Data lives in the `horus-data` volume. Restart and shut down are done with Docker, not the web UI, and so is changing the port (change the port mapping and restart the container).
+Open port 8000 and **create the first account straight away**: the container listens on the network from the start, so until the account exists anyone who can reach the page could create it. To avoid that window, set `HORUS_ADMIN_USER` and `HORUS_ADMIN_PASSWORD_FILE` (lines to uncomment are in `compose.example.yaml`); the account is then created when the container starts. See [Accounts and security](accounts-and-security.md#creating-the-admin-from-the-environment-docker). Data lives in the `horus-data` volume. Restart and shut down are done with Docker, not the web UI, and so is changing the port (change the port mapping and restart the container).
 
 ## Proxmox VE container
 `scripts/proxmox/horus-lxc.sh` creates a small Debian 13 container, installs Horus as a service and prints the address. Run it on the Proxmox host as root.
@@ -47,4 +47,7 @@ This adds or removes one entry under your own account's Run key (no administrato
 On a fresh install the first screen has **Already use Horus? Restore from a backup instead**. Choose a backup zip (Settings > Backups > Download on the old install) and your accounts, servers and history come back. In an existing install use **Restore from a file...** under Settings > Backups. Backups can be deleted from the same list.
 
 ## Updating
-Horus checks once a day for a newer release and, when there is one, shows the update steps for how your copy runs (Docker, Proxmox container or manual install) in Settings, with a Copy button. It never updates itself. See [Configuration](configuration.md#update-checks).
+Horus checks once a day for a newer release and, when there is one, shows how to update in Settings.
+
+- **Docker and manual installs:** the steps for how your copy runs, with a Copy button. Horus never updates these itself.
+- **Proxmox container:** an **Update now** button (admins only, from a signed-in session; no API or control key can press it). It makes a backup, downloads the release from GitHub, installs it into Horus's own environment and restarts. It appears only when the container can write to that environment, which is true for containers made or updated with the current `horus-lxc.sh` and for the community-style installer (which runs as root). On an older container, run `bash horus-lxc.sh update <container id>` once and the button appears from then on. See [Configuration](configuration.md#update-checks).

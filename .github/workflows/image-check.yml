@@ -1,0 +1,35 @@
+name: Published image check
+
+# Once a week, pulls the published image the way a user would (anonymously, from ghcr.io) and checks
+# that it starts and reports healthy. A failure here means `latest` is broken for new users.
+# Plain docker commands only: the repository allows GitHub's own actions only.
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pull-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull the published image
+        run: docker pull ghcr.io/watchful-horus/horus-media:latest
+
+      - name: Start it and wait until it reports healthy
+        run: |
+          docker run -d --name horus-check -p 8000:8000 ghcr.io/watchful-horus/horus-media:latest
+          for i in $(seq 1 40); do
+            status="$(docker inspect --format '{{.State.Health.Status}}' horus-check)"
+            echo "health: ${status}"
+            [ "${status}" = "healthy" ] && break
+            sleep 3
+          done
+          if [ "${status}" != "healthy" ]; then docker logs horus-check; exit 1; fi
+
+      - name: Check what it serves
+        run: |
+          curl -fsS http://127.0.0.1:8000/api/health
+          curl -fsS http://127.0.0.1:8000/ | grep -q 'id="app"'

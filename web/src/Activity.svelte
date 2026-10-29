@@ -163,7 +163,13 @@
   <p class="muted">Loading...</p>
 {:else if data.servers.length === 0}
   <div class="card empty">
-    <p>No servers yet.</p>
+    <h2>Welcome to Horus</h2>
+    <p class="muted">Three steps and this page fills up.</p>
+    <ol class="steps">
+      <li><strong>Add a server.</strong> Plex (sign in with Plex) or Emby (an API key).</li>
+      <li><strong>Watch something.</strong> Streams appear here live, and Horus starts recording history.</li>
+      <li><strong>Optional: import older plays.</strong> Right after adding a server, so the Graphs page has data from day one.</li>
+    </ol>
     {#if canSetup}
       <button class="primary" onclick={onsetup}>Add a server</button>
     {:else}
@@ -268,6 +274,9 @@
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
     padding: 16px 20px; margin-bottom: 16px; }
   .empty { text-align: center; }
+  .empty h2 { text-align: center; margin: 0 0 4px; }
+  .steps { text-align: left; max-width: 520px; margin: 8px auto 18px; padding-left: 20px; }
+  .steps li { margin: 6px 0; }
   .totals { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
   .tot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 10px 14px;
     background: var(--panel); border: 1px solid var(--border); border-radius: 10px; min-width: 150px; }

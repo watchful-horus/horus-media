@@ -156,3 +156,27 @@ def test_bandwidth_total_adds_servers_per_poll(env):
     assert total and len(total) == len(each)
     assert total[0][1] == 2 * each[0][1]  # average adds up
     assert total[0][2] == 2 * each[0][2]  # and so does the peak, measured at the same instant
+
+
+def test_monthly_totals_cover_twelve_months_per_server(tmp_path):
+    import sqlite3
+    from datetime import date
+
+    from horus_media.stats import compute_monthly
+
+    conn = sqlite3.connect(tmp_path / "m.db")
+    conn.row_factory = sqlite3.Row
+    conn.executescript(
+        "CREATE TABLE servers (id INTEGER PRIMARY KEY, name TEXT);"
+        "CREATE TABLE history (server_id INTEGER, user TEXT, started_at TEXT);"
+        "INSERT INTO servers VALUES (1, 'A'), (2, 'B');"
+        "INSERT INTO history VALUES (1, 'x', '2026-10-05T12:00:00+00:00'),"
+        " (1, 'x', '2026-10-06T12:00:00+00:00'), (2, 'y', '2025-11-10T12:00:00+00:00'),"
+        " (2, 'y', '2025-10-31T12:00:00+00:00');"  # one month too old: left out
+    )
+    out = compute_monthly(conn, None, today=date(2026, 10, 29))
+    assert out["months"][0] == "2025-11-01" and out["months"][-1] == "2026-10-01"
+    assert len(out["months"]) == 12
+    assert out["series"][0] == {"server": "A", "data": [0] * 11 + [2]}
+    assert out["series"][1]["data"][0] == 1
+    assert out["total"] == 3

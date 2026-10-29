@@ -1,14 +1,24 @@
 version: 2
+# Weekly, with all the updates of one kind grouped into a single pull request.
 updates:
   - package-ecosystem: pip
     directory: "/"
     schedule:
       interval: weekly
+    groups:
+      python-dependencies:
+        patterns: ["*"]
   - package-ecosystem: npm
     directory: "/web"
     schedule:
       interval: weekly
+    groups:
+      web-dependencies:
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]

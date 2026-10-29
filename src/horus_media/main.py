@@ -39,7 +39,7 @@ from .routes_auth import make_router as make_auth_router
 from .routes_integrations import make_router as make_integrations_router
 from .routes_settings import make_router
 from .routes_v1 import make_router as make_v1_router
-from .stats import HOURLY_MAX_DAYS, compute_stats
+from .stats import HOURLY_MAX_DAYS, compute_monthly, compute_stats
 from .store import ServerStore
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -57,6 +57,7 @@ async def lifespan(app: FastAPI):
     conn = connect(db_path())
     try:
         migrate(conn)
+        auth.admin_from_environment(conn)
         first_run = not auth.admin_exists(conn)
         listen.remember_startup(app_settings.load(conn))
     finally:
@@ -328,6 +329,11 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
         only = auth.only_media_user(store.conn, getattr(request.state, "user", None))
         return compute_stats(store.conn, start, end, app_settings.load(store.conn).zone(), hourly,
                              only_user=only)
+
+    @app.get("/api/stats/monthly")
+    def stats_monthly(request: Request, store: Store):
+        only = auth.only_media_user(store.conn, getattr(request.state, "user", None))
+        return compute_monthly(store.conn, app_settings.load(store.conn).zone(), only_user=only)
 
     app.include_router(make_router(get_store, transport))
     app.include_router(make_auth_router(get_store))

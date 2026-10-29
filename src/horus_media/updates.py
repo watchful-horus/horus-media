@@ -10,7 +10,7 @@ import re
 
 import httpx
 
-from . import __version__
+from . import __version__, self_update
 
 
 class UpdateCheckError(Exception):
@@ -43,4 +43,5 @@ def check(url: str, transport: httpx.BaseTransport | None = None) -> dict:
         "latest": latest,
         "newer": parse_version(latest) > parse_version(__version__),
         "release_url": body.get("html_url") if isinstance(body, dict) else None,
+        "asset_url": self_update.asset_for(body, latest) if isinstance(body, dict) else None,
     }

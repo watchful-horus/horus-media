@@ -61,6 +61,11 @@ def _row_time(row: dict) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
+def _date_only(row: dict) -> bool:
+    raw = row.get("DateCreated") or row.get("Time") or row.get("date")
+    return bool(raw) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(raw).strip()) is not None
+
+
 def _method(text: str) -> str:
     lowered = text.lower()
     if "transcode" in lowered:
@@ -132,6 +137,7 @@ class EmbyClient(MediaServer):
                     play_method=_method(method),
                     started_at=started,
                     duration_seconds=int(row.get("PlayDuration") or row.get("Duration") or 0),
+                    date_only=_date_only(row),
                 ))
         return records
 

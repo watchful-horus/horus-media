@@ -12,7 +12,7 @@ A self-hosted dashboard for Plex and Emby. See what is playing on both servers r
 - Graphs: plays over time by hour, day, week or month; direct play vs transcode; bandwidth; plays by user, platform, hour and weekday; media types
 - Accounts with admin and user roles (an email address works as a username), API keys, and a read-only data API for Grafana and Prometheus
 - Notifications (Discord, ntfy, webhook), optional alerts, weekly or monthly summary reports, and a Seerr requests tab
-- Backups and restore, application logs, and restart / shut down from the web UI
+- Backups and restore, application logs, restart / shut down from the web UI, and an **Update now** button for a Proxmox container
 - Light and dark themes
 - Reads from your servers and changes nothing, with one exception: an admin can press **Stop stream** on the Activity page to end a stream (a signed-in admin only, never an API key or control key; Plex needs Plex Pass for this). Paused streams show an amber **Paused** badge, and a summary at the top adds up the streams and bandwidth per server and in total, split into local and remote (a paused stream counts as a stream but adds no bandwidth)
 
@@ -25,7 +25,12 @@ Graphs in the dark theme, and in the light theme, then bandwidth and the hour an
 ## Quick start
 **Docker** (needs Docker with Compose): copy `compose.example.yaml` to `compose.yaml`, set your time zone, and run `docker compose up -d`. The image is `ghcr.io/watchful-horus/horus-media`.
 
-Then open port 8000 and **create the first account straight away**. The container listens on the network from the start, so until the account exists anyone who can reach the page could create it.
+Or in one line, without a compose file:
+```bash
+docker run -d --name horus -p 8000:8000 -v horus-data:/data -e TZ=Europe/London --restart unless-stopped ghcr.io/watchful-horus/horus-media:latest
+```
+
+Then open port 8000 and **create the first account straight away** (or set `HORUS_ADMIN_USER` and a password file so the account exists before anyone can open the page; see [Accounts and security](docs/accounts-and-security.md#the-first-account)). The container listens on the network from the start, so until the account exists anyone who can reach the page could create it.
 
 Other ways to install (a Proxmox VE container with a guided script, or from source on Windows, Linux or macOS) are in [docs/install.md](docs/install.md).
 

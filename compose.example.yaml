@@ -1,6 +1,7 @@
 # Copy to compose.yaml and run: docker compose up -d
-# Then open http://<this host>:8000 and create the first account straight away: the container listens
-# on the network from the start, so until it exists anyone who can reach the page could create it.
+# Then open http://<this host>:8000. The container listens on the network from the start, so until the
+# first account exists anyone who can reach the page could create it. Either create it straight away, or
+# uncomment the HORUS_ADMIN_* lines below so the account exists before anyone can open the page.
 services:
   horus:
     image: ghcr.io/watchful-horus/horus-media:0.2.0   # to build from this folder instead, use `build: .` here
@@ -10,7 +11,10 @@ services:
       - "8000:8000"        # change the left number to use another port on the host
     environment:
       TZ: Europe/London    # your time zone: decides which day/hour plays count toward
+      # HORUS_ADMIN_USER: admin                          # the first admin, created at start if none exists
+      # HORUS_ADMIN_PASSWORD_FILE: /run/secrets/horus_admin_password   # first line of this file is the password
     volumes:
       - horus-data:/data   # database, encryption key, backups and logs
+      # - ./horus_admin_password:/run/secrets/horus_admin_password:ro   # for HORUS_ADMIN_PASSWORD_FILE
 volumes:
   horus-data:

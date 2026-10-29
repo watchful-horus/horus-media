@@ -24,6 +24,7 @@ Things that matter most, because Horus stores credentials for people's media ser
   restore or log download),
 - a way to make Horus change anything on a Plex or Emby server (it only reads, except the admin-only
   "Stop stream" button, which no API key or control key may use),
+- a way to trigger "Update now" (the admin-only button that installs a new release into a Proxmox container) without a signed-in admin session, or to make it install something other than the official GitHub release,
 - a way around the limits of control keys: using one when control keys are switched off or the key
   has expired, or using one to manage users or keys, change a password or sign in.
 

@@ -4,10 +4,12 @@
   import Account from './Account.svelte'
   import Activity from './Activity.svelte'
   import Auth from './Auth.svelte'
-  import Graphs from './Graphs.svelte'
   import Requests from './Requests.svelte'
   import SettingsPage from './SettingsPage.svelte'
   import { applyMode, nextMode, savedMode } from './theme.js'
+
+  // Graphs (and the chart library it needs) is fetched only when someone opens that tab.
+  const loadGraphs = () => import('./Graphs.svelte')
 
   let mode = $state(savedMode())
   const ICONS = { auto: '◐', light: '☀', dark: '☾' }
@@ -119,7 +121,13 @@
     {#if where.tab === 'activity'}
       <Activity onsetup={() => go('settings', 'servers')} canSetup={isAdmin} isAdmin={isAdmin} />
     {:else if where.tab === 'graphs'}
-      <Graphs />
+      {#await loadGraphs()}
+        <p class="muted">Loading...</p>
+      {:then { default: Graphs }}
+        <Graphs />
+      {:catch}
+        <p class="bad">Could not load the graphs. Reload the page to try again.</p>
+      {/await}
     {:else if where.tab === 'requests' && seerrOn}
       <Requests />
     {:else if where.tab === 'account' && auth.user}

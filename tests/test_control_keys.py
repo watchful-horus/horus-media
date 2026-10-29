@@ -212,3 +212,11 @@ def test_control_keys_need_a_signed_in_admin_account(secured, monkeypatch):
     c = local()
     r = c.post("/api/keys", json={"name": "t", "scope": "control", "expires_in_days": 7})
     assert r.status_code == 409 and "signed-in admin" in r.json()["detail"]
+
+
+def test_a_control_key_can_never_update_horus(secured):
+    c = admin()
+    switch(c)
+    key = control_key(c)["key"]
+    r = local().post("/api/update/apply", headers=bearer(key))
+    assert r.status_code == 403 and "signed-in admin" in r.json()["detail"]

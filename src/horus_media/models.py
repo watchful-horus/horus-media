@@ -58,6 +58,7 @@ class HistoryRecord(BaseModel):
     play_method: str = "unknown"
     started_at: datetime
     duration_seconds: int = 0
+    date_only: bool = False  # the server gave only a date; the time of day is made up on import
 
 
 class ServerIn(BaseModel):

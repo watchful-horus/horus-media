@@ -139,3 +139,24 @@ def test_import_only_issues_get_requests(tmp_path, monkeypatch, kind):
     c = make(tmp_path, monkeypatch, handler)
     c.post(f"/api/servers/{add(c, kind)}/import-history")
     assert methods and set(methods) == {"GET"}
+
+
+def test_emby_date_only_plays_go_at_midday_in_the_users_zone(tmp_path, monkeypatch):
+    rows = [{"rowid": 9, "DateCreated": "2026-03-04", "ItemName": "Old film", "ItemType": "Movie",
+             "PlayDuration": 600, "user_name": "carol"}]
+
+    def handler(request):
+        if request.url.path == "/user_usage_stats/user_list":
+            return httpx.Response(200, json=EMBY_USERS)
+        if request.url.path == "/user_usage_stats/UserPlaylist":
+            return httpx.Response(200, json=rows)
+        return httpx.Response(404)
+
+    c = make(tmp_path, monkeypatch, handler)
+    c.put("/api/settings", json={"timezone": "America/Los_Angeles"})
+    sid = add(c, "emby")
+    assert c.post(f"/api/servers/{sid}/import-history").json()["added"] == 1
+    play = plays(c)[0]
+    assert play["started_at"].startswith("2026-03-04T12:00:00-08:00")
+    # importing again adds nothing, even though the stored time is not midnight any more
+    assert c.post(f"/api/servers/{sid}/import-history").json()["added"] == 0

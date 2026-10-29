@@ -253,6 +253,8 @@ install_in_container() {  # $1 = CTID; installs/upgrades Horus from $PACKAGE
   fi
   # --force-reinstall: a rebuilt wheel keeps its version number, and pip would skip it otherwise
   pct exec "$ctid" -- /opt/horus/bin/pip install --upgrade --force-reinstall --no-cache-dir "$target"
+  # Horus runs as the `horus` user; owning its own environment lets Settings > Update now work
+  pct exec "$ctid" -- chown -R horus /opt/horus
 }
 
 horus_containers() {  # prints "id name" for containers this script created
@@ -467,6 +469,7 @@ EOF
 set -e
 systemctl stop horus
 /opt/horus/bin/pip install --upgrade --force-reinstall --no-cache-dir '${PACKAGE}'
+chown -R horus /opt/horus
 systemctl start horus
 echo "Horus updated."
 EOF
