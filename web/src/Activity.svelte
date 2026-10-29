@@ -64,19 +64,29 @@
     ].filter(([, v]) => v)
   }
 
-  // One line per server and one for everything: how many streams are playing, how they are
-  // being served, and the bandwidth they add up to. Unreachable servers are left out.
+  // One tile per server and one for everything: how many streams there are, how they are being
+  // served, and the bandwidth they add up to, split into local (same network) and remote.
+  // A paused stream counts as a stream but adds no bandwidth, because nothing is flowing.
+  // Unreachable servers are left out.
   const streamsText = (n) => `${n} stream${n === 1 ? '' : 's'}`
+  const sum = (list) => {
+    const known = list.filter((s) => s.bandwidth_kbps != null && s.state !== 'paused')
+    return known.length ? known.reduce((n, s) => n + s.bandwidth_kbps, 0) : list.length ? null : 0
+  }
+  const isRemote = (s) => (s.location ?? '').startsWith('WAN')
+  const isLocal = (s) => (s.location ?? '').startsWith('LAN')
   function tally(name, sessions) {
     const by = { direct_play: 0, direct_stream: 0, transcode: 0 }
-    let kbps = 0
-    let known = false
-    for (const s of sessions) {
-      by[s.play_method] = (by[s.play_method] ?? 0) + 1
-      if (s.bandwidth_kbps != null) { kbps += s.bandwidth_kbps; known = true }
-    }
+    for (const s of sessions) by[s.play_method] = (by[s.play_method] ?? 0) + 1
     const kinds = Object.entries(by).filter(([, n]) => n).map(([k, n]) => `${n} ${METHOD[k]}`)
-    return { name, count: sessions.length, kinds: kinds.join(', '), kbps: known ? kbps : sessions.length ? null : 0 }
+    const local = sessions.filter(isLocal)
+    const remote = sessions.filter(isRemote)
+    return {
+      name, count: sessions.length, kinds: kinds.join(', '), kbps: sum(sessions),
+      paused: sessions.filter((s) => s.state === 'paused').length,
+      local: { count: local.length, kbps: sum(local) },
+      remote: { count: remote.length, kbps: sum(remote) },
+    }
   }
   const totals = $derived.by(() => {
     if (!data) return null
@@ -163,21 +173,22 @@
 {:else}
   {#if totals}
     <div class="totals" aria-label="Streams now">
-      {#each totals.rows as r}
+      {#each [...totals.rows, ...(totals.showTotal ? [totals.all] : [])] as r}
         <div class="tot">
           <span class="tname">{r.name}</span>
           <strong>{streamsText(r.count)}</strong>
           <span class="tbw">{r.count ? bandwidth(r.kbps) : '—'}</span>
+          {#if r.paused}<span class="tkinds">{r.paused} paused (no bandwidth counted)</span>{/if}
+          {#if r.count}
+            <span class="tkinds">
+              Local {r.local.count}{r.local.count ? ` · ${bandwidth(r.local.kbps)}` : ''}
+              &nbsp;&nbsp; Remote {r.remote.count}{r.remote.count ? ` · ${bandwidth(r.remote.kbps)}` : ''}
+            </span>
+          {/if}
+          {#if r === totals.all && r.kinds}<span class="tkinds">{r.kinds}</span>{/if}
         </div>
       {/each}
-      {#if totals.showTotal}
-        <div class="tot total">
-          <span class="tname">Total</span>
-          <strong>{streamsText(totals.all.count)}</strong>
-          <span class="tbw">{totals.all.count ? bandwidth(totals.all.kbps) : '—'}</span>
-          {#if totals.all.kinds}<span class="tkinds">{totals.all.kinds}</span>{/if}
-        </div>
-      {/if}
+      
     </div>
   {/if}
   {#each data.servers as server (server.id)}
@@ -265,7 +276,6 @@
   .tot strong { font-size: 18px; }
   .tot .tbw { font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .tot .tkinds { flex-basis: 100%; font-size: 12.5px; color: var(--muted); }
-  .tot.total { border-color: var(--accent); }
   .server { margin-bottom: 28px; }
   h2 { margin: 0 0 12px; font-size: 17px; display: flex; align-items: center; gap: 8px; }
   .type { font-size: 12px; text-transform: uppercase; color: var(--muted); font-weight: 400; }
