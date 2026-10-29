@@ -2,6 +2,9 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## Unreleased
+- **Settings > General is split into four tabs:** General, Alerts and reports, Network, and Maintenance (backups, updates, version, restart). One shared Save button; the address bar keeps the tab (`#settings/general/network`).
+
 ## 0.3.0 (2026-10-29)
 - **First admin from the environment (Docker):** `HORUS_ADMIN_USER` with `HORUS_ADMIN_PASSWORD_FILE` (or `HORUS_ADMIN_PASSWORD`) creates the first admin when the container starts, so there is no open first-run screen on the network. Ignored once an admin exists.
 - **Proxmox installers:** they no longer create an admin or generate a password. You open the printed address and create the first account yourself, with your own username and password (`HORUS_OPEN_FIRST_RUN=1` in the service lets Horus listen on the network until then; needs this version or newer). The wizard's optional `ADMIN_USER` / `ADMIN_PASSWORD` still create it during the install.

@@ -11,7 +11,7 @@ from pathlib import Path
 from . import listen
 
 IMAGE = "ghcr.io/watchful-horus/horus-media"
-BACK_UP_FIRST = "Back up first (Settings > General > Backups > Back up now). Your data is kept either way."
+BACK_UP_FIRST = "Back up first (Settings > General > Maintenance > Back up now). Your data is kept either way."
 
 
 def kind() -> str:

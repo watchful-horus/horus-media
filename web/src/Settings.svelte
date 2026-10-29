@@ -2,6 +2,11 @@
   import { onMount } from 'svelte'
   import { api } from './api.js'
 
+  // Which part of General is showing (General, Alerts and reports, Network, Maintenance). The form and
+  // its Save button are shared, so a change made on one tab is saved together with the others.
+  let { tab = 'general', ontab = () => {} } = $props()
+  const SUBTABS = [['general', 'General'], ['alerts', 'Alerts and reports'], ['network', 'Network'], ['maintenance', 'Maintenance']]
+
   let info = $state(null)
   let form = $state(null) // editable copy of the settings
   let saved = $state(null) // last values from the server, to know if anything changed
@@ -198,7 +203,13 @@
 {#if !form}
   <p class={message ? 'bad' : 'muted'}>{message ?? 'Loading...'}</p>
 {:else}
+  <div class="subtabs" role="tablist" aria-label="General settings">
+    {#each SUBTABS as [id, text]}
+      <button type="button" role="tab" aria-selected={tab === id} class:active={tab === id} onclick={() => ontab(id)}>{text}</button>
+    {/each}
+  </div>
   <form onsubmit={(e) => { e.preventDefault(); save() }}>
+    {#if tab === 'general'}
     <section class="card">
       <h2>General</h2>
       <label>
@@ -223,7 +234,9 @@
       </label>
       <span class="hint">When on, a normal user sees only plays by the Plex/Emby name you link to their account under Users (and no server-wide bandwidth). With no name linked they see nothing. Admins always see everything. Their API keys follow the same rule.</span>
     </section>
+    {/if}
 
+    {#if tab === 'alerts'}
     <section class="card">
       <h2>Alerts and reports</h2>
       <p class="hint">All off by default. An alert only reaches you through a notification channel that has it ticked (Integrations &gt; Notifications). Each one is sent once when the limit is crossed, and again only after it has dropped back below.</p>
@@ -251,7 +264,9 @@
         <span class="hint">Goes to every notification channel with "report" ticked. The first one arrives a week or month after you switch this on. You can also see or send one now under Integrations.</span>
       </label>
     </section>
+    {/if}
 
+    {#if tab === 'network'}
     <section class="card">
       <h2>Network</h2>
       {#if listen.in_container}
@@ -309,7 +324,9 @@
         </div>
       {/if}
     </section>
+    {/if}
 
+    {#if tab === 'maintenance'}
     <section class="card">
       <h2>Backups</h2>
       <p class="hint">
@@ -464,6 +481,7 @@
         </p>
       {/if}
     </section>
+    {/if}
 
     <div class="savebar">
       <button class="primary" disabled={busy || !dirty}>Save settings</button>
@@ -474,6 +492,10 @@
 {/if}
 
 <style>
+  .subtabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .subtabs button { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none;
+    padding: 8px 14px; color: var(--muted); }
+  .subtabs button.active { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
     padding: 16px 20px; margin-bottom: 16px; }
   h2 { margin: 0 0 12px; font-size: 17px; }
