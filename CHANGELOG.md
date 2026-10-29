@@ -2,15 +2,26 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
-## Unreleased
-- **Activity:** the Total box is now the first one, at the far left of the totals strip.
-- **Your details, and everyone's:** click a name under Settings > Users to open that person's panel (username, display name, Plex/Emby name, role, password reset, delete). The Account page now has a **Your details** card: change your own username and an optional display name (shown in the top bar and the Users list). Only admins set a Plex/Emby name. Needs migration 11 (display name).
-- **Removed the Seerr requests tab and its Integrations section.** It only listed Overseerr/Jellyseerr requests and was not connected to plays or stats. On upgrade, any stored Seerr address and API key are deleted (migration 10). A backup made after this change cannot be restored into an older Horus.
-- **Users page:** cleaner rows (avatar, name, role and last sign-in, actions lined up on the right), and the "Normal users see only their own activity" setting now lives there instead of in General.
-- **Backups list:** Download, Restore and Delete line up in a column on the right.
-- **Docker:** `HORUS_ALLOW_SELF_RESTART=1` gives a container a Restart button (Horus restarts inside the container; Shut down and the port stay with Docker), and the page now explains in plain words why those controls are off by default. The restart page-reload now uses the port in your address bar.
-- **Server unreachable:** the log says why (timed out, connection refused or host not reachable, connection dropped) and, when it comes back, how long it was down.
+## 0.4.0 (2026-10-29)
+
+**Settings and people**
 - **Settings is easier to scan:** the long General page is split into four entries in the left list: General, Alerts and reports, Network and Maintenance (backups, updates, version, restart). They share one Save button. Old bookmarks such as `#settings/general/network` still work.
+- **Click a name to see and change a person's details.** Under Settings > Users, a person's panel holds username, display name, Plex/Emby name, role, password reset and delete. The Users list has cleaner rows, and the "Normal users see only their own activity" setting now lives there instead of in General.
+- **Your details:** the Account page has a new **Your details** card to change your own username and an optional display name (shown in the top bar and the Users list). Only admins set a Plex/Emby name; control keys can't change any of this.
+- **Backups list:** Download, Restore and Delete line up in a column on the right.
+
+**Docker**
+- `HORUS_ALLOW_SELF_RESTART=1` gives a container a Restart button (Horus restarts inside the container; Shut down and the port stay with Docker). The page now explains in plain words why those controls are off by default, and the restart page-reload uses the port in your address bar.
+
+**Activity and logs**
+- The Total box is now the first one in the Activity totals strip.
+- When a server is unreachable the log says why (timed out, connection refused or host not reachable, connection dropped) and, when it comes back, how long it was down.
+
+**Removed**
+- **The Seerr requests tab and its Integrations section.** It only listed Overseerr/Jellyseerr requests and was not connected to plays or stats. Any stored Seerr address and API key are deleted when you upgrade.
+
+**Upgrading**
+- Two database changes run automatically at start (migration 10 drops the Seerr connection, 11 adds the display name). A backup made after this version can't be restored into 0.3.x or older.
 
 ## 0.3.0 (2026-10-29)
 - **First admin from the environment (Docker):** `HORUS_ADMIN_USER` with `HORUS_ADMIN_PASSWORD_FILE` (or `HORUS_ADMIN_PASSWORD`) creates the first admin when the container starts, so there is no open first-run screen on the network. Ignored once an admin exists.
