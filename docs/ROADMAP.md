@@ -1,6 +1,6 @@
 # Roadmap
 
-Status as of 2026-10-30: version 0.5.1. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
+Status as of 2026-10-30: version 0.4.1. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
 
 ## Done
 

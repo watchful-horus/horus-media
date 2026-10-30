@@ -16,7 +16,7 @@ docker run -d --name horus -p 8000:8000 -v horus-data:/data -e TZ=Europe/London 
 ```
 More ways to install are in [Quick start](#quick-start) and [docs/install.md](docs/install.md).
 
-> Status: early release (0.5.1), public and tested with Docker and a Proxmox container. Plex and Emby are trademarks of their owners; Horus is not affiliated with either.
+> Status: early release (0.4.1), public and tested with Docker and a Proxmox container. Plex and Emby are trademarks of their owners; Horus is not affiliated with either.
 
 ## Features
 - Live activity from Plex and Emby in one view, with posters and full stream details

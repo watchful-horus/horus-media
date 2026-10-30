@@ -2,7 +2,7 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
-## 0.5.1 (2026-10-30)
+## 0.4.1 (2026-10-30)
 
 **Activity**
 - TV episodes show their season and episode (for example "S1:E1") under the title on the live card, for Plex and Emby. The activity data API has a matching `episode` column.
