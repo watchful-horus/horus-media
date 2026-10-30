@@ -291,6 +291,11 @@
   form.inline { display: flex; gap: 8px; align-items: center; max-width: none; }
   form.inline input { flex: 1; min-width: 0; }
   .actions > button { min-width: 0; }
+  /* Phones only: stack the text above its buttons instead of squeezing it into a thin column. */
+  @media (max-width: 720px) {
+    .row { flex-direction: column; align-items: stretch; gap: 10px; }
+    .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   .grow { flex: 1; display: grid; gap: 6px; }
   a { color: var(--accent); }
   .check { display: flex; align-items: center; gap: 8px; margin: 8px 0; }

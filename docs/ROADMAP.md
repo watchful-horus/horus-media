@@ -1,6 +1,6 @@
 # Roadmap
 
-Status as of 2026-10-30: version 0.4.1. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
+Status as of 2026-10-30: version 0.4.2. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
 
 ## Done
 
@@ -60,7 +60,6 @@ Status as of 2026-10-30: version 0.4.1. The original v1 scope is complete and th
 - [ ] arm64 Docker image (the app and its tests pass on aarch64 under emulation; the image build is untried)
 - [ ] Not yet tried on real hardware: restoring a backup that is older than the current database version
 - [ ] Mobile: pages laid out properly on a phone (a mobile web view), or a mobile app. To decide which: responsive web layout first, installable PWA next, native app only if those fall short
-- [ ] Bandwidth over time (dark theme): the white Total line is thick and bright and drowns out the per-server lines. Make Total thinner, dashed or dimmer so the servers stay readable
 - [ ] More notification kinds
 - [ ] GitHub Discussions
 - [ ] Community-scripts submission is a long way off: a new app must be 6+ months old, actively maintained and have 600+ stars with release tarballs. The `ct/`, `install/` and `json/` files are kept in their format so it stays possible

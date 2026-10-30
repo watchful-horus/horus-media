@@ -44,6 +44,8 @@
   .content { min-width: 0; }
   @media (max-width: 720px) {
     .layout { grid-template-columns: 1fr; gap: 12px; }
-    .side { flex-direction: row; position: static; }
+    /* A single row that scrolls sideways, so nine entries never stretch the page. */
+    .side { flex-direction: row; position: static; min-width: 0; overflow-x: auto; padding-bottom: 4px; }
+    .side button { flex: none; white-space: nowrap; }
   }
 </style>

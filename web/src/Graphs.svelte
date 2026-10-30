@@ -107,10 +107,12 @@
   }
 
   // Lines are solid and gently smoothed, with no dots until you hover. The Total line is the
-  // same but in neutral ink, a little thicker, drawn above the others and without an area fill.
+  // same but in neutral ink, thinner and dashed so it never hides the server lines, drawn above
+  // the others and without an area fill.
   const SMOOTH = { smooth: 0.25, smoothMonotone: 'x' }
   const totalLine = (name, data) => ({
-    name, type: 'line', data, showSymbol: false, z: 5, lineStyle: { width: 2.5 }, ...SMOOTH,
+    name, type: 'line', data, showSymbol: false, z: 5, lineStyle: { width: 1.5, type: 'dashed' },
+    ...SMOOTH,
     emphasis: { focus: 'series' },
   })
   const withTotal = (series) =>

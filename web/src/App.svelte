@@ -137,4 +137,9 @@
   header button.active { background: var(--bg); border-color: var(--border); font-weight: 600; }
   .signout, .theme { color: var(--muted); }
   main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  /* Phones only: let the header wrap onto a second row; wider screens are untouched. */
+  @media (max-width: 720px) {
+    header { flex-wrap: wrap; gap: 8px 12px; padding: 12px 16px; }
+    main { padding: 16px; }
+  }
 </style>

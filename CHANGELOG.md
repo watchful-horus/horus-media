@@ -2,6 +2,14 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.2 (2026-10-30)
+
+**Graphs**
+- The Total line on the time charts is now thinner and dashed, so it no longer hides the per-server lines.
+
+**Phones**
+- On a phone-width screen the top bar wraps instead of cutting off Settings, the Settings section list scrolls sideways instead of stretching the page, and each server on Settings > Servers stacks its text above its buttons. Screens wider than 720 px look exactly as before.
+
 ## 0.4.1 (2026-10-30)
 
 **Activity**
