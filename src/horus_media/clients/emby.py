@@ -7,7 +7,7 @@ import httpx
 
 from ..models import HistoryRecord, PlayMethod, Session
 from .base import ConnectionResult, MediaServer
-from .display import channels, rate, resolution, with_label, words
+from .display import channels, episode_label, rate, resolution, with_label, words
 
 log = logging.getLogger(__name__)
 POSTER_PATH = re.compile(r"^/Items/[0-9A-Za-z]+/Images/Primary$")
@@ -166,6 +166,8 @@ class EmbyClient(MediaServer):
             server=self.name,
             user=s.get("UserName", "Unknown"),
             title=title,
+            episode=episode_label(item.get("ParentIndexNumber"), item.get("IndexNumber"))
+            if item.get("Type") == "Episode" else None,
             media_type=str(item.get("Type", "unknown")).lower(),
             device=s.get("DeviceName") or "Unknown",
             platform=s.get("Client") or "Unknown",

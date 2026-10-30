@@ -221,6 +221,7 @@
               {/if}
               <div class="body">
                 <h3>{s.title}{#if s.state === 'paused'} <span class="badge paused"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><rect x="2" y="1" width="3" height="10" rx="1" /><rect x="7" y="1" width="3" height="10" rx="1" /></svg>Paused</span>{/if}</h3>
+                {#if s.episode}<p class="who">{s.episode}</p>{/if}
                 <p class="who">{s.user}</p>
 
                 {#if s.position_ms != null && s.duration_ms}

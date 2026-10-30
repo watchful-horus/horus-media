@@ -179,6 +179,21 @@ def test_plex_card_details_transcode_and_no_subtitle():
     assert _plex_one(no_sub).subtitle is None
 
 
+def test_episode_label_plex_and_emby():
+    plex = _plex_one({**PLEX_DIRECT, "type": "episode", "title": "Power",
+                      "grandparentTitle": "TYSON", "parentIndex": 1, "index": 1})
+    assert (plex.title, plex.episode) == ("TYSON - Power", "S1:E1")
+    assert _plex_one(PLEX_DIRECT).episode is None
+    item = {"Name": "Power", "Type": "Episode", "SeriesName": "TYSON",
+            "ParentIndexNumber": 1, "IndexNumber": 1}
+    sessions = [{"Id": "s", "UserName": "u", "NowPlayingItem": item, "PlayState": {}}]
+    t = httpx.MockTransport(lambda r: httpx.Response(200, json=sessions))
+    emby = EmbyClient("E", "http://x", TOKEN, transport=t).get_sessions()[0]
+    assert (emby.title, emby.episode) == ("TYSON - Power", "S1:E1")
+    sessions[0]["NowPlayingItem"] = {"Name": "Film", "Type": "Movie"}
+    assert EmbyClient("E", "http://x", TOKEN, transport=t).get_sessions()[0].episode is None
+
+
 def test_emby_card_details():
     item = {"Name": "Film", "Type": "Movie", "Container": "mkv", "Bitrate": 8_000_000,
             "RunTimeTicks": 600_000_000_000,

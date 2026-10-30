@@ -26,6 +26,13 @@ def words(*parts: object) -> str:
     return " ".join(str(p) for p in parts if p)
 
 
+def episode_label(season: object, episode: object) -> str | None:
+    """1, 1 -> 'S1:E1'; None when either number is missing."""
+    if season is None or episode is None:
+        return None
+    return f"S{season}:E{episode}"
+
+
 def with_label(label: str, detail: str) -> str | None:
     """'Direct Play' + 'H264 720p' -> 'Direct Play (H264 720p)'; None when there is no detail."""
     return f"{label} ({detail})" if detail else None

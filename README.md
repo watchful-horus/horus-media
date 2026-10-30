@@ -2,9 +2,21 @@
 
 # Horus
 
-A self-hosted dashboard for Plex and Emby. See what is playing on both servers right now, and how your libraries get watched over time.
+<p align="center"><b>Plex and Emby in one dashboard.</b><br>Live activity and watch history for both servers, free and open source (MIT), one container to run.</p>
 
-> Status: early release (0.4.0), public and tested with Docker and a Proxmox container. Works with Plex and Emby (not affiliated with either).
+<p align="center"><img src="docs/screenshots/graphs-dark.png" width="90%" alt="Horus graphs, dark theme"></p>
+
+- **One place for both servers:** see every stream on Plex and Emby right now, and how your libraries get watched over time
+- **Private and read-only:** runs on your own hardware, keeps data in a local SQLite file, and changes nothing on your servers (apart from an admin's optional Stop stream button)
+- **Easy to run:** one Docker command, or a guided Proxmox container install; no database to set up
+
+Try it in one line (then open port 8000 and create your account straight away):
+```bash
+docker run -d --name horus -p 8000:8000 -v horus-data:/data -e TZ=Europe/London --restart unless-stopped ghcr.io/watchful-horus/horus-media:latest
+```
+More ways to install are in [Quick start](#quick-start) and [docs/install.md](docs/install.md).
+
+> Status: early release (0.5.1), public and tested with Docker and a Proxmox container. Plex and Emby are trademarks of their owners; Horus is not affiliated with either.
 
 ## Features
 - Live activity from Plex and Emby in one view, with posters and full stream details
@@ -25,10 +37,7 @@ Graphs in the dark theme, and in the light theme, then bandwidth and the hour an
 ## Quick start
 **Docker** (needs Docker with Compose): copy `compose.example.yaml` to `compose.yaml`, set your time zone, and run `docker compose up -d`. The image is `ghcr.io/watchful-horus/horus-media`.
 
-Or in one line, without a compose file:
-```bash
-docker run -d --name horus -p 8000:8000 -v horus-data:/data -e TZ=Europe/London --restart unless-stopped ghcr.io/watchful-horus/horus-media:latest
-```
+Or use the one-line `docker run` command at the top of this page, without a compose file.
 
 Then open port 8000 and **create the first account straight away** (or set `HORUS_ADMIN_USER` and a password file so the account exists before anyone can open the page; see [Accounts and security](docs/accounts-and-security.md#the-first-account)). The container listens on the network from the start, so until the account exists anyone who can reach the page could create it.
 

@@ -98,8 +98,9 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
                 for result in fetch_all(store.list_with_tokens(), transport)
                 for s in result.sessions
                 if only is None or s.user.casefold() == only.casefold()]
-        columns = ["server", "user", "title", "media_type", "device", "platform", "play_method",
-                   "state", "bandwidth_kbps", "progress_percent", "position_ms", "duration_ms",
+        columns = ["server", "user", "title", "episode", "media_type", "device", "platform",
+                   "play_method", "state", "bandwidth_kbps", "progress_percent", "position_ms",
+                   "duration_ms",
                    "product", "quality", "container", "video", "audio", "subtitle", "location"]
         return respond(rows, format, columns)
 

@@ -13,6 +13,7 @@ class Session(BaseModel):
     server: str
     user: str
     title: str
+    episode: str | None = None  # "S1:E1" for a TV episode, otherwise None
     media_type: str
     device: str
     platform: str

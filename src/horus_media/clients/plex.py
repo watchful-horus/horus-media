@@ -6,7 +6,7 @@ import httpx
 
 from ..models import HistoryRecord, PlayMethod, Session
 from .base import ConnectionResult, MediaServer
-from .display import channels, rate, resolution, with_label, words
+from .display import channels, episode_label, rate, resolution, with_label, words
 
 log = logging.getLogger(__name__)
 POSTER_PATH = re.compile(r"^/library/metadata/\d+/(thumb|art)(/\d+)?$")
@@ -114,6 +114,8 @@ class PlexClient(MediaServer):
             server=self.name,
             user=item.get("User", {}).get("title", "Unknown"),
             title=title,
+            episode=episode_label(item.get("parentIndex"), item.get("index"))
+            if item.get("type") == "episode" else None,
             media_type=item.get("type", "unknown"),
             device=player.get("title") or player.get("device") or "Unknown",
             platform=player.get("platform") or player.get("product") or "Unknown",
