@@ -1,8 +1,12 @@
+import logging
+import os
 import sqlite3
 import threading
 from pathlib import Path
 
 from .migrations import MIGRATIONS
+
+log = logging.getLogger(__name__)
 
 # The poller thread and the first web request both call migrate() at startup; without this one
 # of them can find a table half-created by the other.
@@ -15,6 +19,20 @@ def connect(path: Path) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+def owner_only(path: Path) -> None:
+    """Only the account Horus runs as may read the database (password hashes, encrypted
+    tokens) or look into its folder (the key, backups and log live there too). SQLite gives its
+    journal file the database's mode. Does nothing useful on Windows, and a folder Horus may
+    not change (a mount, say) is left as it is."""
+    if os.name == "nt":
+        return
+    for target, mode in ((path, 0o600), (path.parent, 0o700)):
+        try:
+            os.chmod(target, mode)
+        except OSError as e:
+            log.warning("could not make %s private (%s)", target.name, type(e).__name__)
 
 
 def migrate(conn: sqlite3.Connection) -> int:

@@ -76,6 +76,15 @@
       resetPassword = ''
     }, `Password reset for ${u.username}. They were signed out everywhere.`)
 
+  // Ends that person's sign-ins on every browser; their password and API keys stay.
+  const signOut = (u) =>
+    guard(async () => {
+      const { ended } = await api.signOutUser(u.id)
+      message = ended === 0 ? `${u.username} was not signed in anywhere.`
+        : `${u.username} was signed out of ${ended} browser${ended === 1 ? '' : 's'}.`
+      ok = true
+    })
+
   const remove = (u) => {
     if (!confirm(`Delete ${u.username}? They are signed out straight away and can't sign in again.`)) return
     guard(async () => {
@@ -149,6 +158,7 @@
                   </form>
                 {:else}
                   <button disabled={busy} onclick={() => { resetFor = u.id; resetPassword = '' }}>Reset password</button>
+                  <button disabled={busy} onclick={() => signOut(u)}>Sign out everywhere</button>
                 {/if}
                 <button class="danger" disabled={busy} onclick={() => remove(u)}>Delete person</button>
               {/if}

@@ -91,6 +91,38 @@ def trusted_proxies() -> str | None:
     return ",".join(entries)
 
 
+def allowed_hosts() -> set[str]:
+    """HORUS_ALLOWED_HOSTS: the names Horus may be opened by while it has no login (see
+    `known_host`). A comma-separated list such as `horus.lan, media.example.com`."""
+    raw = os.environ.get("HORUS_ALLOWED_HOSTS", "")
+    return {e.strip().lower().rstrip(".") for e in raw.split(",") if e.strip()}
+
+
+def host_name(header: str) -> str:
+    """The name or address in a Host header, without the port."""
+    host = header.strip().lower()
+    if host.startswith("["):  # [::1]:8000
+        return host[1:].split("]", 1)[0]
+    return host.rsplit(":", 1)[0].rstrip(".") if host.count(":") <= 1 else host
+
+
+def known_host(header: str) -> bool:
+    """True when the Host header is an IP address, localhost, or a name in HORUS_ALLOWED_HOSTS.
+
+    A web page on another site can point its own domain name at Horus's address ("DNS
+    rebinding") and then talk to Horus as if it were that site's own page. The browser still
+    sends the hostile name as Host, so refusing unknown names stops it. This is only needed
+    while Horus answers without a login; with a login the page has no session cookie to use."""
+    host = host_name(header)
+    if not host or host == "localhost" or host.endswith(".localhost"):
+        return True  # no Host at all: not a browser
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return host in allowed_hosts()
+
+
 def record_running(listen: Listen) -> None:
     os.environ["HORUS_RUNNING_HOST"] = listen.host
     os.environ["HORUS_RUNNING_PORT"] = str(listen.port)

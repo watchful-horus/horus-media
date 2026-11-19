@@ -98,6 +98,9 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
                 for result in fetch_all(store.list_with_tokens(), transport)
                 for s in result.sessions
                 if only is None or s.user.casefold() == only.casefold()]
+        if not auth.sees_addresses(getattr(request.state, "user", None)):
+            for row in rows:  # a normal user, or their key: LAN or WAN, never the address
+                row["location"] = auth.without_address(row["location"])
         columns = ["server", "user", "title", "episode", "media_type", "device", "platform",
                    "play_method", "state", "bandwidth_kbps", "progress_percent", "position_ms",
                    "duration_ms",

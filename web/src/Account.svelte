@@ -52,6 +52,25 @@
       busy = false
     }
   }
+
+  let othersMsg = $state(null)
+  let othersOk = $state(true)
+
+  async function signOutOthers() {
+    othersMsg = null
+    busy = true
+    try {
+      const { ended } = await api.signOutOthers()
+      othersMsg = ended === 0 ? 'You were not signed in anywhere else.'
+        : `Signed out ${ended} other browser${ended === 1 ? '' : 's'}.`
+      othersOk = true
+    } catch (e) {
+      othersMsg = e.message
+      othersOk = false
+    } finally {
+      busy = false
+    }
+  }
 </script>
 
 <section class="card">
@@ -90,6 +109,18 @@
       {#if message}<span class={ok ? 'okmsg' : 'bad'}>{message}</span>{/if}
     </div>
   </form>
+</section>
+
+<section class="card">
+  <h2>Signed-in browsers</h2>
+  <p class="hint">
+    A sign-in lasts 30 days on each browser or device. If you left one signed in somewhere, or lost
+    a device, sign out everywhere else. This browser stays signed in.
+  </p>
+  <div class="actions">
+    <button disabled={busy} onclick={signOutOthers}>Sign out everywhere else</button>
+    {#if othersMsg}<span class={othersOk ? 'okmsg' : 'bad'}>{othersMsg}</span>{/if}
+  </div>
 </section>
 
 {#if user.role !== 'admin'}

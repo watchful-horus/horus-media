@@ -19,7 +19,7 @@ from .activity import fetch_all
 from .clients import make_client
 from .config import db_path
 from .crypto import TokenCipher
-from .db import connect, migrate
+from .db import connect, migrate, owner_only
 from .history_import import HistoryImportError, import_history
 from .metrics import make_router as make_metrics_router
 from .models import (
@@ -105,6 +105,7 @@ async def lifespan(app: FastAPI):
     conn = connect(db_path())
     try:
         migrate(conn)
+        owner_only(db_path())
         auth.admin_from_environment(conn)
         first_run = not auth.admin_exists(conn)
         listen.remember_startup(app_settings.load(conn))
@@ -246,6 +247,37 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
                                     status_code=415)
         return await call_next(request)
 
+    def answers_without_login() -> bool:
+        """True while anyone who reaches Horus can use it: login off, or no admin yet."""
+        if auth.auth_disabled():
+            return True
+        conn = connect(db_path())
+        try:
+            migrate(conn)
+            return not auth.admin_exists(conn)
+        finally:
+            conn.close()
+
+    @app.middleware("http")
+    async def known_host_only(request: Request, call_next):
+        """While Horus answers without a login, it answers only to an IP address, localhost or
+        a name the owner listed (see `listen.known_host`). With a login nothing is checked, and
+        the database is only looked at for a name that is not already known."""
+        header = request.headers.get("host", "")
+        if not listen.known_host(header) and answers_without_login():
+            name = listen.host_name(header)
+            shown = name if _HOST.fullmatch(name) else "that name"
+            log.warning("refused %s %s: opened as %s, which is not an IP address or a name in "
+                        "HORUS_ALLOWED_HOSTS", request.method, request.url.path, shown)
+            return Response(
+                f"Horus does not know the name {shown}.\n\n"
+                "While Horus has no login (no account yet, or HORUS_AUTH_DISABLED), it only "
+                "answers to its IP address, to localhost, or to a name listed in "
+                "HORUS_ALLOWED_HOSTS.\n"
+                f"Open Horus by its IP address, or start it with HORUS_ALLOWED_HOSTS={shown}\n",
+                status_code=403, media_type="text/plain; charset=utf-8")
+        return await call_next(request)
+
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
         """On every response, including refusals. A route may set a stricter policy of its own
@@ -314,10 +346,15 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
     @app.get("/api/activity", response_model=Activity)
     def activity(request: Request, store: Store):
         servers = fetch_all(store.list_with_tokens(), transport)
-        only = auth.only_media_user(store.conn, getattr(request.state, "user", None))
+        viewer = getattr(request.state, "user", None)
+        only = auth.only_media_user(store.conn, viewer)
         if only is not None:  # "hide other people's activity" is on for this person
             for s in servers:
                 s.sessions = [x for x in s.sessions if x.user.casefold() == only.casefold()]
+        if not auth.sees_addresses(viewer):
+            for s in servers:
+                for x in s.sessions:
+                    x.location = auth.without_address(x.location)
         return Activity(servers=servers, sessions=[x for s in servers for x in s.sessions])
 
     @app.post("/api/activity/stop", status_code=204)

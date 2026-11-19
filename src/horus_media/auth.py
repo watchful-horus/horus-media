@@ -14,6 +14,7 @@ import os
 import re
 import secrets
 import sqlite3
+import threading
 import time
 from collections import deque
 from collections.abc import Hashable
@@ -28,8 +29,22 @@ KEY_PREFIX = "hk_"
 ROLES = ("admin", "user")
 # Letters, numbers and . _ - @ + so an email address works as a username.
 USERNAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._@+-]{2,63}$")
-_SCRYPT = {"n": 2**14, "r": 8, "p": 1}
+MAX_PASSWORD = 1024
+# One of the settings OWASP lists as equally strong: about 32 MB per sign-in, so a small
+# container is not at risk (the usual 2**17 needs 128 MB). Changing this is safe: a stored hash
+# carries the settings it was made with, and is replaced at that person's next sign-in.
+_SCRYPT = {"n": 2**15, "r": 8, "p": 3}
+_SCRYPT_MAXMEM = 64 * 1024 * 1024  # OpenSSL's default ceiling (32 MB) is just too low for it
+# Each hash holds its 32 MB while it runs, and sign-in needs no login, so a burst of sign-ins
+# could otherwise use up a small container's memory. The rest wait their turn.
+_HASHING = threading.BoundedSemaphore(2)
 _KEY_TOUCH_EVERY = timedelta(minutes=1)
+
+
+def _scrypt(password: str, salt: bytes, n: int, r: int, p: int, dklen: int = 32) -> bytes:
+    with _HASHING:
+        return hashlib.scrypt(password.encode(), salt=salt, n=n, r=r, p=p, dklen=dklen,
+                              maxmem=_SCRYPT_MAXMEM)
 
 
 class UserError(ValueError):
@@ -59,21 +74,25 @@ def _sha(text: str) -> str:
 
 def hash_password(password: str) -> str:
     salt = secrets.token_bytes(16)
-    digest = hashlib.scrypt(password.encode(), salt=salt, dklen=32, **_SCRYPT)
+    digest = _scrypt(password, salt, **_SCRYPT)
     return f"scrypt${_SCRYPT['n']}${_SCRYPT['r']}${_SCRYPT['p']}${_b64(salt)}${_b64(digest)}"
 
 
 def verify_password(password: str, stored: str) -> bool:
+    if len(password) > MAX_PASSWORD:
+        return False
     try:
         _, n, r, p, salt, digest = stored.split("$")
         expected = base64.b64decode(digest)
-        actual = hashlib.scrypt(
-            password.encode(), salt=base64.b64decode(salt), n=int(n), r=int(r), p=int(p),
-            dklen=len(expected),
-        )
+        actual = _scrypt(password, base64.b64decode(salt), int(n), int(r), int(p), len(expected))
     except (ValueError, TypeError):
         return False
     return hmac.compare_digest(actual, expected)
+
+
+def needs_rehash(stored: str) -> bool:
+    """True for a hash made with other settings than today's (an older, weaker version)."""
+    return stored.split("$")[1:4] != [str(_SCRYPT[k]) for k in ("n", "r", "p")]
 
 
 _DUMMY: str | None = None
@@ -89,6 +108,8 @@ def _dummy_hash() -> str:
 def check_new_password(password: str) -> None:
     if len(password) < MIN_PASSWORD:
         raise UserError(f"Use at least {MIN_PASSWORD} characters")
+    if len(password) > MAX_PASSWORD:
+        raise UserError(f"Use at most {MAX_PASSWORD} characters")
 
 
 # --- users ----------------------------------------------------------------------------------
@@ -187,6 +208,11 @@ def authenticate(conn: sqlite3.Connection, username: str, password: str) -> dict
     ok = verify_password(password, row["password_hash"] if row else _dummy_hash())
     if not (row and ok):
         return None
+    if needs_rehash(row["password_hash"]):
+        with conn:  # only now is the password known, so only now can the hash be renewed
+            conn.execute("UPDATE users SET password_hash = ? WHERE id = ?",
+                         (hash_password(password), row["id"]))
+        log.info("password hash renewed with the current settings: %s", row["username"])
     touch_login(conn, row["id"])
     return get_user(conn, row["id"])
 
@@ -297,11 +323,12 @@ def end_session(conn: sqlite3.Connection, token: str | None) -> None:
             conn.execute("DELETE FROM sessions WHERE token_hash = ?", (_sha(token),))
 
 
-def end_user_sessions(conn: sqlite3.Connection, user_id: int, keep: str | None = None) -> None:
-    """Sign a user out everywhere, optionally keeping the session making the request."""
+def end_user_sessions(conn: sqlite3.Connection, user_id: int, keep: str | None = None) -> int:
+    """Sign a user out everywhere, optionally keeping the session making the request.
+    Returns how many sessions were ended."""
     with conn:
-        conn.execute("DELETE FROM sessions WHERE user_id = ? AND token_hash != ?",
-                     (user_id, _sha(keep or "")))
+        return conn.execute("DELETE FROM sessions WHERE user_id = ? AND token_hash != ?",
+                            (user_id, _sha(keep or ""))).rowcount
 
 
 # --- API keys -------------------------------------------------------------------------------
@@ -437,7 +464,20 @@ def role_allows(role: str, method: str, path: str) -> bool:
         return True
     if method == "PATCH" and path == "/api/auth/me":
         return True
-    return method == "POST" and path == "/api/auth/password"
+    return method == "POST" and path in ("/api/auth/password", "/api/auth/sign-out-others")
+
+
+def sees_addresses(viewer: dict | None) -> bool:
+    """Only admins see the IP address a stream is played from. `viewer` is None when the login
+    is off or for a key that belongs to nobody in particular, which see everything."""
+    return viewer is None or viewer["role"] == "admin"
+
+
+def without_address(location: str | None) -> str | None:
+    """"LAN: 192.168.1.20" becomes "LAN". Anything that is not marked LAN or WAN is dropped,
+    because it is an address or host name on its own."""
+    where = (location or "").split(":", 1)[0]
+    return where if where in ("LAN", "WAN") else None
 
 
 # --- brute-force protection ------------------------------------------------------------------

@@ -4,7 +4,7 @@
 # uncomment the HORUS_ADMIN_* lines below so the account exists before anyone can open the page.
 services:
   horus:
-    image: ghcr.io/watchful-horus/horus-media:0.4.6   # to build from this folder instead, use `build: .` here
+    image: ghcr.io/watchful-horus/horus-media:0.4.7   # to build from this folder instead, use `build: .` here
     container_name: horus
     restart: unless-stopped
     ports:
@@ -12,6 +12,7 @@ services:
     environment:
       TZ: Europe/London    # your time zone: decides which day/hour plays count toward
       # HORUS_ALLOW_SELF_RESTART: "1"                  # gives Settings > Maintenance a Restart button (Horus restarts inside the container)
+      # HORUS_ALLOWED_HOSTS: horus.lan                 # only with HORUS_AUTH_DISABLED: the name(s) you open Horus by
       # HORUS_TRUSTED_PROXIES: 172.18.0.0/16           # behind a reverse proxy in another container: its address or network
       # HORUS_ADMIN_USER: admin                         # the first admin, created at start if none exists
       # HORUS_ADMIN_PASSWORD_FILE: /run/secrets/horus_admin_password   # first line of this file is the password

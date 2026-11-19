@@ -8,7 +8,7 @@ Create an API key in **Settings > API** (or under **Account**), then read your d
 | `GET /api/v1/plays?from&to&interval=hour\|day\|week\|month&by=none\|server\|user\|platform\|play_method\|media_type` | Plays per time bucket |
 | `GET /api/v1/bandwidth?from&to&interval=auto\|1m\|5m\|15m\|1h\|1d` | Average and peak kbps per server, plus a combined `Total` |
 | `GET /api/v1/history?from&to&server&user&limit&offset` | Individual plays, newest first |
-| `GET /api/v1/activity` | What is playing now, one row per stream |
+| `GET /api/v1/activity` | What is playing now, one row per stream. `location` holds the player's IP address only for an admin's key; other keys get `LAN` or `WAN` |
 | `GET /api/v1/servers` | Server names and types |
 
 `from` and `to` take dates, ISO date-times, or epoch milliseconds (Grafana's `${__from}` and `${__to}`). Days and hours follow the time zone in Settings.

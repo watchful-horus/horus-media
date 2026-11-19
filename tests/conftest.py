@@ -61,3 +61,20 @@ def client(tmp_path, monkeypatch, transport):
 def login_off_by_default(monkeypatch):
     """Most tests exercise features, not the login. The auth tests switch it back on."""
     monkeypatch.setenv("HORUS_AUTH_DISABLED", "1")
+
+
+@pytest.fixture(autouse=True)
+def test_client_host_is_known(monkeypatch):
+    """The test client calls the app as "testserver". Without a login Horus only answers to an
+    IP address or a listed name; the host-check tests change this themselves."""
+    monkeypatch.setenv("HORUS_ALLOWED_HOSTS", "testserver")
+
+
+@pytest.fixture(autouse=True)
+def cheap_password_hashing(monkeypatch):
+    """The real scrypt settings take about a quarter of a second per password, which adds up
+    over the suite. test_password_hashing.py checks the real ones."""
+    from horus_media import auth
+
+    monkeypatch.setattr(auth, "_SCRYPT", {"n": 2**4, "r": 8, "p": 1})
+    monkeypatch.setattr(auth, "_DUMMY", None)

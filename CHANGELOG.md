@@ -2,6 +2,20 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.7 (2026-11-19)
+
+**Security**
+- **Stronger password hashing.** Passwords are hashed with a setting current guidance lists (scrypt with about 32 MB of memory per sign-in instead of 16 MB, and six times the work for anyone guessing). Nothing to do: each person's stored hash is renewed the next time they sign in. Passwords can be at most 1024 characters, and at most two sign-ins are checked at the same moment (the rest wait a fraction of a second), so a burst of sign-in attempts cannot use up a small container's memory.
+- **Only admins see IP addresses.** A normal user used to see the address every stream was played from. They, and their API keys, now see "LAN" or "WAN" only.
+- **Without a login, Horus answers only to an address it knows.** While there is no account yet, or with `HORUS_AUTH_DISABLED`, Horus answers when opened by its IP address or `localhost`, and refuses any other name. This stops a web page on another site from reaching it through your browser by pointing a domain name at it. **If you run with `HORUS_AUTH_DISABLED` and open Horus by a name** (for example through a reverse proxy), set the new `HORUS_ALLOWED_HOSTS` to that name before you update (see [Configuration](docs/configuration.md#environment-variables)). Installs with a login are not affected.
+- **The database file and the data folder are private** on Linux: readable only by the account Horus runs as. A backup job that reads the folder as another account (not root) needs to run as that account.
+
+**Accounts**
+- **Sign out everywhere else.** A new button on the Account page ends your sign-ins on every other browser and device and leaves the password alone. Admins get **Sign out everywhere** for each person under Settings > Users.
+
+**Documentation**
+- [Accounts and security](docs/accounts-and-security.md) now says plainly that an admin can point Horus at any address, and that a media server added with `http://` gets its token sent unencrypted.
+
 ## 0.4.6 (2026-11-19)
 
 **Security**

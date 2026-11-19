@@ -185,6 +185,15 @@ def make_router(get_store: Callable) -> APIRouter:
         log.info("password changed: %s; their other sessions were signed out", user["username"])
         return {"ok": True}
 
+    @router.post("/auth/sign-out-others")
+    def sign_out_others(request: Request, store: Store):
+        """End every session of yours except the one making this request."""
+        user = me(request)
+        ended = auth.end_user_sessions(store.conn, user["id"],
+                                       request.cookies.get(auth.SESSION_COOKIE))
+        log.info("%s signed out their other sessions (%d)", user["username"], ended)
+        return {"ok": True, "ended": ended}
+
     @router.patch("/auth/me")
     def change_my_details(body: MyDetails, request: Request, store: Store):
         """Your own username and display name. A normal user may not set their Plex/Emby name:
@@ -256,6 +265,21 @@ def make_router(get_store: Callable) -> APIRouter:
         except auth.UserError as e:
             raise refuse(e, 409 if ("admin" in str(e) or "taken" in str(e)) else 422) from e
         return auth.get_user(store.conn, user_id)
+
+    @router.post("/users/{user_id}/sign-out")
+    def sign_out_user(user_id: int, request: Request, store: Store):
+        """Sign a person out everywhere, for example after a lost phone. Their password and API
+        keys stay as they are. On your own account the browser you are using stays signed in."""
+        actor = admin(request)
+        target = auth.get_user(store.conn, user_id)
+        if not target:
+            raise HTTPException(404, "User not found")
+        ended = auth.end_user_sessions(
+            store.conn, user_id,
+            request.cookies.get(auth.SESSION_COOKIE) if user_id == actor["id"] else None)
+        log.info("%s was signed out everywhere (%d sessions, by %s)", target["username"], ended,
+                 actor["username"])
+        return {"ok": True, "ended": ended}
 
     @router.delete("/users/{user_id}", status_code=204)
     def delete_user(user_id: int, request: Request, store: Store):
