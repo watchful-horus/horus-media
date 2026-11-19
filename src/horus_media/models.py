@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 ServerType = Literal["plex", "emby"]
 PlayMethod = Literal["direct_play", "direct_stream", "transcode"]
@@ -34,12 +34,19 @@ class Session(BaseModel):
     position_ms: int | None = None
     duration_ms: int | None = None
     # How fast the server converts compared with playback: 1.0 keeps up, below 1.0 falls behind.
-    # None when nothing is converted or the server does not say.
+    # None when nothing is converted, the server does not say, or converting is paused (below).
     transcode_speed: float | None = None
-    # The server has paused converting because it is far enough ahead; a low speed is then fine.
-    transcode_throttled: bool = Field(False, exclude=True)
+    # The server has paused converting because it is far enough ahead of playback. The speed it
+    # reports then (Plex says 0) is not a rate of anything, so no speed is given.
+    transcode_throttled: bool = False
     transcode_reason: str | None = None  # why it is converted, in words (Emby only)
     direct_play_failed: bool = Field(False, exclude=True)  # Emby fell back after an error
+
+    @model_validator(mode="after")
+    def _no_speed_while_paused_ahead(self):
+        if self.transcode_throttled:
+            self.transcode_speed = None
+        return self
     # Playback problems Horus has confirmed for this stream (see problems.py); filled in for
     # the Activity page, empty straight from a client.
     problems: list[str] = []

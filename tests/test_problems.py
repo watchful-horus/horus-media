@@ -118,7 +118,7 @@ def test_emby_reads_reasons_and_speed():
 
 def test_internal_flags_stay_out_of_what_is_sent_out():
     dumped = _plex_session(plex_item(transcode={"speed": 2, "throttled": True})).model_dump()
-    assert "transcode_throttled" not in dumped and "direct_play_failed" not in dumped
+    assert "direct_play_failed" not in dumped and "native_id" not in dumped
     assert dumped["problems"] == []
 
 
@@ -295,7 +295,27 @@ def test_activity_shows_what_is_wrong_right_now(app):
     plex.poll(15)
     session = client.get("/api/activity").json()["sessions"][0]
     assert session["state"] == "buffering" and session["problems"] == ["buffering"]
-    assert "transcode_throttled" not in session and "native_id" not in session
+    assert session["transcode_throttled"] is False and "native_id" not in session
+
+
+def test_a_conversion_paused_ahead_of_playback_gives_no_speed():
+    """What a healthy Plex stream looks like most of the time: speed 0 and throttled. A speed
+    of 0 would read as a server that cannot keep up."""
+    ahead = _plex_session(plex_item(transcode={"speed": 0.0, "throttled": True}))
+    assert ahead.play_method == "transcode"
+    assert ahead.transcode_speed is None and ahead.transcode_throttled is True
+    busy = _plex_session(plex_item(transcode={"speed": 3.4, "throttled": False}))
+    assert busy.transcode_speed == 3.4 and busy.transcode_throttled is False
+
+
+def test_activity_and_the_data_api_say_when_a_conversion_is_ahead(app):
+    client, plex = app
+    plex.sessions.append(plex_item(transcode={"speed": 0.0, "throttled": True}))
+    session = client.get("/api/activity").json()["sessions"][0]
+    assert session["transcode_speed"] is None and session["transcode_throttled"] is True
+    row = client.get("/api/v1/activity").json()[0]
+    assert row["transcode_speed"] is None and row["transcode_throttled"] is True
+    assert "transcode_throttled" in client.get("/api/v1/activity?format=csv").text.splitlines()[0]
 
 
 def test_activity_marks_a_stream_that_keeps_buffering(app):

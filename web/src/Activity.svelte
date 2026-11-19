@@ -72,7 +72,8 @@
       ['Player', s.device],
       ['Quality', s.quality],
       ['Stream', METHOD[s.play_method]],
-      ['Transcode speed', s.transcode_speed != null ? `${s.transcode_speed}x` : null],
+      ['Transcode speed', s.transcode_throttled ? 'Ahead of playback'
+        : s.transcode_speed != null ? `${s.transcode_speed}x` : null],
       ['Transcode reason', s.transcode_reason],
       ['Container', s.container],
       ['Video', s.video],

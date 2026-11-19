@@ -2,6 +2,12 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.11 (2026-11-19)
+
+**Fixed**
+- **A healthy converted stream no longer shows "Transcode speed 0x".** A server that is far enough ahead of playback pauses converting, and Plex then reports a speed of 0. The Activity page showed that number, which reads as a server that cannot keep up. It now says *Ahead of playback*. No playback problem was ever recorded for this; only the display was misleading.
+- **`/api/v1/activity`:** `transcode_speed` is empty for such a stream and the new `transcode_throttled` is true, so a dashboard can tell "paused ahead" from "too slow".
+
 ## 0.4.10 (2026-11-19)
 
 **Security**

@@ -106,7 +106,7 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
                 row["location"] = auth.without_address(row["location"])
         columns = ["server", "user", "title", "episode", "media_type", "device", "platform",
                    "play_method", "state", "bandwidth_kbps", "progress_percent", "position_ms",
-                   "duration_ms", "transcode_speed", "transcode_reason",
+                   "duration_ms", "transcode_speed", "transcode_throttled", "transcode_reason",
                    "product", "quality", "container", "video", "audio", "subtitle", "location"]
         return respond(rows, format, columns)
 

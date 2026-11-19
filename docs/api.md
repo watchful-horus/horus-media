@@ -8,7 +8,7 @@ Create an API key in **Settings > API** (or under **Account**), then read your d
 | `GET /api/v1/plays?from&to&interval=hour\|day\|week\|month&by=none\|server\|user\|platform\|play_method\|media_type` | Plays per time bucket |
 | `GET /api/v1/bandwidth?from&to&interval=auto\|1m\|5m\|15m\|1h\|1d` | Average and peak kbps per server, plus a combined `Total`. Data older than 30 days is kept as five-minute averages with their peak, so `1m` gives one point per five minutes there |
 | `GET /api/v1/history?from&to&server&user&limit&offset` | Individual plays, newest first |
-| `GET /api/v1/activity` | What is playing now, one row per stream. `state` is `playing`, `paused` or (Plex) `buffering`; `transcode_speed` is how fast the server converts compared with playback (below 1 it cannot keep up). `location` holds the player's IP address only for an admin's key; other keys get `LAN` or `WAN` |
+| `GET /api/v1/activity` | What is playing now, one row per stream. `state` is `playing`, `paused` or (Plex) `buffering`; `transcode_speed` is how fast the server converts compared with playback (below 1 it cannot keep up); it is empty, with `transcode_throttled` true, while the server has paused converting because it is far enough ahead. `location` holds the player's IP address only for an admin's key; other keys get `LAN` or `WAN` |
 | `GET /api/v1/problems?from&to&limit&offset` | [Playback problems](servers-and-integrations.md#playback-problems) Horus noticed, newest first: `kind` is `buffering`, `stalled`, `slow_transcode` or `direct_play_error`; `location` is only `LAN` or `WAN` |
 | `GET /api/v1/servers` | Server names and types |
 
