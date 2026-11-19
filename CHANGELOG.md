@@ -2,6 +2,17 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.6 (2026-11-19)
+
+**Security**
+- **Restoring a backup no longer unpacks it in memory.** A small zip can unpack to gigabytes; the database is now unpacked to disk a piece at a time, and an oversized key file in a backup is refused. The 2 GB limit on a backup is unchanged.
+- **The community-style Proxmox install is boxed in.** `install/horus-install.sh` still runs Horus as root (the community-scripts rules require it), but systemd now lets the service write only below `/opt/horus`, gain no privileges and hold no special capabilities. New installs only; it has not been run on a real Proxmox host yet.
+
+**How Horus is built and published**
+- **The Docker image is built from exact, hash-checked dependencies** (`requirements.txt`) on base images pinned by digest, and CI tests against the same versions. The image's web build moved from Node 20, which is no longer supported, to Node 24.
+- **Releases and images carry signed build provenance.** See [Checking a download](docs/install.md#checking-a-download).
+- **Published releases can no longer be changed,** and version tags cannot be moved or deleted. Release notes now come straight from this changelog.
+
 ## 0.4.5 (2026-11-19)
 
 **Fixes**

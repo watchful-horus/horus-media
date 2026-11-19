@@ -130,3 +130,55 @@ def test_uploading_needs_an_admin(tmp_path, monkeypatch, source):
     assert KEY_FILENAME  # (the key file is part of a full backup)
     anon = TestClient(app, client=("10.0.0.5", 1))
     assert anon.post("/api/backups/upload", content=full, headers=HEADERS).status_code == 401
+
+
+# --- a zip that unpacks to far more than it weighs ------------------------------------------------
+
+def test_a_zip_that_unpacks_large_is_not_read_into_memory(tmp_path, monkeypatch):
+    import io
+    import tracemalloc
+    import zipfile
+
+    c = TestClient(new_app(tmp_path, monkeypatch))
+    c.post("/api/servers", json=PLEX)
+    bomb = io.BytesIO()
+    with zipfile.ZipFile(bomb, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("horus.db", b"\0" * (64 * 1024 * 1024))  # 64 MB of zeros, a few KB zipped
+    assert len(bomb.getvalue()) < 200_000
+    tracemalloc.start()
+    r = c.post("/api/backups/upload", content=bomb.getvalue(), headers=HEADERS)
+    peak = tracemalloc.get_traced_memory()[1]
+    tracemalloc.stop()
+    assert r.status_code == 422  # unpacked to disk, looked at, and it is not a database
+    assert peak < 16 * 1024 * 1024  # a piece at a time, never the whole 64 MB at once
+    assert c.get("/api/servers").json()[0]["name"] == "Plex"  # nothing was replaced
+    assert not list((tmp_path / "backups").glob("upload-*"))
+    assert not [p for p in (tmp_path / "backups").iterdir() if p.is_dir()]  # no unpacked copy left
+
+    monkeypatch.setattr(backup, "MAX_UPLOAD", 4 * 1024 * 1024)  # as if the limit were 4 MB
+    r = c.post("/api/backups/upload", content=bomb.getvalue(), headers=HEADERS)
+    assert r.status_code == 422 and "too large" in r.json()["detail"]
+
+
+def test_an_oversized_key_file_is_refused(tmp_path, monkeypatch, source):
+    import io
+    import zipfile
+
+    full, _ = source
+    c = TestClient(new_app(tmp_path / "dest", monkeypatch))
+    swollen = io.BytesIO()
+    with zipfile.ZipFile(io.BytesIO(full)) as good, zipfile.ZipFile(swollen, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("horus.db", good.read("horus.db"))
+        z.writestr(KEY_FILENAME, b"A" * (8 * 1024 * 1024))
+    r = c.post("/api/backups/upload", content=swollen.getvalue(), headers=HEADERS)
+    assert r.status_code == 422 and "key file" in r.json()["detail"]
+
+
+def test_a_damaged_zip_is_refused_cleanly(tmp_path, monkeypatch, source):
+    full, _ = source
+    c = TestClient(new_app(tmp_path / "dest", monkeypatch))
+    broken = bytearray(full)
+    middle = len(broken) // 2
+    broken[middle:middle + 40] = b"\xff" * 40  # corrupt the packed database
+    r = c.post("/api/backups/upload", content=bytes(broken), headers=HEADERS)
+    assert r.status_code == 422

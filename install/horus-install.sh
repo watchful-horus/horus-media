@@ -38,9 +38,22 @@ User=root
 WorkingDirectory=/opt/horus
 Environment=HORUS_DB_PATH=/opt/horus/data/horus.db
 Environment=HORUS_OPEN_FIRST_RUN=1
+Environment=UV_CACHE_DIR=/opt/horus/.cache/uv
 ExecStart=/opt/horus/.venv/bin/python -m horus_media
 Restart=on-failure
 RestartSec=5
+# Horus runs as root here, so the service is boxed in: it can write only below /opt/horus
+# (its program, data and the cache "Update now" uses), cannot gain privileges, holds no
+# special capabilities and only talks over the network and local sockets.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/horus
+ProtectHome=read-only
+PrivateTmp=true
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
 
 [Install]
 WantedBy=multi-user.target

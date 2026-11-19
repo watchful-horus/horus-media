@@ -6,6 +6,8 @@ name: Docker image
 # It uses only the docker command that is already on the runner, so no third-party actions are needed
 # (the repository allows GitHub's own actions only). Only linux/amd64 is built, because that is the
 # only architecture that has been tested.
+# The pushed image gets a signed statement of where and from which commit it was built (check it with
+# `gh attestation verify oci://ghcr.io/<owner>/horus-media:<tag> --repo <owner>/horus-media`).
 # A new package on ghcr.io starts private. Make it public under the package's settings when the
 # repository goes public, so anyone can pull it.
 on:
@@ -17,6 +19,8 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write       # to sign the build provenance
+  attestations: write   # to store it with the repository
 
 jobs:
   publish:
@@ -48,21 +52,28 @@ jobs:
             echo "list=${IMAGE}:edge" >> "$GITHUB_OUTPUT"
           fi
 
+      # Values from earlier steps reach the scripts below through the environment, never pasted
+      # into the script text.
       - name: Build the image
+        env:
+          TAGS: ${{ steps.tags.outputs.list }}
+          VERSION: ${{ steps.tags.outputs.version }}
         run: |
           args=()
-          for tag in ${{ steps.tags.outputs.list }}; do args+=(-t "${tag}"); done
+          for tag in ${TAGS}; do args+=(-t "${tag}"); done
           docker build "${args[@]}" \
             --label "org.opencontainers.image.title=Horus" \
             --label "org.opencontainers.image.licenses=MIT" \
             --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
-            --label "org.opencontainers.image.version=${{ steps.tags.outputs.version }}" \
+            --label "org.opencontainers.image.version=${VERSION}" \
             --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
             .
 
       - name: Check the image starts and reports healthy before publishing it
+        env:
+          TAGS: ${{ steps.tags.outputs.list }}
         run: |
-          first="$(echo '${{ steps.tags.outputs.list }}' | cut -d' ' -f1)"
+          first="$(echo "${TAGS}" | cut -d' ' -f1)"
           docker run -d --name horus-check "${first}"
           for i in $(seq 1 40); do
             status="$(docker inspect --format '{{.State.Health.Status}}' horus-check)"
@@ -76,8 +87,22 @@ jobs:
       - name: Sign in to ghcr.io
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: echo "${REGISTRY_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+        run: echo "${REGISTRY_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
 
       - name: Push
+        id: push
+        env:
+          TAGS: ${{ steps.tags.outputs.list }}
         run: |
-          for tag in ${{ steps.tags.outputs.list }}; do docker push "${tag}"; done
+          for tag in ${TAGS}; do docker push "${tag}"; done
+          first="$(echo "${TAGS}" | cut -d' ' -f1)"
+          digest="$(docker inspect --format '{{index .RepoDigests 0}}' "${first}" | cut -d@ -f2)"
+          case "${digest}" in sha256:*) ;; *) echo "no digest for ${first}" >&2; exit 1 ;; esac
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Sign where the image was built
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

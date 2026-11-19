@@ -3,6 +3,9 @@ name: Release
 # Pushing a tag such as v0.1.0 builds the web UI and the Python wheel and publishes a GitHub
 # release with one asset, horus-media-<tag>.tar.gz. The Proxmox installer (ct/horus.sh) downloads
 # that asset, so the tag must match the version in pyproject.toml.
+# The release notes are that version's section of CHANGELOG.md, and the asset gets a signed
+# statement of where and from which commit it was built (check it with
+# `gh attestation verify horus-media-<tag>.tar.gz --repo <owner>/horus-media`).
 on:
   push:
     tags:
@@ -10,6 +13,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write       # to sign the build provenance
+  attestations: write   # to store it with the repository
 
 jobs:
   release:
@@ -19,7 +24,7 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: web/package-lock.json
 
@@ -50,7 +55,28 @@ jobs:
         # Owner 0:0 so extracting it as root never tries to restore the runner's user id.
         run: tar --owner=0 --group=0 --numeric-owner -czf "horus-media-${GITHUB_REF_NAME}.tar.gz" -C dist .
 
+      - name: Take the release notes from the changelog
+        # This version's section, with links into the repository made absolute (a release page
+        # is not inside the repository, so relative links would break there).
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="${version}" '
+            /^## / { if (found) exit; if ($2 == v) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > section.md
+          sed -E "s#\]\((docs/|README\.md|SECURITY\.md|CONTRIBUTING\.md)#](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/\1#g" section.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "CHANGELOG.md has no section for ${version}" >&2
+            exit 1
+          fi
+          cat release-notes.md
+
+      - name: Sign where the release file was built
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: horus-media-${{ github.ref_name }}.tar.gz
+
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" "horus-media-${GITHUB_REF_NAME}.tar.gz" --title "${GITHUB_REF_NAME}" --generate-notes
+        run: gh release create "${GITHUB_REF_NAME}" "horus-media-${GITHUB_REF_NAME}.tar.gz" --title "${GITHUB_REF_NAME}" --notes-file release-notes.md

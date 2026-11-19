@@ -21,8 +21,14 @@ jobs:
           python-version: "3.12"
           cache: pip
 
+      # The same exact, hash-checked dependencies the Docker image is built from, so the tests
+      # run against what is shipped. Then Horus itself and the two test tools.
       - name: Install
-        run: pip install -e ".[dev]"
+        run: |
+          pip install --require-hashes -r requirements.txt
+          pip install --no-deps -e .
+          pip install "pytest>=8" "ruff>=0.6"
+          pip check
 
       - name: Lint
         run: ruff check .
@@ -75,7 +81,7 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: web/package-lock.json
 

@@ -16,6 +16,7 @@ import shutil
 import sqlite3
 import tempfile
 import zipfile
+import zlib
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -28,6 +29,8 @@ from .migrations import MIGRATIONS
 log = logging.getLogger(__name__)
 NAME_RE = re.compile(r"^horus-\d{8}-\d{6}\.zip$")
 MAX_UPLOAD = 2 * 1024**3  # a backup bigger than 2 GB is not a Horus backup
+MAX_KEY_BYTES = 512  # the key file is 44 characters; anything much longer is not one
+_CHUNK = 1024 * 1024
 
 
 class RestoreError(Exception):
@@ -143,12 +146,25 @@ def _read_source(source: Path, snapshot: Path) -> bytes | None:
             members = set(z.namelist())
             if "horus.db" not in members:
                 raise RestoreError("This zip has no database in it")
-            info = z.getinfo("horus.db")
-            if info.file_size > MAX_UPLOAD:
+            if z.getinfo("horus.db").file_size > MAX_UPLOAD:
                 raise RestoreError("That backup is too large")
-            snapshot.write_bytes(z.read("horus.db"))  # read by name: never extract paths
-            return z.read(KEY_FILENAME).strip() if KEY_FILENAME in members else None
-    except zipfile.BadZipFile:
+            # Read by name (never extract paths), a piece at a time, counting what really comes
+            # out: a small zip can unpack to gigabytes, and the size it claims is only a claim.
+            with z.open("horus.db") as packed, snapshot.open("wb") as out:
+                written = 0
+                while chunk := packed.read(_CHUNK):
+                    written += len(chunk)
+                    if written > MAX_UPLOAD:
+                        raise RestoreError("That backup is too large")
+                    out.write(chunk)
+            if KEY_FILENAME not in members:
+                return None
+            with z.open(KEY_FILENAME) as packed:
+                key = packed.read(MAX_KEY_BYTES + 1)
+            if len(key) > MAX_KEY_BYTES:
+                raise RestoreError("The backup's key file is not a Horus key")
+            return key.strip()
+    except (zipfile.BadZipFile, zlib.error, EOFError):
         raise RestoreError("This is not a valid backup file") from None
 
 

@@ -15,6 +15,14 @@ updates:
     groups:
       web-dependencies:
         patterns: ["*"]
+  # The two base images in the Dockerfile are pinned by digest; this proposes the newer ones.
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      docker-base-images:
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

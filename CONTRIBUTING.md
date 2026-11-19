@@ -59,3 +59,13 @@ By contributing you agree that your contribution is released under the project's
 ## Behaviour
 Be kind and assume good faith. Harassment and personal attacks are not tolerated, and the
 maintainer may remove comments or block accounts that do it.
+
+## Changing a Python dependency
+`pyproject.toml` holds the ranges; `requirements.txt` holds the exact, hash-checked versions the Docker image and CI install. After changing a dependency in `pyproject.toml`, make `requirements.txt` again **on Linux** (so Linux-only packages are included), for example in a `python:3.12-slim` container:
+
+```
+pip install pip-tools
+pip-compile --generate-hashes --strip-extras --no-header --output-file=requirements.txt pyproject.toml
+```
+
+Keep the comment lines at the top of the file. Dependabot proposes routine version bumps.
