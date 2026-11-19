@@ -1,9 +1,12 @@
 """Backups of the Horus database.
 
 A full backup is a zip of the database plus its encryption key, saved to a `backups` folder next
-to the database (the key already lives there, so this exposes nothing new). It is never served
-over HTTP. The only downloadable export blanks the server tokens, so it is safe to hand around:
-after restoring one you sign in with Plex / re-enter keys again.
+to the database (the key already lives there, so this exposes nothing new). A signed-in admin can
+download it (never an API key), which is how an install is moved to another machine. It holds
+working server tokens and the password hashes, so it must be kept private.
+
+Restore also accepts a bare database file with the server tokens blanked: after restoring one
+you sign in with Plex / re-enter keys again.
 """
 
 import logging
@@ -64,19 +67,6 @@ def write_full_backup(db_file: Path, now: datetime | None = None) -> Path:
     except OSError:
         pass  # not supported on every filesystem
     return target
-
-
-def write_safe_export(db_file: Path, dest_dir: Path) -> Path:
-    """A copy of the database with server tokens removed."""
-    dest = dest_dir / "horus-no-tokens.db"
-    _copy_db(db_file, dest)
-    conn = sqlite3.connect(dest)
-    try:
-        with conn:
-            conn.execute("UPDATE servers SET token = ''")
-    finally:
-        conn.close()
-    return dest
 
 
 def find_backup(db_file: Path, name: str) -> Path | None:

@@ -42,6 +42,7 @@ An ordinary API key can only read the data endpoints under `/api/v1`. A **contro
 - **Off by default.** An admin switches control keys on under **Settings > API > Control keys**. Switching them off stops every control key at once.
 - **Always expires.** Choose 24 hours, 7, 30 or 90 days when you make one.
 - **Never users, keys, sign-in or Stop stream.** A control key cannot create or delete people, create or revoke keys, change passwords, sign in or stop a stream, and cannot switch control keys on or off.
+- **Never the secrets.** A control key cannot download a backup (it holds the encryption key, the server tokens and the password hashes), cannot restore from an uploaded file (an uploaded backup brings its own accounts), cannot change the release address and cannot press **Update now**. It can still make a backup and restore one that is already saved on that install.
 - **Logged.** Every use is written to the log with the key's name, never the key itself.
 - A control key stops working if its owner is no longer an admin.
 

@@ -134,8 +134,11 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
 
     @router.put("/settings")
     def put_settings(changes: dict[str, Any], store: Store, request: Request):
-        if getattr(request.state, "via_key", None) and "control_keys_enabled" in changes:
-            raise HTTPException(403, "A control key can't change whether control keys are allowed")
+        if getattr(request.state, "via_key", None):
+            if "control_keys_enabled" in changes:
+                raise HTTPException(403, "A control key can't change whether control keys are allowed")
+            if "update_url" in changes:  # it decides where "Check for updates" looks
+                raise HTTPException(403, "A control key can't change the release address")
         check_listen_change(store.conn, changes, request)
         try:
             app_settings.update(store.conn, changes)
@@ -170,8 +173,12 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
 
     @router.post("/backups/upload")
     async def upload_backup(request: Request):
-        """Restore from a file you upload: a full backup (zip) or a download without tokens.
-        The current state is backed up first, so this can be undone."""
+        """Restore from a file you upload: a full backup (zip) or a bare database file.
+        The current state is backed up first, so this can be undone. A signed-in admin only: an
+        uploaded backup brings its own accounts, so a control key could use it to replace them."""
+        if getattr(request.state, "via_key", None):
+            raise HTTPException(403, "Restoring from an uploaded file needs a signed-in admin, "
+                                     "not an API key")
         return await restore_upload(request)
 
     @router.post("/backups/{name}/restore")
@@ -189,10 +196,13 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
         finally:
             DB_WORK.release()
 
-    # A full backup holds the encryption key and the server tokens, so only an admin can fetch
-    # one (the login gate treats every route not on the user allow-list as admin-only).
+    # A full backup holds the encryption key, the server tokens and the password hashes, so only a
+    # signed-in admin can fetch one: the login gate treats every route not on the user allow-list
+    # as admin-only, and no API key, not even a control key, may download it.
     @router.get("/backups/{name}/download")
-    def download_backup(name: str):
+    def download_backup(name: str, request: Request):
+        if getattr(request.state, "via_key", None):
+            raise HTTPException(403, "Downloading a backup needs a signed-in admin, not an API key")
         path = backup.find_backup(db_path(), name)
         if path is None:
             raise HTTPException(404, "Backup not found")
@@ -214,9 +224,10 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
         app_settings.set_state(store.conn, "update_latest", result["latest"])
         app_settings.set_state(store.conn, "last_update_check", datetime.now(UTC).isoformat())
         how = install_info.update_help(result["latest"]) if result["newer"] else None
-        can_apply = bool(result["newer"] and result.pop("asset_url", None)
+        asset_url, asset_sha256 = result.pop("asset_url", None), result.pop("asset_sha256", None)
+        # Only a release file of the official repository, with a checksum, can be installed.
+        can_apply = bool(result["newer"] and self_update.is_official(asset_url) and asset_sha256
                          and self_update.why_not() is None)
-        result.pop("asset_url", None)
         return {"configured": True, **result, "can_apply": can_apply,
                 **({"how": how} if how else {})}
 
@@ -242,7 +253,7 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
             raise HTTPException(409, "There is no newer version to install")
         log.warning("update to %s requested from the web UI by %s", found["latest"], actor(request))
         try:
-            self_update.apply(found["latest"], found["asset_url"], transport)
+            self_update.apply(found["latest"], found["asset_url"], found["asset_sha256"], transport)
         except self_update.SelfUpdateError as e:
             log.error("update to %s failed: %s", found["latest"], e)
             raise HTTPException(502, str(e)) from e

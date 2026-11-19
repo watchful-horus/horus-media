@@ -2,6 +2,16 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.3 (2026-11-19)
+
+**Security**
+- **Control keys can no longer reach the secrets.** A control key could download a full backup, which holds the encryption key, the server tokens and the password hashes, and could restore from an uploaded file, which replaces the accounts. Both now need a signed-in admin. A control key also can no longer change the release address. It can still make a backup and restore one already saved on that install. If you have given a control key to anything you do not fully trust, revoke it and consider signing in to your servers again so they get new tokens.
+- **Update now installs only the official release.** The button used to accept a release file from any GitHub repository that the release address pointed at. It now installs only from the official Horus repository's releases, whatever the release address says, and only when the download matches the SHA-256 that GitHub reports for it. A release from anywhere else is still shown as available, to install by hand.
+- The answer from the release address is checked before it is shown: the version must look like a version, and the release-notes link must be https.
+
+**Documentation**
+- The backup section said full backups were never served over HTTP and that Download gave a copy without tokens. That was wrong: **Download** gives the full backup (database plus key), which is how you move Horus to another machine. The docs now say so, and that it must be kept private.
+
 ## 0.4.2 (2026-10-30)
 
 **Graphs**

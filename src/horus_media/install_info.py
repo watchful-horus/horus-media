@@ -1,8 +1,8 @@
 """How to update Horus, worded for the way this copy is running.
 
-Horus never updates itself: it only shows the steps. Docker and Proxmox containers update in
-different ways, and a web app that replaced its own code (or controlled Docker) would be a bigger
-risk than the convenience is worth.
+These are the steps shown in Settings. Docker and manual installs are never updated by Horus
+itself; a Proxmox container that can write to its own environment also gets an "Update now"
+button (see self_update).
 """
 
 import shutil

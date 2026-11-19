@@ -99,6 +99,48 @@ def test_a_control_key_cannot_manage_users_keys_or_sign_in(secured):
     assert [u["username"] for u in c.get("/api/users").json()] == ["owner"]  # nothing changed
 
 
+def test_a_control_key_cannot_take_the_secrets_or_replace_the_accounts(secured):
+    """A full backup holds the encryption key, the server tokens and the password hashes, and an
+    uploaded one brings its own accounts, so neither is open to a key."""
+    c = admin()
+    switch(c)
+    robot = local()
+    headers = bearer(control_key(c)["key"])
+    name = robot.post("/api/backups", headers=headers).json()["name"]
+
+    taken = robot.get(f"/api/backups/{name}/download", headers=headers)
+    assert taken.status_code == 403 and "signed-in admin" in taken.json()["detail"]
+    assert b"PK" not in taken.content  # no zip came back
+
+    full = c.get(f"/api/backups/{name}/download")  # the signed-in admin still can
+    assert full.status_code == 200 and full.content[:2] == b"PK"
+
+    replaced = robot.post("/api/backups/upload", content=full.content,
+                          headers={**headers, "Content-Type": "application/octet-stream"})
+    assert replaced.status_code == 403 and "signed-in admin" in replaced.json()["detail"]
+    assert not list((secured / "backups").glob("upload-*"))  # nothing was written to disk
+    assert len(c.get("/api/backups").json()["items"]) == 1  # and no restore ran (no safety backup)
+
+    # Restoring a backup this install made itself stays possible, for test automation.
+    assert robot.post(f"/api/backups/{name}/restore", headers=headers).status_code == 200
+    assert [u["username"] for u in c.get("/api/users").json()] == ["owner"]
+
+
+def test_a_control_key_cannot_change_the_release_address(secured):
+    c = admin()
+    switch(c)
+    robot = local()
+    headers = bearer(control_key(c)["key"])
+    before = c.get("/api/settings").json()["settings"]["update_url"]
+    r = robot.put("/api/settings", json={"update_url": "https://example.test/latest"}, headers=headers)
+    assert r.status_code == 403 and "release address" in r.json()["detail"]
+    mixed = robot.put("/api/settings", json={"log_level": "DEBUG", "update_url": ""}, headers=headers)
+    assert mixed.status_code == 403
+    after = c.get("/api/settings").json()["settings"]
+    assert after["update_url"] == before and after["log_level"] == "INFO"  # nothing was saved
+    assert c.put("/api/settings", json={"update_url": "https://example.test/latest"}).status_code == 200
+
+
 def test_a_control_key_cannot_switch_control_keys_off_or_on(secured):
     c = admin()
     switch(c)

@@ -1,5 +1,7 @@
 """Deleting backups, restoring from an uploaded file, and starting a fresh install from one."""
 
+import sqlite3
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -35,7 +37,12 @@ def source(tmp_path, monkeypatch):
     assert admin.post("/api/servers", json=PLEX).status_code == 201
     from horus_media.config import db_path
     full = backup.write_full_backup(db_path())
-    export = backup.write_safe_export(db_path(), src)
+    export = src / "horus-no-tokens.db"  # a bare database file with the server tokens blanked
+    backup._copy_db(db_path(), export)
+    conn = sqlite3.connect(export)
+    with conn:
+        conn.execute("UPDATE servers SET token = ''")
+    conn.close()
     return full.read_bytes(), export.read_bytes()
 
 
