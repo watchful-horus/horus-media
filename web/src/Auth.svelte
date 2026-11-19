@@ -81,7 +81,7 @@
         <button type="button" class="link" onclick={() => (restoring = true)}>Already use Horus? Restore from a backup instead</button>
       {:else}
         <p class="muted small">
-          Choose a Horus backup (the zip you downloaded from Settings &gt; Backups). Its
+          Choose a Horus backup (the zip you downloaded from Settings &gt; Backups and updates). Its
           accounts, servers and history come back, and you sign in with the account from that backup.
         </p>
         <input type="file" accept=".zip,.db" disabled={busy} onchange={restoreFrom} aria-label="Backup file" />

@@ -7,7 +7,7 @@
 #   It asks whether to install with default or advanced settings, or to update an existing Horus
 #   container. Everything the wizard asks can also be given up front as environment variables, and
 #   HORUS_WIZARD=0 skips the questions (for scripting):
-#       HORUS_WIZARD=0 HORUS_PACKAGE=/root/horus_media-0.4.12-py3-none-any.whl bash horus-lxc.sh
+#       HORUS_WIZARD=0 HORUS_PACKAGE=/root/horus_media-0.4.13-py3-none-any.whl bash horus-lxc.sh
 #       HORUS_WIZARD=0 bash horus-lxc.sh update 120
 #
 # HORUS_PACKAGE is where Horus is installed from: a path to a wheel on this host, or a web address
@@ -553,14 +553,14 @@ Go ahead?" || exit 1; fi
     echo "    Next:         open that address NOW and create the administrator account (your own"
     echo "                  username and password). Until you do, anyone on your network could."
   fi
-  echo "    Backups:      to bring over an old install, sign in and use Settings > Backups > upload."
+  echo "    Backups:      to bring over an old install, sign in and use Settings > Backups and updates > Restore from a file."
   echo "    Full log:     ${LOG}"
   if [[ "$PACKAGE" =~ ^(https?|git\+https):// ]]; then
     echo "    Update:       run update-horus inside the container, or: bash $0 update ${CTID}"
   else
     echo "    Update:       HORUS_PACKAGE=<new wheel> bash $0 update ${CTID}"
   fi
-  echo "    Data:         /var/lib/horus in container ${CTID} (back it up from Settings > Backups)"
+  echo "    Data:         /var/lib/horus in container ${CTID} (back it up from Settings > Backups and updates)"
 }
 
 # --- main ---

@@ -2,6 +2,17 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.13 (unreleased)
+
+**Changed**
+- **The Settings menu is shorter and in a more useful order:** Servers, Users, Notifications, API, General, Backups and updates, Logs (seven entries instead of nine).
+  - **Notifications** is one page: the channels, the alert limits and report schedule, and the report to see, download or send now. Before, these were split between *Alerts and reports* and *Integrations*, and each page sent you to the other.
+  - **General** now also holds the port and network setting (was *Network*).
+  - **Backups and updates** is the new name of *Maintenance / Updates*.
+  - Settings opens on Servers. Old addresses and bookmarks such as `#settings/integrations`, `#settings/alerts` and `#settings/network` open the page that now holds them.
+- **Your name in the top bar is now a small menu** with Account, Theme and Sign out, in place of three separate buttons.
+- **On a phone** the top bar is two rows instead of three, and the Settings menu is a drop-down list instead of a row that scrolled sideways with most entries out of sight.
+
 ## 0.4.12 (2026-11-19)
 
 **New**

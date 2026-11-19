@@ -17,14 +17,18 @@
   // The address bar (#activity, #graphs, #account, #settings/servers ...) records where you are,
   // so a reload or a bookmark returns to the same page.
   const TABS = ['activity', 'graphs', 'account', 'settings']
-  const SECTIONS = ['general', 'alerts', 'network', 'maintenance', 'servers', 'users', 'api', 'integrations', 'logs']
+  const SECTIONS = ['servers', 'users', 'notifications', 'api', 'general', 'maintenance', 'logs']
+  // Older addresses keep working: these pages were merged into others.
+  const MOVED = { alerts: 'notifications', integrations: 'notifications', network: 'general' }
 
   function fromHash() {
     let [tab, section, sub] = location.hash.replace(/^#\/?/, '').split('/')
-    if (section === 'general' && SECTIONS.includes(sub)) section = sub // an older address: #settings/general/network
+    // an even older address: #settings/general/network
+    if (section === 'general' && (SECTIONS.includes(sub) || sub in MOVED)) section = sub
+    section = MOVED[section] ?? section
     return {
       tab: TABS.includes(tab) ? tab : 'activity',
-      section: SECTIONS.includes(section) ? section : 'general',
+      section: SECTIONS.includes(section) ? section : 'servers',
     }
   }
 
@@ -34,7 +38,7 @@
   // Settings are for admins. (With the login turned off there are no accounts, so everything shows.)
   const isAdmin = $derived(!!auth && (auth.auth_disabled || auth.user?.role === 'admin'))
 
-  function go(tab, section = 'general') {
+  function go(tab, section = 'servers') {
     where = { tab, section }
     history.replaceState(null, '', tab === 'settings' ? `#settings/${section}` : `#${tab}`)
   }
@@ -47,7 +51,13 @@
     }
   }
 
+  // The menu under your name: Account, Theme, Sign out.
+  let menuOpen = $state(false)
+  let menuEl = $state(null)
+  const THEME_TEXT = { auto: 'Auto', light: 'Light', dark: 'Dark' }
+
   async function signOut() {
+    menuOpen = false
     await api.logout().catch(() => {})
     go('activity')
     await checkAuth()
@@ -75,6 +85,10 @@
   })
 </script>
 
+<svelte:window
+  onpointerdown={(e) => { if (menuOpen && menuEl && !menuEl.contains(e.target)) menuOpen = false }}
+  onkeydown={(e) => { if (e.key === 'Escape') menuOpen = false }} />
+
 {#if !auth}
   <p class="loading muted">Loading...</p>
 {:else if auth.setup_required}
@@ -94,13 +108,24 @@
         <button class:active={where.tab === 'settings'} onclick={() => go('settings', where.section)}>Settings</button>
       {/if}
     </nav>
-    <div class="me">
-      <button class="theme" onclick={cycleTheme} title="Theme: {mode} (click to change)" aria-label="Theme: {mode}. Click to change.">{ICONS[mode]} {mode === 'auto' ? 'Auto' : mode === 'light' ? 'Light' : 'Dark'}</button>
-    </div>
     {#if auth.user}
-      <div class="me2">
-        <button class:active={where.tab === 'account'} onclick={() => go('account')} title="Your account">{auth.user.display_name || auth.user.username}</button>
-        <button class="signout" onclick={signOut}>Sign out</button>
+      <div class="me" bind:this={menuEl}>
+        <button class="who" class:active={where.tab === 'account'} aria-haspopup="menu" aria-expanded={menuOpen}
+          title="Account, theme, sign out" onclick={() => (menuOpen = !menuOpen)}>
+          <span class="name">{auth.user.display_name || auth.user.username}</span> <span aria-hidden="true">&#9662;</span>
+        </button>
+        {#if menuOpen}
+          <div class="menu" role="menu">
+            <button role="menuitem" onclick={() => { menuOpen = false; go('account') }}>Account</button>
+            <button role="menuitem" onclick={cycleTheme} title="Click to change">Theme: {THEME_TEXT[mode]} <span aria-hidden="true">{ICONS[mode]}</span></button>
+            <button role="menuitem" onclick={signOut}>Sign out</button>
+          </div>
+        {/if}
+      </div>
+    {:else}
+      <!-- The login is turned off: there is no account, so only the theme button is left. -->
+      <div class="me">
+        <button class="theme" onclick={cycleTheme} title="Theme: {mode} (click to change)" aria-label="Theme: {mode}. Click to change.">{ICONS[mode]} {THEME_TEXT[mode]}</button>
       </div>
     {/if}
   </header>
@@ -131,15 +156,23 @@
   .brand img { display: block; border-radius: 7px; }
   h1 { margin: 0; font-size: 20px; letter-spacing: .02em; }
   nav, .me { display: flex; gap: 6px; }
-  .me { margin-left: auto; }
-  .me2 { display: flex; gap: 6px; }
+  .me { margin-left: auto; position: relative; }
   header button { border-color: transparent; background: none; }
   header button.active { background: var(--bg); border-color: var(--border); font-weight: 600; }
-  .signout, .theme { color: var(--muted); }
+  .theme { color: var(--muted); }
+  .who { display: flex; align-items: center; gap: 6px; max-width: 220px; }
+  .who .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 180px;
+    display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 0, 0, .18); }
+  .menu button { text-align: left; padding: 8px 12px; white-space: nowrap; }
+  .menu button:hover { background: var(--bg); border-color: var(--border); }
   main { max-width: 1100px; margin: 0 auto; padding: 24px; }
-  /* Phones only: let the header wrap onto a second row; wider screens are untouched. */
+  /* Phones only: your name and its menu sit beside the logo, the page buttons on a second row. */
   @media (max-width: 720px) {
     header { flex-wrap: wrap; gap: 8px 12px; padding: 12px 16px; }
+    nav { order: 3; flex-basis: 100%; }
+    .who { max-width: 190px; }
     main { padding: 16px; }
   }
 </style>

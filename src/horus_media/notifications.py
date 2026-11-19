@@ -30,11 +30,11 @@ EVENTS = {
     "play_ended": "A play ends",
     "server_down": "A server becomes unreachable",
     "server_up": "A server comes back",
-    "transcodes_high": "Too many transcodes at once (set the limit in Settings > Alerts)",
-    "bandwidth_high": "A server's bandwidth is over the limit (set it in Settings > Alerts)",
+    "transcodes_high": "Too many transcodes at once (set the limit under Alerts and reports)",
+    "bandwidth_high": "A server's bandwidth is over the limit (set it under Alerts and reports)",
     "playback_problem": "A stream has a playback problem (buffering, stalled, slow transcode)",
-    "new_user": "Someone new plays something (turn on in Settings > Alerts)",
-    "report": "The weekly or monthly report (turn on in Settings > Alerts)",
+    "new_user": "Someone new plays something (turn on under Alerts and reports)",
+    "report": "The weekly or monthly report (turn on under Alerts and reports)",
 }
 TIMEOUT = 5.0
 _URL = re.compile(r"https?://[^\s]+")
@@ -72,7 +72,7 @@ def address(row: sqlite3.Row, cipher: TokenCipher) -> str | None:
         if row["id"] not in _warned:
             _warned.add(row["id"])
             log.warning("notification channel %s: its address cannot be read with the current "
-                        "encryption key; enter the address again (Settings > Integrations, "
+                        "encryption key; enter the address again (Settings > Notifications, "
                         "Edit)", row["name"])
         return None
 

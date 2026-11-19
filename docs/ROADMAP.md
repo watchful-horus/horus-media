@@ -1,6 +1,6 @@
 # Roadmap
 
-Status as of 2026-11-19: version 0.4.12. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
+Status as of 2026-11-19: version 0.4.13. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
 
 ## Done
 
@@ -37,6 +37,7 @@ Status as of 2026-11-19: version 0.4.12. The original v1 scope is complete and t
 **Operations**
 - Settings: time zone, poll interval, retention, HTTP port, "allow other computers", Restart, Shut down (disabled in containers), update address and daily check with a time of day, backups
 - Backups: manual and scheduled zips (with a time of day) and retention, token-free export, restore from the UI or an uploaded file (validates first, saves the current state first), delete backups
+- Settings menu in seven entries (a drop-down list on a phone); Account, Theme and Sign out in a menu under your name
 - Application logging: rotating file and console, secret scrubbing, level setting, Settings > Logs viewer
 - Update check with install-specific update steps; an admin-only Update now button for a Proxmox container that can write to its own environment (works on a real container, confirmed 2026-10-29) (Docker and manual installs are never updated by Horus)
 - Notification channels (Discord, ntfy, webhook; each can be edited in place), optional alerts, weekly/monthly summary reports with CSV. (A read-only Seerr requests tab was added and then removed on 2026-10-29: it had nothing to do with plays or stats)

@@ -2,6 +2,9 @@
   import { onMount } from 'svelte'
   import { api } from './api.js'
 
+  // children: the alert limits and report schedule, shown between the channels and the report.
+  let { children } = $props()
+
   let events = $state({})
   let kinds = $state([])
   let channels = $state([])
@@ -105,30 +108,11 @@
 </script>
 
 <section class="card">
-  <h2>Report</h2>
+  <h2>Channels</h2>
   <p class="hint">
-    A short summary of plays, people, devices, transcoding and peak bandwidth. To get one automatically,
-    pick weekly or monthly under Settings &gt; Alerts and tick "report" on a channel below.
-  </p>
-  <div class="actions">
-    <select bind:value={reportDays} aria-label="Report length">
-      <option value={7}>Last 7 days</option>
-      <option value={30}>Last 30 days</option>
-      <option value={90}>Last 90 days</option>
-    </select>
-    <button disabled={busy} onclick={showReport}>Show</button>
-    <a class="button" href="/api/report?{reportRange()}&format=csv">Download CSV</a>
-    <button disabled={busy} onclick={sendReport}>Send now</button>
-  </div>
-  {#if report}<pre class="report">{report.text}</pre>{/if}
-  {#if reportNote}<p class="okmsg">{reportNote}</p>{/if}
-</section>
-
-<section class="card">
-  <h2>Notifications</h2>
-  <p class="hint">
-    Horus can post a message to Discord, ntfy or any web address when something happens. The address
-    you enter is a secret: it is stored encrypted and never shown again, only its host name.
+    A channel is where Horus posts a message when something happens: Discord, ntfy or any web
+    address. Each channel gets only the events ticked on it. The address you enter is a secret: it is
+    stored encrypted and never shown again, only its host name.
   </p>
   {#each channels as c (c.id)}
     {#if editing?.id === c.id}
@@ -218,6 +202,29 @@
     <div class="actions"><button class="primary" disabled={busy || form.events.length === 0}>Add channel</button></div>
   </form>
   {#if message && !editing}<p class="bad">{message}</p>{/if}
+</section>
+
+{@render children?.()}
+
+<section class="card">
+  <h2>Report</h2>
+  <p class="hint">
+    A short summary of plays, people, devices, transcoding and peak bandwidth. See one here, download
+    it, or send it now to every channel with "report" ticked. To get one automatically, pick weekly or
+    monthly under Alerts and reports above.
+  </p>
+  <div class="actions">
+    <select bind:value={reportDays} aria-label="Report length">
+      <option value={7}>Last 7 days</option>
+      <option value={30}>Last 30 days</option>
+      <option value={90}>Last 90 days</option>
+    </select>
+    <button disabled={busy} onclick={showReport}>Show</button>
+    <a class="button" href="/api/report?{reportRange()}&format=csv">Download CSV</a>
+    <button disabled={busy} onclick={sendReport}>Send now</button>
+  </div>
+  {#if report}<pre class="report">{report.text}</pre>{/if}
+  {#if reportNote}<p class="okmsg">{reportNote}</p>{/if}
 </section>
 
 <style>

@@ -2,8 +2,8 @@
   import { onMount } from 'svelte'
   import { api } from './api.js'
 
-  // Settings > General, Alerts and reports, Network and Maintenance / Updates are four pages of one form with one
-  // Save button (they share this component, so a change made on one stays while you open another).
+  // One settings form, shown in parts: 'general' (General and Network), 'alerts' (inside Settings >
+  // Notifications) and 'maintenance' (Settings > Backups and updates). Each shows the same Save button.
   let { part = 'general' } = $props()
 
   let info = $state(null)
@@ -230,7 +230,7 @@
     {#if part === 'alerts'}
     <section class="card">
       <h2>Alerts and reports</h2>
-      <p class="hint">All off by default. An alert only reaches you through a notification channel that has it ticked (Integrations &gt; Notifications). Each one is sent once when the limit is crossed, and again only after it has dropped back below.</p>
+      <p class="hint">All off by default. An alert only reaches you through a notification channel that has it ticked (Channels, above). Each one is sent once when the limit is crossed, and again only after it has dropped back below.</p>
       <label>
         Transcodes at once, per server
         <input type="number" min="0" max="100" step="1" bind:value={form.alert_transcodes_over} />
@@ -252,12 +252,12 @@
           <option value="weekly">Every week (the last 7 days)</option>
           <option value="monthly">Every month (the last 30 days)</option>
         </select>
-        <span class="hint">Goes to every notification channel with "report" ticked. The first one arrives a week or month after you switch this on. You can also see or send one now under Integrations.</span>
+        <span class="hint">Goes to every notification channel with "report" ticked. The first one arrives a week or month after you switch this on. You can also see or send one now under Report, below.</span>
       </label>
     </section>
     {/if}
 
-    {#if part === 'network'}
+    {#if part === 'general'}
     <section class="card">
       <h2>Network</h2>
       {#if listen.in_container}
@@ -337,7 +337,7 @@
           <label>
             Back up at
             <input type="time" bind:value={form.backup_time} required />
-            <span class="hint">Time of day, in the time zone set above (or this machine's own). Used when the interval is a whole number of days (24, 48, ...); other intervals count hours from the last backup.</span>
+            <span class="hint">Time of day, in the time zone set under General (or this machine's own). Used when the interval is a whole number of days (24, 48, ...); other intervals count hours from the last backup.</span>
           </label>
         {/if}
       {/if}
@@ -401,7 +401,7 @@
         <label>
           Check at
           <input type="time" bind:value={form.update_check_time} required />
-          <span class="hint">Time of day, in the time zone set above (or this machine's own). Horus also checks when it starts for the first time.</span>
+          <span class="hint">Time of day, in the time zone set under General (or this machine's own). Horus also checks when it starts for the first time.</span>
         </label>
       {/if}
       <div class="actions">
@@ -477,7 +477,7 @@
               <code>HORUS_ALLOW_SELF_RESTART=1</code> on the container.
             {/if}
           {:else}
-            Restart applies the port and network settings above. Shut down stops Horus; it stays
+            Restart applies the port and network settings under General. Shut down stops Horus; it stays
             off until you start it again yourself.
             {#if dirty}<strong>Restart is off because you have unsaved changes above. Save them (or reload the page) first.</strong>{/if}
           {/if}

@@ -1,4 +1,4 @@
-"""Shared by Settings > Backups and the first-run screen: restore from an uploaded file."""
+"""Shared by Settings > Backups and updates and the first-run screen: restore from an uploaded file."""
 
 import logging
 

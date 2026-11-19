@@ -24,11 +24,11 @@ If the import says the plugin was not found, Emby answered "not found" (usually 
 **Import once, right after you add the server.** Importing only reads from the server and changes nothing on it. Running it again adds nothing new: each play has a stable key, so one already imported is skipped. Plays Horus recorded live are skipped too, matched by user, title and start time (within two minutes). Plex names a play the same way in both places, so those match. Emby's plugin may name a play differently from how Horus saw it live, so on Emby the longer Horus has been recording before you import, the likelier a few plays count twice. A play for which Emby's plugin gives only a date (no time) is placed at 12:00 midday in your Horus time zone, so it lands on the right day. Imported plays have no bandwidth figure, and Plex does not say how a past play was streamed, so those show as "Unknown" in the direct play vs transcode charts.
 
 ## Notifications and alerts
-**Settings > Integrations** can post a message to a Discord channel webhook, an ntfy topic, or any web address (JSON) when someone starts or finishes playing, a server becomes unreachable or comes back, or a stream has a [playback problem](#playback-problems). Channel addresses are secrets: they are stored encrypted and never shown again. Tick the matching event on a channel to receive it.
+**Settings > Notifications** can post a message to a Discord channel webhook, an ntfy topic, or any web address (JSON) when someone starts or finishes playing, a server becomes unreachable or comes back, or a stream has a [playback problem](#playback-problems). Channel addresses are secrets: they are stored encrypted and never shown again. Tick the matching event on a channel to receive it.
 
 **Edit** on a channel changes its name, type, address and events in place. The address field starts empty: leave it empty to keep the current address, or enter a new one to replace it. Changing the type needs a new address. Nothing is sent when you save; press **Send test** afterwards to check a new address. A channel whose address can no longer be read (the encryption key was lost or replaced) is repaired the same way, by entering its address again.
 
-Three optional alerts (**Settings > Alerts and reports**, all off by default) use the same channels: too many transcodes at once, a server's bandwidth over a limit, and someone Horus has never seen starting to play. Each is sent once when the limit is crossed.
+Three optional alerts (*Alerts and reports* on the same page, all off by default) use the same channels: too many transcodes at once, a server's bandwidth over a limit, and someone Horus has never seen starting to play. Each is sent once when the limit is crossed.
 
 ## Playback problems
 While Horus records history it also watches every playing stream for trouble. It only reads what Plex and Emby report, once per poll, so treat it as a good hint rather than a measurement.
@@ -49,4 +49,4 @@ A problem counts once it has been seen on two polls in a row, so a seek or the f
 - Problems are kept as long as history is and are in [`/api/v1/problems`](api.md#data-api-for-grafana-and-other-tools). Someone who may only see their own activity sees only their own problems.
 
 ## Summary reports
-The same section can send a weekly or monthly summary report. **Integrations > Report** shows one on screen, downloads it as CSV, or sends it now.
+*Alerts and reports* under **Settings > Notifications** can send a weekly or monthly summary report. **Report**, at the bottom of that page, shows one on screen, downloads it as CSV, or sends it now.
