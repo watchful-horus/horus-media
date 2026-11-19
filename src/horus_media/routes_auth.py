@@ -63,16 +63,30 @@ class KeyName(BaseModel):
 def make_router(get_store: Callable) -> APIRouter:
     router = APIRouter(prefix="/api")
     Store = Annotated[ServerStore, Depends(get_store)]
+    # Wrong passwords are counted per address and username together, so one person's mistakes
+    # (or someone guessing at one account) do not lock out everybody else at the same address,
+    # which behind a reverse proxy can be every visitor. A higher limit per address alone still
+    # stops guessing across many usernames. Nothing is counted per username alone: that would
+    # let anyone who knows a username keep its owner locked out.
     limiter = auth.LoginLimiter()
+    address_limiter = auth.LoginLimiter(limit=30)
 
     def client(request: Request) -> str:
         return request.client.host if request.client else "unknown"
+
+    def over_https(request: Request) -> bool:
+        """True when the visitor's browser used https, directly or through a proxy that ends
+        it. The proxy's X-Forwarded-Proto is believed here even from an address that is not a
+        trusted proxy: all it decides is the cookie's Secure flag, and a client that lies about
+        it only gets a cookie its own browser will not send back over http."""
+        forwarded = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+        return request.url.scheme == "https" or forwarded == "https"
 
     def start_session(response: Response, request: Request, store: ServerStore, user_id: int) -> None:
         token = auth.create_session(store.conn, user_id)
         response.set_cookie(
             auth.SESSION_COOKIE, token, max_age=auth.SESSION_DAYS * 86400, httponly=True,
-            samesite="lax", secure=request.url.scheme == "https",
+            samesite="lax", secure=over_https(request),
         )
 
     def me(request: Request) -> dict:
@@ -137,15 +151,17 @@ def make_router(get_store: Callable) -> APIRouter:
     @router.post("/auth/login")
     def login(body: Login, request: Request, response: Response, store: Store):
         who = client(request)
-        if limiter.blocked(who):
+        attempt = (who, body.username.strip().casefold()[:64])  # usernames ignore case
+        if address_limiter.blocked(who) or limiter.blocked(attempt):
             raise HTTPException(429, "Too many attempts, wait a minute")
         user = auth.authenticate(store.conn, body.username, body.password)
         if not user:
-            limiter.fail(who)
+            limiter.fail(attempt)
+            address_limiter.fail(who)
             # The username typed is deliberately not logged: people mistype passwords into it.
             log.warning("failed login from %s", who)
             raise HTTPException(401, "Wrong username or password")
-        limiter.reset(who)
+        limiter.reset(attempt)
         start_session(response, request, store, user["id"])
         log.info("login: %s from %s", user["username"], who)
         return {"ok": True, "user": user}

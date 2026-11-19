@@ -15,7 +15,8 @@ import re
 import secrets
 import sqlite3
 import time
-from collections import defaultdict, deque
+from collections import deque
+from collections.abc import Hashable
 from datetime import UTC, datetime, timedelta
 
 log = logging.getLogger(__name__)
@@ -418,7 +419,7 @@ def credential_from_headers(headers) -> str | None:
 
 # --- what each role may do ------------------------------------------------------------------
 
-_USER_PATHS = {"/api/activity", "/api/stats"}
+_USER_PATHS = {"/api/activity", "/api/stats", "/api/stats/monthly"}
 _POSTER = re.compile(r"/api/servers/\d+/poster")
 _MY_KEY = re.compile(r"/api/my-keys/\d+")
 
@@ -442,23 +443,38 @@ def role_allows(role: str, method: str, path: str) -> bool:
 # --- brute-force protection ------------------------------------------------------------------
 
 class LoginLimiter:
-    """At most `limit` failed attempts per client in `window` seconds."""
+    """At most `limit` failed attempts per key in `window` seconds. The key is whatever the
+    caller counts by: an address, or an address together with a username."""
+
+    SWEEP_ABOVE = 2000  # keys; old ones are dropped past this so the table cannot grow forever
 
     def __init__(self, limit: int = 5, window: float = 60.0, clock=time.monotonic):
         self._limit, self._window, self._clock = limit, window, clock
-        self._failures: dict[str, deque[float]] = defaultdict(deque)
+        self._failures: dict[Hashable, deque[float]] = {}
 
-    def _trim(self, who: str) -> deque[float]:
-        q = self._failures[who]
+    def _trim(self, who: Hashable) -> deque[float] | None:
+        q = self._failures.get(who)
+        if q is None:
+            return None
         while q and self._clock() - q[0] > self._window:
             q.popleft()
+        if not q:
+            del self._failures[who]
+            return None
         return q
 
-    def blocked(self, who: str) -> bool:
-        return len(self._trim(who)) >= self._limit
+    def blocked(self, who: Hashable) -> bool:
+        q = self._trim(who)
+        return q is not None and len(q) >= self._limit
 
-    def fail(self, who: str) -> None:
-        self._trim(who).append(self._clock())
+    def fail(self, who: Hashable) -> None:
+        if len(self._failures) > self.SWEEP_ABOVE:
+            for key in list(self._failures):
+                self._trim(key)
+        q = self._trim(who)
+        if q is None:
+            q = self._failures[who] = deque()
+        q.append(self._clock())
 
-    def reset(self, who: str) -> None:
+    def reset(self, who: Hashable) -> None:
         self._failures.pop(who, None)

@@ -2,6 +2,17 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.5 (2026-11-19)
+
+**Fixes**
+- **Normal users get the "Plays per month" chart.** It was refused for anyone who is not an admin, so the chart was silently missing for them. It shows only their own plays when "Normal users see only their own activity" is on.
+- **A notification channel whose address can no longer be read no longer breaks things.** If the encryption key was lost or replaced (for example a database restored without its key), every poll that wanted to send a notification failed and Settings > Integrations showed an error. Such a channel is now skipped and marked on the page, with a note to remove it and add it again; the other channels keep working.
+
+**Behind a reverse proxy**
+- **Wrong passwords no longer lock everybody out.** Five wrong passwords used to block every sign-in from that address for a minute, and behind a reverse proxy every visitor shares the proxy's address. The count is now kept per username and address together, so only that username waits; an address that fails thirty times in a minute across any usernames still has to wait.
+- **New `HORUS_TRUSTED_PROXIES`** (see [Configuration](docs/configuration.md#environment-variables)): name your reverse proxy's address or network and Horus logs and limits sign-ins by each visitor's own address. Not needed for a proxy on the same machine.
+- **The session cookie is marked `Secure`** when the visitor used https through a proxy that sets `X-Forwarded-Proto`. No setting needed.
+
 ## 0.4.4 (2026-11-19)
 
 **Security**

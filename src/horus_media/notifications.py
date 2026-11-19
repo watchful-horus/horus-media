@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
 import httpx
+from cryptography.fernet import InvalidToken
 
 from .crypto import TokenCipher
 
@@ -55,9 +56,28 @@ def validate(kind: str, url: str, events: list[str]) -> list[str]:
     return sorted(set(events), key=list(EVENTS).index)
 
 
+UNREADABLE = "This channel's address can no longer be read. Remove the channel and add it again."
+_warned: set[int] = set()  # unreadable channels already mentioned in the log
+
+
+def address(row: sqlite3.Row, cipher: TokenCipher) -> str | None:
+    """The channel's address, or None when it cannot be decrypted: the encryption key was lost
+    or replaced since the channel was added (for example by restoring a database without its
+    key). One such channel must never stop the others, or the poll that wanted to notify."""
+    try:
+        return cipher.decrypt(row["url"])
+    except InvalidToken:
+        if row["id"] not in _warned:
+            _warned.add(row["id"])
+            log.warning("notification channel %s: its address cannot be read with the current "
+                        "encryption key; remove it and add it again", row["name"])
+        return None
+
+
 def _public(row: sqlite3.Row, cipher: TokenCipher) -> dict:
-    host = urlsplit(cipher.decrypt(row["url"])).hostname or ""
-    return {"id": row["id"], "name": row["name"], "kind": row["kind"], "host": host,
+    url = address(row, cipher)
+    return {"id": row["id"], "name": row["name"], "kind": row["kind"],
+            "host": (urlsplit(url).hostname or "") if url else "", "unreadable": url is None,
             "events": json.loads(row["events"]), "enabled": bool(row["enabled"])}
 
 
@@ -88,7 +108,9 @@ def update_channel(conn: sqlite3.Connection, cipher: TokenCipher, channel_id: in
     if row is None:
         return None
     if events is not None:
-        events = validate(row["kind"], cipher.decrypt(row["url"]), events)
+        # Only the events are being checked; an unreadable address must not block pausing or
+        # changing them.
+        events = validate(row["kind"], address(row, cipher) or "https://unreadable.invalid", events)
     with conn:
         if enabled is not None:
             conn.execute("UPDATE notification_channels SET enabled = ? WHERE id = ?",
@@ -138,7 +160,9 @@ def notify(conn: sqlite3.Connection, cipher: TokenCipher, event: str, title: str
     for row in rows:
         if event not in json.loads(row["events"]):
             continue
-        url = cipher.decrypt(row["url"])
+        url = address(row, cipher)
+        if url is None:
+            continue
 
         def job(row=row, url=url) -> None:
             problem = send(row["kind"], url, event, title, message, transport)

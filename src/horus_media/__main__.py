@@ -32,13 +32,19 @@ def serve() -> None:
         where = listen.resolve(conn)
     finally:
         conn.close()
+    try:
+        proxies = listen.trusted_proxies()
+    except ValueError as e:
+        sys.exit(f"HORUS_TRUSTED_PROXIES is not a list of addresses or networks: {e}")
     listen.record_running(where)
     if not listen.wait_until_free(where.host, where.port):
         sys.exit(f"Port {where.port} is already in use. Pick another one with HORUS_PORT, "
                  "or stop whatever is using it.")
     if sys.stderr is None or sys.stdout is None:  # started by pythonw at login: no console
         sys.stdout = sys.stderr = open(os.devnull, "w")  # noqa: SIM115 - lives as long as Horus
-    uvicorn.run("horus_media.main:app", host=where.host, port=where.port)
+    # forwarded_allow_ips=None leaves the web server's default: only a proxy on this machine.
+    uvicorn.run("horus_media.main:app", host=where.host, port=where.port,
+                forwarded_allow_ips=proxies)
 
 
 def startup_command(action: str) -> None:

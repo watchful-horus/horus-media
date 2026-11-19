@@ -1,6 +1,6 @@
 # Roadmap
 
-Status as of 2026-11-19: version 0.4.4. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
+Status as of 2026-11-19: version 0.4.5. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
 
 ## Done
 
@@ -26,7 +26,7 @@ Status as of 2026-11-19: version 0.4.4. The original v1 scope is complete and th
 - Import of past history (Plex history, Emby Playback Reporting plugin), safe to repeat
 
 **Accounts and API**
-- First-run account creation (the first person picks their username and becomes admin); admin and user roles; admins manage people; scrypt, sessions, rate-limited sign-in; an email address works as a username
+- First-run account creation (the first person picks their username and becomes admin); admin and user roles; admins manage people; scrypt, sessions, sign-in rate limited per username and address (`HORUS_TRUSTED_PROXIES` for the real address behind a proxy); an email address works as a username
 - API keys (hashed, shown once), per-user keys, and a read-only `/api/v1` data API for Grafana: plays, bandwidth, history, activity, servers; JSON and CSV
 - Control keys (off by default, always expiring, never able to touch users, keys, sign-in, Stop stream, backup downloads, uploaded restores or the release address, every use logged) and `scripts/horusctl.py`
 - Hide other people's activity from normal users (per-account Plex/Emby name link)
@@ -48,7 +48,7 @@ Status as of 2026-11-19: version 0.4.4. The original v1 scope is complete and th
 - MIT licence, `CONTRIBUTING.md`, `SECURITY.md`, issue and pull request templates, Dependabot, CODEOWNERS
 - Public repository with secret scanning, private vulnerability reporting, CodeQL, Dependabot alerts, protected `main`, SHA-pinned Actions
 - CI (tests, lint, Docker image, web build) on every push and pull request
-- 330 tests (fake responses, no live servers), `ruff` clean; README and docs
+- 343 tests (fake responses, no live servers), `ruff` clean; README and docs
 
 **Verified**
 - Backup Download then Restore across installs (Proxmox container to Docker); Emby history import; lint and the full suite on real Linux; the Docker image in CI and a real Docker host, including an anonymous pull; all tests on emulated aarch64

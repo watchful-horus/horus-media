@@ -6,6 +6,7 @@ used in HORUS_RUNNING_* so the Settings page can show it; when Horus is started 
 (for example `uvicorn ... --port 9000`) the command line decides and the page says so.
 """
 
+import ipaddress
 import os
 import socket
 import sqlite3
@@ -71,6 +72,23 @@ def resolve(conn: sqlite3.Connection) -> Listen:
         host_source="environment" if host_env else "setting",
         port_source="environment" if port_env else "setting",
     )
+
+
+def trusted_proxies() -> str | None:
+    """HORUS_TRUSTED_PROXIES: the reverse proxies whose X-Forwarded-For and X-Forwarded-Proto
+    Horus believes, so sign-ins are logged and rate limited by the visitor's own address. A
+    comma-separated list of addresses or networks (10.0.0.5, 172.18.0.0/16), or `*` for any.
+    None when it is not set: the web server's own default then applies (this machine only).
+    Raises ValueError for an entry that is not an address or network, so a typo stops Horus at
+    start instead of quietly trusting nothing."""
+    raw = os.environ.get("HORUS_TRUSTED_PROXIES", "").strip()
+    if not raw:
+        return None
+    entries = [e.strip() for e in raw.split(",") if e.strip()]
+    for entry in entries:
+        if entry != "*":
+            ipaddress.ip_network(entry, strict=False)
+    return ",".join(entries)
 
 
 def record_running(listen: Listen) -> None:

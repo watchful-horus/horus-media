@@ -97,12 +97,15 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
 
     @router.post("/notifications/{channel_id}/test")
     def test_channel(channel_id: int, store: Store):
-        row = store.conn.execute("SELECT kind, url FROM notification_channels WHERE id = ?",
+        row = store.conn.execute("SELECT id, name, kind, url FROM notification_channels WHERE id = ?",
                                  (channel_id,)).fetchone()
         if row is None:
             raise HTTPException(404, "Channel not found")
+        url = notifications.address(row, store.cipher)
+        if url is None:
+            return {"ok": False, "error": notifications.UNREADABLE}
         problem = notifications.send(
-            row["kind"], store.cipher.decrypt(row["url"]), "test", "Horus test",
+            row["kind"], url, "test", "Horus test",
             "This is a test message from Horus.", transport)
         return {"ok": problem is None, "error": problem}
 

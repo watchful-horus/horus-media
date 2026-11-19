@@ -264,3 +264,48 @@ def test_a_stored_seerr_connection_is_forgotten_when_upgrading(tmp_path):
     conn.commit()
     migrate(conn)
     assert conn.execute("SELECT name FROM sqlite_master WHERE name = 'seerr'").fetchone() is None
+
+
+# --- a channel whose address can no longer be read ------------------------------------------------
+
+def lose_the_key(tmp_path):
+    """As after restoring a database without its key: a new key that cannot read old addresses."""
+    from cryptography.fernet import Fernet
+
+    (tmp_path / "horus.key").write_bytes(Fernet.generate_key())
+    notifications._warned.clear()
+
+
+def test_an_unreadable_channel_is_marked_and_does_not_break_the_page(api, tmp_path, caplog):
+    old = channel(api, name="Old").json()["id"]
+    lose_the_key(tmp_path)
+    new = channel(api, name="New").json()["id"]  # added with the current key
+    with caplog.at_level("WARNING", logger="horus_media"):
+        listing = api.get("/api/notifications")
+        api.get("/api/notifications")
+    assert listing.status_code == 200
+    by_id = {c["id"]: c for c in listing.json()["channels"]}
+    assert by_id[old]["unreadable"] is True and by_id[old]["host"] == ""
+    assert by_id[new]["unreadable"] is False and by_id[new]["host"] == "hooks.example.com"
+    assert caplog.text.count("its address cannot be read") == 1  # said once, not on every look
+
+    tested = api.post(f"/api/notifications/{old}/test").json()
+    assert tested["ok"] is False and "add it again" in tested["error"]
+    assert api.post(f"/api/notifications/{new}/test").json() == {"ok": True, "error": None}
+    # It can still be paused, changed and removed.
+    assert api.patch(f"/api/notifications/{old}", json={"enabled": False}).json()["enabled"] is False
+    assert api.patch(f"/api/notifications/{old}", json={"events": ["server_down"]}).status_code == 200
+    assert api.delete(f"/api/notifications/{old}").status_code == 204
+
+
+def test_an_unreadable_channel_does_not_stop_the_others_or_the_poll(api, tmp_path):
+    channel(api, name="Old")
+    lose_the_key(tmp_path)
+    channel(api, name="New")
+    conn = connect(tmp_path / "horus.db")
+    migrate(conn)
+    cipher = TokenCipher.for_db(tmp_path / "horus.db")
+    SENT.clear()
+    notifications.notify(conn, cipher, "play_started", "t", "m",
+                         httpx.MockTransport(handler), wait=True)
+    assert len(SENT) == 1  # the readable one got it; the other was skipped, not raised

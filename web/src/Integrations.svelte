@@ -117,7 +117,14 @@
       <div>
         <strong>{c.name}</strong> <span class="badge">{c.kind}</span>
         {#if !c.enabled}<span class="badge">paused</span>{/if}
-        <div class="muted small">Sends to {c.host} &middot; {c.events.map((e) => events[e]).join(', ')}</div>
+        {#if c.unreadable}
+          <div class="small bad">
+            This channel's address can no longer be read (the encryption key has changed since it
+            was added), so nothing is sent to it. Remove it and add it again.
+          </div>
+        {:else}
+          <div class="muted small">Sends to {c.host} &middot; {c.events.map((e) => events[e]).join(', ')}</div>
+        {/if}
         {#if results[c.id]}
           <div class="small" class:okmsg={results[c.id].ok} class:bad={!results[c.id].ok}>
             {results[c.id].ok ? 'Test message sent.' : results[c.id].error}
@@ -125,8 +132,10 @@
         {/if}
       </div>
       <div class="actions">
-        <button disabled={busy} onclick={() => test(c)}>Send test</button>
-        <button disabled={busy} onclick={() => pause(c)}>{c.enabled ? 'Pause' : 'Resume'}</button>
+        {#if !c.unreadable}
+          <button disabled={busy} onclick={() => test(c)}>Send test</button>
+          <button disabled={busy} onclick={() => pause(c)}>{c.enabled ? 'Pause' : 'Resume'}</button>
+        {/if}
         <button disabled={busy} onclick={() => remove(c)}>Remove</button>
       </div>
     </div>

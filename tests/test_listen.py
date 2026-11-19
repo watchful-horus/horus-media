@@ -136,7 +136,8 @@ def test_entry_point_starts_uvicorn_with_the_saved_settings(api, monkeypatch):
     calls = []
     monkeypatch.setattr(entry.uvicorn, "run", lambda app, **kw: calls.append((app, kw)))
     entry.main()
-    assert calls == [("horus_media.main:app", {"host": "127.0.0.1", "port": 9234})]
+    assert calls == [("horus_media.main:app", {"host": "127.0.0.1", "port": 9234,
+                                               "forwarded_allow_ips": None})]
     assert listen.running()["port"] == 9234 and listen.running()["can_restart"]
     monkeypatch.delenv("HORUS_RUNNING_PORT")
 
