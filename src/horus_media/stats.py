@@ -99,31 +99,40 @@ def compute_stats(
         weekday_types.setdefault(p["media_type"] or UNKNOWN, [0] * 7)[local.weekday()] += 1
 
     samples = conn.execute(
-        "SELECT server_id, ts, kbps FROM bandwidth_samples WHERE ts >= ? AND ts < ? ORDER BY ts",
+        "SELECT server_id, ts, kbps, COALESCE(peak_kbps, kbps) AS peak FROM bandwidth_samples "
+        "WHERE ts >= ? AND ts < ? ORDER BY ts",
         (lo, hi),
     ).fetchall() if only_user is None else []
     extent = (
         _local(samples[-1]["ts"], tz) - _local(samples[0]["ts"], tz) if samples else timedelta(0)
     )
     size = _bucket(extent)
-    buckets: dict[tuple[int, datetime], list[int]] = {}
+    # A sample is (average, peak). For a fresh sample the two are the same number; samples
+    # older than a month have been thinned to one per five minutes and carry both.
+    buckets: dict[tuple[int, datetime], list[tuple[int, int]]] = {}
     for r in samples:
-        buckets.setdefault((r["server_id"], _floor(_local(r["ts"], tz), size)), []).append(r["kbps"])
+        buckets.setdefault((r["server_id"], _floor(_local(r["ts"], tz), size)), []).append(
+            (r["kbps"], r["peak"]))
     # Combined bandwidth: every server's sample from one poll shares a timestamp, so adding
-    # them gives the true total at that moment (and a true peak, unlike summing peaks).
-    per_poll: dict[str, int] = {}
+    # them gives the true total at that moment (and a true peak, unlike summing peaks). For
+    # thinned samples the servers' peaks are added, which can overstate the combined peak.
+    per_poll: dict[str, tuple[int, int]] = {}
     for r in samples:
-        per_poll[r["ts"]] = per_poll.get(r["ts"], 0) + r["kbps"]
-    total_buckets: dict[datetime, list[int]] = {}
-    for ts, kbps in per_poll.items():
-        total_buckets.setdefault(_floor(_local(ts, tz), size), []).append(kbps)
-    bandwidth_total = [
-        [b.isoformat(), round(sum(v) / len(v)), max(v)] for b, v in sorted(total_buckets.items())
-    ]
+        kbps, peak = per_poll.get(r["ts"], (0, 0))
+        per_poll[r["ts"]] = (kbps + r["kbps"], peak + r["peak"])
+    total_buckets: dict[datetime, list[tuple[int, int]]] = {}
+    for ts, pair in per_poll.items():
+        total_buckets.setdefault(_floor(_local(ts, tz), size), []).append(pair)
+
+    def point(bucket: datetime, pairs: list[tuple[int, int]]) -> list:
+        return [bucket.isoformat(), round(sum(k for k, _ in pairs) / len(pairs)),
+                max(p for _, p in pairs)]
+
+    bandwidth_total = [point(b, v) for b, v in sorted(total_buckets.items())]
     bandwidth = []
     for sid, name in names.items():
         points = [
-            [b.isoformat(), round(sum(v) / len(v)), max(v)]
+            point(b, v)
             for (s, b), v in sorted(buckets.items(), key=lambda kv: kv[0][1])
             if s == sid
         ]

@@ -1,5 +1,8 @@
+import hashlib
 import logging
 import sqlite3
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import httpx
@@ -41,10 +44,42 @@ def fetch_server_activity(
         client.close()
 
 
+# How old a live result may be and still be handed to a page or a scrape. Several open
+# browsers, the data API and a Prometheus scrape then share one call to each media server
+# instead of each making their own. The poller always asks the servers itself.
+LIVE_MAX_AGE = 5.0
+_live_lock = threading.Lock()
+_live: dict = {}  # "key": what was asked, "at": when (monotonic seconds), "results": the answer
+
+
+def forget_live() -> None:
+    """Drop the remembered result, so the next caller asks the servers (after stopping a
+    stream, say)."""
+    with _live_lock:
+        _live.clear()
+
+
 def fetch_all(
-    entries: list[tuple[sqlite3.Row, str]], transport: httpx.BaseTransport | None = None
+    entries: list[tuple[sqlite3.Row, str]], transport: httpx.BaseTransport | None = None,
+    max_age: float = 0.0,
 ) -> list[ServerActivity]:
+    """Live sessions from every server, asked in parallel. With `max_age`, a result that is at
+    most that many seconds old is reused; callers get their own copy and may change it."""
     if not entries:
         return []
+    if max_age <= 0:
+        return _fetch(entries, transport)
+    key = (id(transport), tuple((r["id"], r["type"], r["name"], r["url"], hashlib.sha256(
+        token.encode()).hexdigest()) for r, token in entries))
+    with _live_lock:  # held while fetching, so callers arriving together share one fetch
+        fresh = _live.get("key") == key and time.monotonic() - _live["at"] <= max_age
+        if not fresh:
+            _live.update(key=key, results=_fetch(entries, transport), at=time.monotonic())
+        return [r.model_copy(deep=True) for r in _live["results"]]
+
+
+def _fetch(
+    entries: list[tuple[sqlite3.Row, str]], transport: httpx.BaseTransport | None
+) -> list[ServerActivity]:
     with ThreadPoolExecutor(max_workers=len(entries)) as pool:
         return list(pool.map(lambda e: fetch_server_activity(*e, transport=transport), entries))

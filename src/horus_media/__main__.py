@@ -19,12 +19,13 @@ import sys
 import uvicorn
 from pydantic import ValidationError
 
-from . import app_settings, auth, listen, startup
+from . import app_settings, auth, backup, listen, startup
 from .config import db_path
 from .db import connect, migrate
 
 
 def serve() -> None:
+    backup.finish_restore(db_path())  # before anything opens the database
     conn = connect(db_path())
     try:
         migrate(conn)

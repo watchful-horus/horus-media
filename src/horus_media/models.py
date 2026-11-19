@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -62,29 +63,48 @@ class HistoryRecord(BaseModel):
     date_only: bool = False  # the server gave only a date; the time of day is made up on import
 
 
+def _server_name(v: str) -> str:
+    v = v.strip()
+    if not v:
+        raise ValueError("Name cannot be empty")
+    return v
+
+
+def _server_url(v: str) -> str:
+    """A media server's address: http or https with a host, and nothing odd in it."""
+    v = v.strip()
+    try:
+        parts = urlsplit(v)
+        scheme, host = parts.scheme.lower(), parts.hostname
+    except ValueError:
+        scheme, host = "", None
+    if scheme not in ("http", "https") or not host or any(c.isspace() for c in v):
+        raise ValueError("The address must start with http:// or https:// and name a server")
+    return v
+
+
 class ServerIn(BaseModel):
     type: ServerType
-    name: str
-    url: str
-    token: str
+    name: str = Field(min_length=1, max_length=80)
+    url: str = Field(min_length=1, max_length=2048)
+    token: str = Field(min_length=1, max_length=4096)
+
+    _name = field_validator("name")(_server_name)
+    _url = field_validator("url")(_server_url)
 
 
 class ServerRenameIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
 
-    @field_validator("name")
-    @classmethod
-    def _trimmed(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("Name cannot be empty")
-        return v
+    _name = field_validator("name")(_server_name)
 
 
 class ServerTestIn(BaseModel):
     type: ServerType
-    url: str
-    token: str
+    url: str = Field(min_length=1, max_length=2048)
+    token: str = Field(min_length=1, max_length=4096)
+
+    _url = field_validator("url")(_server_url)
 
 
 class ServerOut(BaseModel):

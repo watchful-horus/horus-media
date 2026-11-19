@@ -73,8 +73,41 @@ def test_client_host_is_known(monkeypatch):
 @pytest.fixture(autouse=True)
 def cheap_password_hashing(monkeypatch):
     """The real scrypt settings take about a quarter of a second per password, which adds up
-    over the suite. test_password_hashing.py checks the real ones."""
+    over the suite. test_hardening.py checks the real ones."""
     from horus_media import auth
 
     monkeypatch.setattr(auth, "_SCRYPT", {"n": 2**4, "r": 8, "p": 1})
     monkeypatch.setattr(auth, "_DUMMY", None)
+
+
+@pytest.fixture(autouse=True)
+def live_activity_is_always_fresh(monkeypatch):
+    """Pages reuse a live result for a few seconds. Tests change what the fake servers say
+    from one call to the next, so they ask every time; test_upkeep.py checks the reuse."""
+    from horus_media import activity
+
+    monkeypatch.setattr(activity, "LIVE_MAX_AGE", 0.0)
+    activity.forget_live()
+
+
+@pytest.fixture(autouse=True)
+def no_background_thread(monkeypatch):
+    """A test that starts the app for real (`with TestClient(...)`) would also start the
+    background thread, whose daily update check calls GitHub. Tests never touch the network,
+    and the poller and housekeeping are tested by calling them directly."""
+    monkeypatch.setattr("horus_media.main.run_forever", lambda stop: None)
+
+
+NETWORK_ATTEMPTS: list[str] = []
+
+
+@pytest.fixture(autouse=True)
+def no_real_network(monkeypatch):
+    """Nothing in the suite may leave this machine. A request without a fake transport (the
+    daily update check in housekeeping, say) fails like an unplugged cable instead of calling
+    GitHub, whose limit for requests without a login is shared by everything at one address."""
+    def refuse(self, request):
+        NETWORK_ATTEMPTS.append(str(request.url.host))
+        raise httpx.ConnectError("tests do not use the network", request=request)
+
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", refuse)

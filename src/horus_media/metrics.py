@@ -1,6 +1,7 @@
 """Prometheus metrics at /metrics (text exposition format).
 
-A scrape asks each server for its live sessions (read-only), so the numbers are current.
+A scrape asks each server for its live sessions (read-only), or reuses an answer that is a
+few seconds old, so the numbers are current.
 Access needs an admin session or an API key (`Authorization: Bearer hk_...` works with
 Prometheus's `authorization` setting). Labels carry server names only: no users or titles.
 """
@@ -14,6 +15,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import PlainTextResponse
 
 from . import __version__
+from . import activity as live
 from .activity import fetch_all
 from .store import ServerStore
 
@@ -33,7 +35,7 @@ def _line(name: str, labels: dict[str, str], value: float) -> str:
 
 
 def render(store: ServerStore, transport: httpx.BaseTransport | None) -> str:
-    results = fetch_all(store.list_with_tokens(), transport)
+    results = fetch_all(store.list_with_tokens(), transport, live.LIVE_MAX_AGE)
     recorded = {
         r["server_id"]: r["n"]
         for r in store.conn.execute(

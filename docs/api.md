@@ -6,7 +6,7 @@ Create an API key in **Settings > API** (or under **Account**), then read your d
 | Endpoint | What it returns |
 |---|---|
 | `GET /api/v1/plays?from&to&interval=hour\|day\|week\|month&by=none\|server\|user\|platform\|play_method\|media_type` | Plays per time bucket |
-| `GET /api/v1/bandwidth?from&to&interval=auto\|1m\|5m\|15m\|1h\|1d` | Average and peak kbps per server, plus a combined `Total` |
+| `GET /api/v1/bandwidth?from&to&interval=auto\|1m\|5m\|15m\|1h\|1d` | Average and peak kbps per server, plus a combined `Total`. Data older than 30 days is kept as five-minute averages with their peak, so `1m` gives one point per five minutes there |
 | `GET /api/v1/history?from&to&server&user&limit&offset` | Individual plays, newest first |
 | `GET /api/v1/activity` | What is playing now, one row per stream. `location` holds the player's IP address only for an admin's key; other keys get `LAN` or `WAN` |
 | `GET /api/v1/servers` | Server names and types |
@@ -16,7 +16,7 @@ Create an API key in **Settings > API** (or under **Account**), then read your d
 In Grafana, install the **Infinity** data source, add it with *Bearer Token* authentication and your key, and point a JSON panel at one of the addresses above, for example `http://horus:8000/api/v1/plays?from=${__from}&to=${__to}&interval=day&by=server`. Set `time` as a Timestamp column and use the Time series format to get one line per server. Grafana makes the requests from wherever it runs, so Horus must be reachable from there (see [Port, network access](configuration.md#port-network-access-restart-and-shut-down)).
 
 ## Prometheus metrics
-`GET /metrics` returns Prometheus text: whether each server is up, streams by play method, combined stream bandwidth, and plays recorded. Only server names appear in labels. It needs an admin's API key (Settings > API), sent with Prometheus's `authorization` setting:
+`GET /metrics` returns Prometheus text: whether each server is up, streams by play method, combined stream bandwidth, and plays recorded. Only server names appear in labels. A scrape, like the Activity page and `/api/v1/activity`, uses an answer from the media servers that is at most five seconds old, so several readers do not each call your servers. It needs an admin's API key (Settings > API), sent with Prometheus's `authorization` setting:
 
 ```yaml
 scrape_configs:

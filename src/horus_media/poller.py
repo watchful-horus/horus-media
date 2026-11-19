@@ -180,7 +180,7 @@ def run_forever(stop: threading.Event) -> None:
                         # Re-read each time: a restore can swap the key under us.
                         poll_once(conn, TokenCipher.for_db(path))
                     maintenance.run(conn, path, cfg)
-            except Exception as e:  # noqa: BLE001 - keep alive; log type only (text may hold URLs)
+            except Exception as e:  # noqa: BLE001 - keep alive; the log scrubs tokens from the text
                 log.warning("background task failed: %s: %s", type(e).__name__, e)
             stop.wait(TICK_SECONDS)
     finally:

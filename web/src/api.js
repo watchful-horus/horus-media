@@ -1,6 +1,14 @@
 // Any API call that comes back 401 means the login expired: tell the app to show the login screen.
 const AUTH_PATHS = ['/api/auth/login', '/api/auth/setup', '/api/auth/status']
 
+// The server's reason for refusing a request. A rejected field comes back as a list; show its
+// first message ("The address must start with http:// ...") rather than just "HTTP 422".
+function reason(detail, status) {
+  if (typeof detail === 'string') return detail
+  const first = Array.isArray(detail) ? detail[0]?.msg : null
+  return typeof first === 'string' ? first.replace(/^Value error, /, '') : `HTTP ${status}`
+}
+
 async function request(method, path, body) {
   const res = await fetch(path, {
     method,
@@ -10,7 +18,7 @@ async function request(method, path, body) {
   if (!res.ok) {
     if (res.status === 401 && !AUTH_PATHS.includes(path)) window.dispatchEvent(new Event('horus:login'))
     const detail = await res.json().catch(() => ({}))
-    throw new Error(typeof detail.detail === 'string' ? detail.detail : `HTTP ${res.status}`)
+    throw new Error(reason(detail.detail, res.status))
   }
   return res.status === 204 ? null : res.json()
 }

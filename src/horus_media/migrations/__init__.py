@@ -126,4 +126,10 @@ MIGRATIONS: list[str] = [
     """
     ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT '';
     """,
+    # Bandwidth samples older than a month are thinned to one per five minutes, which then
+    # holds the average in `kbps` and the highest sample in `peak_kbps`. Empty for a fresh
+    # sample, whose peak is the sample itself.
+    """
+    ALTER TABLE bandwidth_samples ADD COLUMN peak_kbps INTEGER;
+    """,
 ]

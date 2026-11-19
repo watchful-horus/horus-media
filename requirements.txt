@@ -348,9 +348,7 @@ pycparser==3.12 \
 pydantic==2.14.4 \
     --hash=sha256:653a2ad9f6d8858529c77c72717d0ea991d6c6837fe683246b2f4b2bbfc3fadc \
     --hash=sha256:7c19f1d46f8accf55a4617a6116e1ade64840870f397b846a2c53fb9019414ba
-    # via
-    #   fastapi
-    #   pydantic-settings
+    # via fastapi
 pydantic-core==2.50.5 \
     --hash=sha256:004c784d4642bd1112a9fa9a022543aa17793fd32004f7e903ee97df2086bad4 \
     --hash=sha256:00598ae680c6e4a17cda01910e49c0da8ce15610505e6c57cec3f15d83daef88 \
@@ -493,16 +491,10 @@ pydantic-core==2.50.5 \
     --hash=sha256:fa66340c6d3e08a276803812e7665312dfc75dd24eedfa8e09f18a0f8e3e0e8f \
     --hash=sha256:feb8c87dbc4684777ddafbf37c922d9e2748272ba61e362ebf85db73ebda6234
     # via pydantic
-pydantic-settings==2.16.3 \
-    --hash=sha256:10e36f616623ebb586c05ca3d3cd22927146869db413d4f14c20c514442a1337 \
-    --hash=sha256:d1db16a2d34006323a1b42c0640898da58adfbad7ec30baaa9e2b18aafc08999
-    # via horus-media (pyproject.toml)
 python-dotenv==1.2.4 \
     --hash=sha256:42269a8a5b3fd54ffa6f3d84b18abed50064717576b4ecf03dc4a55d8aa04fdc \
     --hash=sha256:f0d53e69935a851c0dcc78f3ab7aaccd8cabef0b92382b576b824212902873c0
-    # via
-    #   pydantic-settings
-    #   uvicorn
+    # via uvicorn
 pyyaml==6.0.3 \
     --hash=sha256:00c4bdeba853cc34e7dd471f16b4114f4162dc03e6b7afcc2128711f0eca823c \
     --hash=sha256:0150219816b6a1fa26fb4699fb7daa9caf09eb1999f3b70fb6e786805e80375a \
@@ -591,7 +583,6 @@ typing-extensions==4.16.0 \
     #   opentelemetry-api
     #   pydantic
     #   pydantic-core
-    #   pydantic-settings
     #   starlette
     #   typing-inspection
 typing-inspection==0.4.5 \
@@ -600,7 +591,6 @@ typing-inspection==0.4.5 \
     # via
     #   fastapi
     #   pydantic
-    #   pydantic-settings
 tzdata==2026.6 \
     --hash=sha256:0a10eec6e13ef16b627fabed9a5f2ba61a62b1c67f327305f4e7e412a70b4aec \
     --hash=sha256:85d2cd9c09f81f0bb29db27759fc83af4f1e620efb814f8c5bf8b4cc4feece6d

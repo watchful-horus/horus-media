@@ -2,6 +2,31 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.8 (2026-11-19)
+
+**Data**
+- **Old bandwidth samples are thinned.** Horus records one sample per server every 15 seconds, about two million a year, and kept them all. Samples older than 30 days are now replaced by five-minute averages that keep the peak, once a day. Graphs of older periods keep their shape; the database stops growing without limit and long ranges load faster. This cannot be undone, so the first time it runs Horus writes a full backup first (Settings > Maintenance / Updates lists it).
+- **A restore can no longer be left half-done.** The database and its key are now swapped in together. If Horus is stopped in the middle (a power cut, say), it finishes the restore at the next start instead of being left with a database its key cannot open.
+- **Two backups made in the same second** no longer overwrite each other.
+
+**Speed and load**
+- **Less load on Plex and Emby.** The Activity page, `/api/v1/activity` and `/metrics` share one answer from your servers for up to five seconds, so several open browsers or a fast Prometheus scrape no longer each call them.
+- **Fewer "database is locked" errors.** A request now waits up to 30 seconds for the database instead of 5 when a backup or the recorder is writing.
+- Start-up work (checking the database layout, reading the key file) is done once instead of on every request.
+
+**Fixes**
+- **"Could not check for updates" now says why** when GitHub is limiting requests from your network, and that it works again within the hour.
+- **Adding a server checks what you typed.** The address must start with `http://` or `https://`, and name, address and token have length limits. The page shows the reason instead of "HTTP 422".
+- The hint under *Release address* no longer says Horus never installs anything; it describes the Update now button.
+
+**Upgrading**
+- One database change runs automatically at start (migration 12 adds a column for the kept peak). A backup made with this version cannot be restored into 0.4.7 or older.
+- `/api/v1/bandwidth` with `interval=1m` returns one point per five minutes for data older than 30 days.
+
+**For developers**
+- The test suite can no longer reach the network. A few older tests ran the daily update check for real, so every run of the suite used up some of GitHub's 60 requests an hour for that address.
+- The unused `pydantic-settings` dependency is gone, and `.env.example` lists only variables Horus reads.
+
 ## 0.4.7 (2026-11-19)
 
 **Security**

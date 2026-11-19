@@ -390,7 +390,7 @@
         <label>
           Release address
           <input type="url" bind:value={form.update_url} placeholder="https://api.github.com/repos/owner/repo/releases/latest" />
-          <span class="hint">A web address that returns the latest release, such as a GitHub "latest release" link. Horus contacts only this address, sends nothing about you or your servers, and never installs anything. The address of the Horus project is filled in for you; clear it to turn update checks off.</span>
+          <span class="hint">A web address that returns the latest release, such as a GitHub "latest release" link. Horus contacts only this address and sends nothing about you or your servers. Checking never installs anything; in a Proxmox container the Update now button installs the official release, and only when you press it. The address of the Horus project is filled in for you; clear it to turn update checks off.</span>
         </label>
       {/if}
       <label class="check">

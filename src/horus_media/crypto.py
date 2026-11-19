@@ -1,6 +1,7 @@
 import contextlib
 import logging
 import os
+import threading
 from pathlib import Path
 
 from cryptography.fernet import Fernet
@@ -9,6 +10,8 @@ KEY_FILENAME = "horus.key"
 
 
 log = logging.getLogger(__name__)
+_LOCK = threading.Lock()
+_cached: dict = {}  # the last cipher made by TokenCipher.for_db, with the key file's stamp
 
 
 def _load_or_create_key(key_path: Path) -> bytes:
@@ -34,7 +37,18 @@ class TokenCipher:
 
     @classmethod
     def for_db(cls, db_file: Path) -> "TokenCipher":
-        return cls(db_file.parent / KEY_FILENAME)
+        """The cipher for this database's key file. It is kept and reused until the key file
+        changes (a restore can replace it), so the file is not read on every request."""
+        key_path = db_file.parent / KEY_FILENAME
+        try:
+            found = key_path.stat()
+            stamp = (str(key_path), found.st_ino, found.st_mtime_ns, found.st_size)
+        except OSError:
+            return cls(key_path)  # no key yet: this creates it; it is remembered next time
+        with _LOCK:
+            if _cached.get("stamp") != stamp:
+                _cached.update(stamp=stamp, cipher=cls(key_path))
+            return _cached["cipher"]
 
     def encrypt(self, plaintext: str) -> str:
         return self._fernet.encrypt(plaintext.encode()).decode()

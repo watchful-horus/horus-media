@@ -16,6 +16,7 @@ from typing import Annotated, Literal
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
+from . import activity as live
 from . import app_settings, auth
 from .activity import fetch_all
 from .stats import _bucket, _floor, _local
@@ -95,7 +96,7 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
         """What is playing right now, one row per stream. Empty when nothing is playing."""
         only = limit_to(request, store)
         rows = [s.model_dump(exclude={"poster", "session_key"})
-                for result in fetch_all(store.list_with_tokens(), transport)
+                for result in fetch_all(store.list_with_tokens(), transport, live.LIVE_MAX_AGE)
                 for s in result.sessions
                 if only is None or s.user.casefold() == only.casefold()]
         if not auth.sees_addresses(getattr(request.state, "user", None)):
@@ -199,7 +200,8 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
         if limit_to(request, store) is not None:  # bandwidth is server-wide, so it would show
             return respond([], format, ["time", "server", "avg_kbps", "peak_kbps"])  # others' use
         samples = store.conn.execute(
-            "SELECT s.name AS server, b.ts, b.kbps FROM bandwidth_samples b "
+            "SELECT s.name AS server, b.ts, b.kbps, COALESCE(b.peak_kbps, b.kbps) AS peak "
+            "FROM bandwidth_samples b "
             "JOIN servers s ON s.id = b.server_id WHERE b.ts >= ? AND b.ts < ? ORDER BY b.ts",
             (start.isoformat(), end.isoformat()),
         ).fetchall()
@@ -209,19 +211,22 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
             size = _bucket(extent)
         else:
             size = INTERVALS[interval]
-        per_server: dict[tuple[str, datetime], list[int]] = {}
-        per_poll: dict[str, int] = {}
+        # Each sample is (average, peak): the same number for a fresh sample, two numbers for
+        # one older than a month, which stands for five minutes.
+        per_server: dict[tuple[str, datetime], list[tuple[int, int]]] = {}
+        per_poll: dict[str, tuple[int, int]] = {}
         for r in samples:
             per_server.setdefault((r["server"], _floor(_local(r["ts"], tz), size)), []).append(
-                r["kbps"])
-            per_poll[r["ts"]] = per_poll.get(r["ts"], 0) + r["kbps"]  # same poll shares a timestamp
+                (r["kbps"], r["peak"]))
+            kbps, peak = per_poll.get(r["ts"], (0, 0))  # same poll shares a timestamp
+            per_poll[r["ts"]] = (kbps + r["kbps"], peak + r["peak"])
         names = {r["server"] for r in samples}
         if len(names) > 1:
-            for ts, kbps in per_poll.items():
-                per_server.setdefault(("Total", _floor(_local(ts, tz), size)), []).append(kbps)
+            for ts, pair in per_poll.items():
+                per_server.setdefault(("Total", _floor(_local(ts, tz), size)), []).append(pair)
         rows = [
-            {"time": bucket.isoformat(), "server": name, "avg_kbps": round(sum(v) / len(v)),
-             "peak_kbps": max(v)}
+            {"time": bucket.isoformat(), "server": name,
+             "avg_kbps": round(sum(k for k, _ in v) / len(v)), "peak_kbps": max(p for _, p in v)}
             for (name, bucket), v in sorted(per_server.items(), key=lambda kv: (kv[0][1], kv[0][0]))
         ]
         return respond(rows, format, ["time", "server", "avg_kbps", "peak_kbps"])

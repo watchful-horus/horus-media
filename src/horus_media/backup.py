@@ -17,7 +17,7 @@ import sqlite3
 import tempfile
 import zipfile
 import zlib
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -55,8 +55,11 @@ def _copy_db(db_file: Path, dest: Path) -> None:
 def write_full_backup(db_file: Path, now: datetime | None = None) -> Path:
     folder = backup_dir(db_file)
     folder.mkdir(parents=True, exist_ok=True)
-    stamp = (now or datetime.now(UTC)).strftime("%Y%m%d-%H%M%S")
-    target = folder / f"horus-{stamp}.zip"
+    moment = now or datetime.now(UTC)
+    target = folder / f"horus-{moment:%Y%m%d-%H%M%S}.zip"
+    while target.exists():  # a second backup in the same second must not replace the first
+        moment += timedelta(seconds=1)
+        target = folder / f"horus-{moment:%Y%m%d-%H%M%S}.zip"
     with tempfile.TemporaryDirectory(dir=folder) as tmp:
         snapshot = Path(tmp) / "horus.db"
         _copy_db(db_file, snapshot)
@@ -221,22 +224,60 @@ def restore_file(db_file: Path, source: Path, label: str) -> dict:
         servers = _check_snapshot(snapshot, key)
 
         safety = write_full_backup(db_file)  # undo point, made only once the backup checks out
-        src = sqlite3.connect(snapshot)
-        dest = sqlite3.connect(db_file, timeout=30)
-        try:
-            src.backup(dest)
-        finally:
-            dest.close()
-            src.close()
+        # The database and its key have to change together. Both are first put next to the
+        # live files, then a marker is written, and only then are they applied. If Horus dies
+        # part-way, the next start sees the marker and finishes the job (`finish_restore`).
+        _discard_staged(db_file)
+        shutil.move(snapshot, _staged_db(db_file))
         if backup_key and (not key_file.exists() or backup_key != key_file.read_bytes().strip()):
-            staged = key_file.with_suffix(".key.new")
-            fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-            with os.fdopen(fd, "wb") as f:
-                f.write(backup_key)
-            os.replace(staged, key_file)
+            _write_private(_staged_key(db_file), backup_key)
+        _write_private(_marker(db_file), label.encode("utf-8", "replace")[:200])
+    _apply_staged(db_file)
 
     log.warning("restored backup %s: %d server(s); previous state saved as %s",
                 label, servers, safety.name)
+    return {"servers": servers, "safety_backup": safety.name}
+
+
+def _staged_db(db_file: Path) -> Path:
+    return db_file.with_name(db_file.name + ".restore")
+
+
+def _staged_key(db_file: Path) -> Path:
+    return db_file.parent / (KEY_FILENAME + ".restore")
+
+
+def _marker(db_file: Path) -> Path:
+    return db_file.parent / "restore.pending"
+
+
+def _write_private(path: Path, data: bytes) -> None:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as f:
+        f.write(data)
+        f.flush()
+        os.fsync(f.fileno())
+
+
+def _discard_staged(db_file: Path) -> None:
+    for leftover in (_marker(db_file), _staged_db(db_file), _staged_key(db_file)):
+        leftover.unlink(missing_ok=True)
+
+
+def _apply_staged(db_file: Path) -> None:
+    """Put the staged database and key in place. Every step can be repeated, so this is also
+    what finishes a restore that was interrupted. The database is copied in with SQLite's own
+    backup (other connections may have the file open), the key is swapped in one step, and the
+    marker goes last."""
+    src = sqlite3.connect(_staged_db(db_file))
+    dest = sqlite3.connect(db_file, timeout=30)
+    try:
+        src.backup(dest)
+    finally:
+        dest.close()
+        src.close()
+    if _staged_key(db_file).exists():
+        os.replace(_staged_key(db_file), db_file.parent / KEY_FILENAME)
     conn = sqlite3.connect(db_file)
     try:
         migrate(conn)  # the backup may predate newer migrations
@@ -244,4 +285,16 @@ def restore_file(db_file: Path, source: Path, label: str) -> dict:
             conn.execute("UPDATE history SET ended_at = last_seen_at WHERE ended_at IS NULL")
     finally:
         conn.close()
-    return {"servers": servers, "safety_backup": safety.name}
+    _discard_staged(db_file)
+
+
+def finish_restore(db_file: Path) -> bool:
+    """Call at start, before the database is opened. Finishes a restore that was cut short
+    after its marker was written (True), and clears away files from one that was cut short
+    before that, which has changed nothing yet."""
+    if _marker(db_file).exists() and _staged_db(db_file).exists():
+        log.warning("finishing a restore that was interrupted")
+        _apply_staged(db_file)
+        return True
+    _discard_staged(db_file)
+    return False

@@ -1,5 +1,5 @@
-"""Housekeeping the background thread does between polls: pruning old history, scheduled
-backups and the optional daily update check. Each step decides for itself whether it is due."""
+"""Housekeeping the background thread does between polls: pruning old history, thinning old
+bandwidth samples, scheduled backups and the optional daily update check. Each step decides for itself whether it is due."""
 
 import logging
 import sqlite3
@@ -59,6 +59,69 @@ def prune_history(conn: sqlite3.Connection, days: int, now: datetime) -> None:
                  plays, samples, days)
 
 
+THIN_AFTER = timedelta(days=30)
+THIN_EVERY = timedelta(days=1)
+
+
+def _five_minutes(moment: datetime) -> datetime:
+    moment = moment.astimezone(UTC)
+    return moment.replace(minute=moment.minute - moment.minute % 5, second=0, microsecond=0)
+
+
+def thin_samples(conn: sqlite3.Connection, now: datetime) -> tuple[int, int]:
+    """Replace bandwidth samples older than a month by one per server and five minutes, holding
+    the average, the peak and the most streams seen. Returns (samples before, samples after)
+    for the days it changed. Work is done a day at a time, each day in one transaction, and
+    where it got to is remembered, so a run that is cut short just continues next time. The
+    edge sits on a five-minute boundary, so no five minutes are thinned in two halves."""
+    cutoff = _five_minutes(now - THIN_AFTER)
+    done_until = app_settings.get_state(conn, "samples_thinned_until")
+    first = conn.execute("SELECT MIN(ts) FROM bandwidth_samples").fetchone()[0]
+    before = after = 0
+    if first:
+        start = max(datetime.fromisoformat(t) for t in (done_until, first) if t)
+        day = start.astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        while day < cutoff:
+            lo, hi = day.isoformat(), min(day + timedelta(days=1), cutoff).isoformat()
+            rows = conn.execute(
+                "SELECT server_id, ts, kbps, COALESCE(peak_kbps, kbps) AS peak, sessions "
+                "FROM bandwidth_samples WHERE ts >= ? AND ts < ?", (lo, hi)).fetchall()
+            groups: dict[tuple[int, datetime], list[sqlite3.Row]] = {}
+            for r in rows:
+                slot = _five_minutes(datetime.fromisoformat(r["ts"]))
+                groups.setdefault((r["server_id"], slot), []).append(r)
+            if len(groups) < len(rows):  # otherwise this day is already one per five minutes
+                with conn:
+                    conn.execute("DELETE FROM bandwidth_samples WHERE ts >= ? AND ts < ?", (lo, hi))
+                    conn.executemany(
+                        "INSERT INTO bandwidth_samples (server_id, ts, kbps, peak_kbps, sessions) "
+                        "VALUES (?, ?, ?, ?, ?)",
+                        [(sid, slot.isoformat(), round(sum(r["kbps"] for r in g) / len(g)),
+                          max(r["peak"] for r in g), max(r["sessions"] for r in g))
+                         for (sid, slot), g in sorted(groups.items(), key=lambda kv: kv[0][1])])
+                before += len(rows)
+                after += len(groups)
+            day += timedelta(days=1)
+    app_settings.set_state(conn, "samples_thinned_until", cutoff.isoformat())
+    return before, after
+
+
+def thin_old_samples(conn: sqlite3.Connection, db_file: Path, now: datetime) -> None:
+    """The daily run of `thin_samples`. The very first time there is something to thin, a full
+    backup is written first, because the fine-grained samples cannot be brought back."""
+    if not app_settings.get_state(conn, "samples_thinned_until"):
+        old = conn.execute("SELECT COUNT(*) FROM bandwidth_samples WHERE ts < ?",
+                           (_five_minutes(now - THIN_AFTER).isoformat(),)).fetchone()[0]
+        if old:
+            made = backup.write_full_backup(db_file, now)
+            log.info("backup written before old bandwidth samples are thinned for the first "
+                     "time: %s (%d samples older than 30 days)", made.name, old)
+    before, after = thin_samples(conn, now)
+    if before:
+        log.info("bandwidth samples older than 30 days thinned to five-minute averages: "
+                 "%d became %d", before, after)
+
+
 REPORT_DAYS = {"weekly": 7, "monthly": 30}
 
 
@@ -91,6 +154,10 @@ def run(
     if cfg.retention_days and _due(conn, "last_prune", PRUNE_EVERY, now):
         prune_history(conn, cfg.retention_days, now)
         app_settings.set_state(conn, "last_prune", now.isoformat())
+
+    if _due(conn, "last_thin", THIN_EVERY, now):
+        thin_old_samples(conn, db_file, now)
+        app_settings.set_state(conn, "last_thin", now.isoformat())
 
     # Whole days (24, 48, ...) run at the chosen time of day; any other number of hours is a plain interval.
     on_the_clock = cfg.backup_interval_hours % 24 == 0

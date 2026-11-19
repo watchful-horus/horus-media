@@ -37,6 +37,12 @@ def check(url: str, transport: httpx.BaseTransport | None = None) -> dict:
         with httpx.Client(timeout=10.0, transport=transport, follow_redirects=True,
                           headers={"User-Agent": f"horus-media/{__version__}"}) as http:
             resp = http.get(url)
+            if resp.status_code == 429 or (
+                    resp.status_code == 403 and resp.headers.get("x-ratelimit-remaining") == "0"):
+                # GitHub allows 60 requests an hour without a login, counted per public address,
+                # so several copies of Horus (or other tools) at one home share them.
+                raise UpdateCheckError("The release address is limiting requests from your "
+                                       "network right now. Try again in an hour")
             resp.raise_for_status()
             body = resp.json()
         if not isinstance(body, dict):

@@ -14,7 +14,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import __version__, app_settings, auth, listen, logging_setup
+from . import __version__, app_settings, auth, backup, listen, logging_setup
+from . import activity as live
 from .activity import fetch_all
 from .clients import make_client
 from .config import db_path
@@ -102,6 +103,7 @@ def content_security_policy(headers) -> str:
 async def lifespan(app: FastAPI):
     logging_setup.configure(db_path())
     log.info("Horus %s starting (data folder: %s)", __version__, db_path().resolve().parent)
+    backup.finish_restore(db_path())
     conn = connect(db_path())
     try:
         migrate(conn)
@@ -345,7 +347,7 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
 
     @app.get("/api/activity", response_model=Activity)
     def activity(request: Request, store: Store):
-        servers = fetch_all(store.list_with_tokens(), transport)
+        servers = fetch_all(store.list_with_tokens(), transport, live.LIVE_MAX_AGE)
         viewer = getattr(request.state, "user", None)
         only = auth.only_media_user(store.conn, viewer)
         if only is not None:  # "hide other people's activity" is on for this person
@@ -375,6 +377,7 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
             if target is None or not target.native_id:
                 raise HTTPException(404, "That stream has already ended")
             client.stop_session(target.native_id, body.reason)
+            live.forget_live()  # so the page shows it gone at once
         except httpx.HTTPStatusError as e:
             code = e.response.status_code
             log.warning("stopping a stream on %s was refused (HTTP %d)", row["name"], code)
