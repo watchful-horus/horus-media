@@ -23,8 +23,13 @@ class ChannelIn(BaseModel):
 
 
 class ChannelChange(BaseModel):
+    """Only what is given changes. An empty or missing `url` keeps the stored address."""
+
     enabled: bool | None = None
     events: list[str] | None = None
+    name: str | None = None
+    kind: str | None = None
+    url: str | None = None
 
 
 def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> APIRouter:
@@ -81,11 +86,15 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
     def change_channel(channel_id: int, body: ChannelChange, store: Store):
         try:
             channel = notifications.update_channel(store.conn, store.cipher, channel_id,
-                                                   body.enabled, body.events)
+                                                   body.enabled, body.events, body.name,
+                                                   body.kind, body.url)
         except notifications.ChannelError as e:
             raise HTTPException(422, str(e)) from None
         if channel is None:
             raise HTTPException(404, "Channel not found")
+        changed = sorted(body.model_fields_set - {"url"}) + (["address"] if body.url else [])
+        log.info("notification channel changed: %s (%s): %s", channel["name"], channel["kind"],
+                 ", ".join(changed) or "nothing")
         return channel
 
     @router.delete("/notifications/{channel_id}", status_code=204)

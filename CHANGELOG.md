@@ -11,6 +11,10 @@ Newest first. Each version is a tag on GitHub, with a Docker image and a release
 - **A new notification event**, *A stream has a playback problem*, can be ticked on a channel under Settings > Integrations. It is off until you tick it and is sent once per kind for each play, and once more if the play keeps buffering.
 - **`GET /api/v1/problems`** returns the recorded problems as JSON or CSV, and `/api/v1/activity` gains `transcode_speed` and `transcode_reason`. The `state` of a stream can now also be `buffering`.
 
+**New: edit a notification channel**
+- **Settings > Integrations has an Edit button on each channel.** It opens the channel in place and lets you change its name, type, address and events; before, the only way was to remove the channel and add it again. The address is still never shown: the field starts empty, leaving it empty keeps the current address, and typing a new one replaces it. Changing the type asks for a new address. Saving sends nothing; use Send test to check a new address.
+- **A channel whose address can no longer be read can be repaired** with Edit by entering the address again, keeping its name and events.
+
 **Good to know**
 - Horus only sees what Plex and Emby report when it asks, every poll interval (15 seconds by default). A hiccup shorter than that is missed, and "stalled" is Horus's own conclusion, not something the server says. Nothing is recorded while recording is off (poll interval 0).
 - Emby has no buffering state, so buffering there shows up as Stalled.

@@ -39,7 +39,7 @@ Status as of 2026-11-19: version 0.4.9. The original v1 scope is complete and th
 - Backups: manual and scheduled zips (with a time of day) and retention, token-free export, restore from the UI or an uploaded file (validates first, saves the current state first), delete backups
 - Application logging: rotating file and console, secret scrubbing, level setting, Settings > Logs viewer
 - Update check with install-specific update steps; an admin-only Update now button for a Proxmox container that can write to its own environment (works on a real container, confirmed 2026-10-29) (Docker and manual installs are never updated by Horus)
-- Notification channels (Discord, ntfy, webhook), optional alerts, weekly/monthly summary reports with CSV. (A read-only Seerr requests tab was added and then removed on 2026-10-29: it had nothing to do with plays or stats)
+- Notification channels (Discord, ntfy, webhook; each can be edited in place), optional alerts, weekly/monthly summary reports with CSV. (A read-only Seerr requests tab was added and then removed on 2026-10-29: it had nothing to do with plays or stats)
 - Auto / light / dark theme toggle; Windows "start at login"; `create-admin` and `configure` commands
 
 **Installing and project**
@@ -50,7 +50,7 @@ Status as of 2026-11-19: version 0.4.9. The original v1 scope is complete and th
 - Public repository with secret scanning, private vulnerability reporting, CodeQL, Dependabot alerts, protected `main`, SHA-pinned Actions
 - CI (tests, lint, Docker image, web build) on every push and pull request
 - Build supply chain: hash-locked Python dependencies and digest-pinned base images for the Docker image, signed build provenance for the release file and the image, release notes taken from the changelog, immutable releases and protected version tags
-- 424 tests (fake responses, no live servers), `ruff` clean; README and docs
+- 427 tests (fake responses, no live servers), `ruff` clean; README and docs
 
 **Verified**
 - Backup Download then Restore across installs (Proxmox container to Docker); Emby history import; lint and the full suite on real Linux; the Docker image in CI and a real Docker host, including an anonymous pull; all tests on emulated aarch64

@@ -82,6 +82,61 @@ def test_pause_edit_delete(api):
     assert api.delete(f"/api/notifications/{cid}").status_code == 404
 
 
+def test_edit_changes_name_address_and_type_and_keeps_the_rest(api, tmp_path, caplog):
+    cid = channel(api).json()["id"]
+    path = f"/api/notifications/{cid}"
+
+    # A new name alone: address, type and events stay.
+    renamed = api.patch(path, json={"name": "  Living room  ", "url": ""}).json()
+    assert renamed["name"] == "Living room" and renamed["host"] == "hooks.example.com"
+    assert renamed["kind"] == "webhook" and renamed["events"] == ["play_started"]
+    api.post(f"{path}/test")
+    assert SENT[-1].url.path == "/secret-path-123"  # an empty address kept the stored one
+
+    # A new address and type together; the address is stored encrypted and never returned or logged.
+    with caplog.at_level("INFO", logger="horus_media"):
+        moved = api.patch(path, json={"kind": "ntfy", "url": " https://ntfy.example.com/new-topic-9 ",
+                                      "events": ["server_up", "server_down"]})
+    assert moved.status_code == 200
+    assert moved.json() == {"id": cid, "name": "Living room", "kind": "ntfy",
+                            "host": "ntfy.example.com", "unreadable": False,
+                            "events": ["server_down", "server_up"], "enabled": True}
+    assert "new-topic-9" not in moved.text and "new-topic-9" not in caplog.text
+    assert "notification channel changed: Living room (ntfy)" in caplog.text
+    raw = connect(tmp_path / "horus.db").execute("SELECT url FROM notification_channels").fetchone()
+    assert "new-topic-9" not in raw[0]
+    api.post(f"{path}/test")
+    assert SENT[-1].url.path == "/new-topic-9" and SENT[-1].headers["title"]  # sent the ntfy way
+
+
+def test_edit_is_checked_like_a_new_channel_and_a_refused_edit_changes_nothing(api):
+    cid = channel(api).json()["id"]
+    path = f"/api/notifications/{cid}"
+    before = api.get("/api/notifications").json()["channels"]
+    for bad in ({"name": "  "}, {"name": "x" * 61}, {"url": "ftp://x"}, {"url": "not an address"},
+                {"kind": "sms", "url": HOOK}, {"kind": "discord"},  # a new type needs a new address
+                {"events": []}, {"events": ["nope"]},
+                {"name": "Fine", "url": "ftp://x"}, {"name": "Fine", "events": []}):
+        r = api.patch(path, json=bad)
+        assert r.status_code == 422, bad
+    assert "address too" in api.patch(path, json={"kind": "discord"}).json()["detail"]
+    assert api.get("/api/notifications").json()["channels"] == before
+    assert api.patch(path, json={"kind": "webhook"}).status_code == 200  # the same type is no change
+    assert api.patch("/api/notifications/999", json={"name": "x"}).status_code == 404
+
+
+def test_a_new_address_repairs_an_unreadable_channel(api, tmp_path):
+    cid = channel(api, name="Old").json()["id"]
+    lose_the_key(tmp_path)
+    path = f"/api/notifications/{cid}"
+    assert api.get("/api/notifications").json()["channels"][0]["unreadable"] is True
+    assert api.patch(path, json={"kind": "discord"}).status_code == 422
+    fixed = api.patch(path, json={"url": HOOK}).json()
+    assert fixed["unreadable"] is False and fixed["host"] == "hooks.example.com"
+    assert fixed["name"] == "Old" and fixed["events"] == ["play_started"]
+    assert api.post(f"{path}/test").json() == {"ok": True, "error": None}
+
+
 def test_poller_notifies_on_play_start_end_and_server_changes(tmp_path):
     SENT.clear()
     conn = connect(tmp_path / "h.db")

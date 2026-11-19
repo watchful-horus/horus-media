@@ -36,9 +36,27 @@
   }
   onMount(() => guard(load))
 
-  const toggleEvent = (id) => {
-    form.events = form.events.includes(id) ? form.events.filter((e) => e !== id) : [...form.events, id]
+  const toggleEvent = (f, id) => {
+    f.events = f.events.includes(id) ? f.events.filter((e) => e !== id) : [...f.events, id]
   }
+
+  // Editing happens in the channel's own row. The stored address never comes back from the
+  // server, so the address field starts empty and an empty field keeps the current one.
+  let editing = $state(null) // { id, name, kind, url, events, host, was, unreadable }
+  const edit = (c) => {
+    message = null
+    editing = { id: c.id, name: c.name, kind: c.kind, url: '', events: [...c.events],
+      host: c.host, was: c.kind, unreadable: c.unreadable }
+  }
+  const needsAddress = $derived(!!editing && (editing.unreadable || editing.kind !== editing.was))
+  const save = () =>
+    guard(async () => {
+      const { id, name, kind, url, events } = editing
+      await api.updateChannel(id, { name, kind, events, ...(url.trim() ? { url } : {}) })
+      delete results[id]
+      editing = null
+      await load()
+    })
 
   const add = () =>
     guard(async () => {
@@ -113,6 +131,43 @@
     you enter is a secret: it is stored encrypted and never shown again, only its host name.
   </p>
   {#each channels as c (c.id)}
+    {#if editing?.id === c.id}
+    <div class="row">
+      <form onsubmit={(e) => { e.preventDefault(); save() }}>
+        <label>Name<input bind:value={editing.name} maxlength="60" required /></label>
+        <label>Type
+          <select bind:value={editing.kind}>
+            {#each kinds as k}<option value={k}>{KIND_TEXT[k] ?? k}</option>{/each}
+          </select>
+        </label>
+        <label>Address
+          <input type="url" bind:value={editing.url} required={needsAddress} autocomplete="off"
+            placeholder={needsAddress ? 'https://...' : 'Leave empty to keep the current address'} />
+          <span class="small">
+            {#if editing.unreadable}
+              The old address can no longer be read: enter it again.
+            {:else if needsAddress}
+              A different type needs its own address: enter the new one.
+            {:else}
+              Now sends to {editing.host}. The address is never shown again; leave this empty to
+              keep it, or enter a new one to replace it.
+            {/if}
+          </span>
+        </label>
+        <fieldset>
+          <legend>Send a message when</legend>
+          {#each Object.entries(events) as [id, text]}
+            <label class="check"><input type="checkbox" checked={editing.events.includes(id)} onchange={() => toggleEvent(editing, id)} /> {text}</label>
+          {/each}
+        </fieldset>
+        <div class="actions">
+          <button class="primary" disabled={busy || editing.events.length === 0}>Save</button>
+          <button type="button" disabled={busy} onclick={() => { editing = null; message = null }}>Cancel</button>
+        </div>
+        {#if message}<p class="bad">{message}</p>{/if}
+      </form>
+    </div>
+    {:else}
     <div class="row">
       <div>
         <strong>{c.name}</strong> <span class="badge">{c.kind}</span>
@@ -120,7 +175,7 @@
         {#if c.unreadable}
           <div class="small bad">
             This channel's address can no longer be read (the encryption key has changed since it
-            was added), so nothing is sent to it. Remove it and add it again.
+            was added), so nothing is sent to it. Use Edit to enter the address again, or remove it.
           </div>
         {:else}
           <div class="muted small">Sends to {c.host} &middot; {c.events.map((e) => events[e]).join(', ')}</div>
@@ -136,9 +191,11 @@
           <button disabled={busy} onclick={() => test(c)}>Send test</button>
           <button disabled={busy} onclick={() => pause(c)}>{c.enabled ? 'Pause' : 'Resume'}</button>
         {/if}
+        <button disabled={busy} onclick={() => edit(c)}>Edit</button>
         <button disabled={busy} onclick={() => remove(c)}>Remove</button>
       </div>
     </div>
+    {/if}
   {:else}
     <p class="muted">No channels yet.</p>
   {/each}
@@ -155,12 +212,12 @@
     <fieldset>
       <legend>Send a message when</legend>
       {#each Object.entries(events) as [id, text]}
-        <label class="check"><input type="checkbox" checked={form.events.includes(id)} onchange={() => toggleEvent(id)} /> {text}</label>
+        <label class="check"><input type="checkbox" checked={form.events.includes(id)} onchange={() => toggleEvent(form, id)} /> {text}</label>
       {/each}
     </fieldset>
     <div class="actions"><button class="primary" disabled={busy || form.events.length === 0}>Add channel</button></div>
   </form>
-  {#if message}<p class="bad">{message}</p>{/if}
+  {#if message && !editing}<p class="bad">{message}</p>{/if}
 </section>
 
 <style>

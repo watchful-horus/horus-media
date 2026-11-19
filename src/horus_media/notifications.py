@@ -57,7 +57,8 @@ def validate(kind: str, url: str, events: list[str]) -> list[str]:
     return sorted(set(events), key=list(EVENTS).index)
 
 
-UNREADABLE = "This channel's address can no longer be read. Remove the channel and add it again."
+UNREADABLE = ("This channel's address can no longer be read. Enter it again with Edit, or remove "
+              "the channel and add it again.")
 _warned: set[int] = set()  # unreadable channels already mentioned in the log
 
 
@@ -71,7 +72,8 @@ def address(row: sqlite3.Row, cipher: TokenCipher) -> str | None:
         if row["id"] not in _warned:
             _warned.add(row["id"])
             log.warning("notification channel %s: its address cannot be read with the current "
-                        "encryption key; remove it and add it again", row["name"])
+                        "encryption key; enter the address again (Settings > Integrations, "
+                        "Edit)", row["name"])
         return None
 
 
@@ -87,11 +89,16 @@ def list_channels(conn: sqlite3.Connection, cipher: TokenCipher) -> list[dict]:
         "SELECT * FROM notification_channels ORDER BY id")]
 
 
-def add_channel(conn: sqlite3.Connection, cipher: TokenCipher, name: str, kind: str, url: str,
-                events: list[str]) -> dict:
+def _name(name: str) -> str:
     name = name.strip()
     if not name or len(name) > 60:
         raise ChannelError("Give the channel a short name")
+    return name
+
+
+def add_channel(conn: sqlite3.Connection, cipher: TokenCipher, name: str, kind: str, url: str,
+                events: list[str]) -> dict:
+    name = _name(name)
     events = validate(kind, url, events)
     with conn:
         cur = conn.execute(
@@ -104,21 +111,44 @@ def add_channel(conn: sqlite3.Connection, cipher: TokenCipher, name: str, kind: 
 
 
 def update_channel(conn: sqlite3.Connection, cipher: TokenCipher, channel_id: int,
-                   enabled: bool | None, events: list[str] | None) -> dict | None:
+                   enabled: bool | None = None, events: list[str] | None = None,
+                   name: str | None = None, kind: str | None = None,
+                   url: str | None = None) -> dict | None:
+    """Change what was given and keep the rest. An empty address means "keep the current one":
+    the stored address is never sent back to the page, so it cannot be re-submitted. The type
+    only changes together with a new address, because the old one would not fit it."""
     row = conn.execute("SELECT * FROM notification_channels WHERE id = ?", (channel_id,)).fetchone()
     if row is None:
         return None
-    if events is not None:
-        # Only the events are being checked; an unreadable address must not block pausing or
-        # changing them.
-        events = validate(row["kind"], address(row, cipher) or "https://unreadable.invalid", events)
-    with conn:
-        if enabled is not None:
-            conn.execute("UPDATE notification_channels SET enabled = ? WHERE id = ?",
-                         (int(enabled), channel_id))
+    url = (url or "").strip() or None
+    changes: dict[str, object] = {}
+    if name is not None:
+        changes["name"] = _name(name)
+    if kind is not None and kind != row["kind"]:
+        if kind not in KINDS:
+            raise ChannelError("Unknown channel type")
+        if url is None:
+            raise ChannelError("Enter the new address too when you change the type")
+        changes["kind"] = kind
+    if url is not None or events is not None or "kind" in changes:
+        # Without a new address only the events are being checked; an unreadable stored address
+        # must not block pausing or changing them.
+        checked = validate(kind or row["kind"],
+                           url or address(row, cipher) or "https://unreadable.invalid",
+                           json.loads(row["events"]) if events is None else events)
         if events is not None:
-            conn.execute("UPDATE notification_channels SET events = ? WHERE id = ?",
-                         (json.dumps(events), channel_id))
+            changes["events"] = json.dumps(checked)
+    if url is not None:
+        changes["url"] = cipher.encrypt(url)
+    if enabled is not None:
+        changes["enabled"] = int(enabled)
+    if changes:
+        with conn:
+            conn.execute(
+                f"UPDATE notification_channels SET {', '.join(f'{c} = ?' for c in changes)} "
+                "WHERE id = ?", (*changes.values(), channel_id))
+    if url is not None:
+        _warned.discard(channel_id)  # readable again; warn afresh if the key is lost once more
     return _public(conn.execute("SELECT * FROM notification_channels WHERE id = ?",
                                 (channel_id,)).fetchone(), cipher)
 

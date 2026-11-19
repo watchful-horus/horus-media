@@ -26,6 +26,8 @@ If the import says the plugin was not found, Emby answered "not found" (usually 
 ## Notifications and alerts
 **Settings > Integrations** can post a message to a Discord channel webhook, an ntfy topic, or any web address (JSON) when someone starts or finishes playing, a server becomes unreachable or comes back, or a stream has a [playback problem](#playback-problems). Channel addresses are secrets: they are stored encrypted and never shown again. Tick the matching event on a channel to receive it.
 
+**Edit** on a channel changes its name, type, address and events in place. The address field starts empty: leave it empty to keep the current address, or enter a new one to replace it. Changing the type needs a new address. Nothing is sent when you save; press **Send test** afterwards to check a new address. A channel whose address can no longer be read (the encryption key was lost or replaced) is repaired the same way, by entering its address again.
+
 Three optional alerts (**Settings > Alerts and reports**, all off by default) use the same channels: too many transcodes at once, a server's bandwidth over a limit, and someone Horus has never seen starting to play. Each is sent once when the limit is crossed.
 
 ## Playback problems
