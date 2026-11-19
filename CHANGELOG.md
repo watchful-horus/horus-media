@@ -2,7 +2,7 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
-## 0.4.9 (unreleased)
+## 0.4.9 (2026-11-19)
 
 **New: playback problems**
 - **Horus notices when a stream has trouble.** While it records history it now watches each playing stream for four things: the player says it is *buffering* (Plex), playback has *stalled* (not paused, yet the position has not moved for 40 seconds; Plex and Emby), the server *converts slower than the stream plays* (a slow transcode), and Emby had to convert because *direct play failed*. A problem has to be seen on two polls in a row, so a seek or the short buffer at the start of a play is not counted.
