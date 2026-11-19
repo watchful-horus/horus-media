@@ -8,7 +8,7 @@
 
   let { section, onsection, me } = $props()
 
-  const SECTIONS = [['general', 'General'], ['alerts', 'Alerts and reports'], ['network', 'Network'], ['maintenance', 'Maintenance'], ['servers', 'Servers'], ['users', 'Users'], ['api', 'API'], ['integrations', 'Integrations'], ['logs', 'Logs']]
+  const SECTIONS = [['general', 'General'], ['alerts', 'Alerts and reports'], ['network', 'Network'], ['maintenance', 'Maintenance / Updates'], ['servers', 'Servers'], ['users', 'Users'], ['api', 'API'], ['integrations', 'Integrations'], ['logs', 'Logs']]
 </script>
 
 <div class="layout">
@@ -37,7 +37,7 @@
 </div>
 
 <style>
-  .layout { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 28px; align-items: start; }
+  .layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 28px; align-items: start; }
   .side { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 16px; }
   .side button { text-align: left; border-color: transparent; background: none; padding: 8px 12px; }
   .side button.active { background: var(--panel); border-color: var(--border); font-weight: 600; }

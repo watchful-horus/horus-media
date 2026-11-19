@@ -13,6 +13,9 @@ Newest first. Each version is a tag on GitHub, with a Docker image and a release
 - **New `HORUS_TRUSTED_PROXIES`** (see [Configuration](docs/configuration.md#environment-variables)): name your reverse proxy's address or network and Horus logs and limits sign-ins by each visitor's own address. Not needed for a proxy on the same machine.
 - **The session cookie is marked `Secure`** when the visitor used https through a proxy that sets `X-Forwarded-Proto`. No setting needed.
 
+**Settings**
+- The **Maintenance** entry in the Settings menu is now called **Maintenance / Updates**, so it is easier to find where updates live. The menu is a little wider to fit it; the page address is unchanged.
+
 ## 0.4.4 (2026-11-19)
 
 **Security**

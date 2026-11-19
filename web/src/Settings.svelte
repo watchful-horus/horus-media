@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { api } from './api.js'
 
-  // Settings > General, Alerts and reports, Network and Maintenance are four pages of one form with one
+  // Settings > General, Alerts and reports, Network and Maintenance / Updates are four pages of one form with one
   // Save button (they share this component, so a change made on one stays while you open another).
   let { part = 'general' } = $props()
 
