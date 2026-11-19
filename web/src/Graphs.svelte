@@ -313,6 +313,40 @@
     }
   })
 
+  const oneDecimal = (n) => (Math.round(n * 10) / 10).toLocaleString()
+  const monthlyHoursChart = $derived.by(() => {
+    if (!monthly?.hours) return null
+    const series = withTotal(monthly.hours.map((s) => ({ name: s.server, data: s.data })))
+    const servers = series.filter((s) => !s.total)
+    return {
+      option: {
+        tooltip: {
+          trigger: 'axis', axisPointer: { type: 'shadow' },
+          formatter: (params) => `${esc(params[0].axisValueLabel)}<br/>` +
+            params.map((p) => `${p.marker} ${esc(p.seriesName)} <b>${oneDecimal(p.value)} h</b>`).join('<br/>') +
+            (params.length > 1 ? `<br/>Total <b>${oneDecimal(params.reduce((n, p) => n + p.value, 0))} h</b>` : ''),
+        },
+        xAxis: { type: 'category', data: monthly.months.map(monthLabel) },
+        yAxis: { type: 'value', min: 0, axisLabel: { formatter: '{value} h' } },
+        series: servers.map((s) => ({
+          name: s.name, type: 'bar', stack: 'hours', data: s.data, barMaxWidth: 36,
+          itemStyle: { borderColor: 'transparent', borderWidth: 1 }, emphasis: { focus: 'series' },
+        })),
+      },
+      table: {
+        head: ['Month', ...series.map((s) => label(s.name))],
+        rows: monthly.months.map((k, i) => [monthLabel(k), ...series.map((s) => oneDecimal(s.data[i]))]),
+      },
+    }
+  })
+  const monthlyHoursNote = $derived(
+    !monthly?.hours ? null
+      : 'From the start of each play to the last time it was seen, so a pause counts.' +
+        (monthly.imported
+          ? ` ${monthly.imported.toLocaleString()} of the ${monthly.total.toLocaleString()} plays were imported from the server's own history; those have no length and add no hours.`
+          : ''),
+  )
+
   // A note under the bandwidth chart when recording started part-way through the range.
   const bandwidthNote = $derived(
     data?.bandwidth_since && data.bandwidth_since.slice(0, 10) > data.range.start
@@ -382,6 +416,13 @@
         <h2>Plays per month, last 12 months</h2>
         <Chart option={monthlyChart.option} table={monthlyChart.table} slots={serverSlots} />
       </section>
+      {#if monthlyHoursChart}
+        <section class="card wide">
+          <h2>Hours watched per month, last 12 months</h2>
+          <Chart option={monthlyHoursChart.option} table={monthlyHoursChart.table} slots={serverSlots} />
+          {#if monthlyHoursNote}<p class="muted note">{monthlyHoursNote}</p>{/if}
+        </section>
+      {/if}
     {/if}
     <section class="card"><h2>Plays by user</h2><Chart option={built.user.option} table={built.user.table} slots={[0]} height={built.user.height} /></section>
     <section class="card"><h2>Plays by platform</h2><Chart option={built.platform.option} table={built.platform.table} slots={[0]} height={built.platform.height} /></section>

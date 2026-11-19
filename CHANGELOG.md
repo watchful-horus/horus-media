@@ -2,6 +2,14 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.12 (2026-11-19)
+
+**New**
+- **Hours watched per month.** The Graphs page has a second 12-month chart under *Plays per month*: hours watched per month, stacked by server. Time is counted from the start of a play to the last time Horus saw it, so a pause counts, and one play counts for at most 12 hours. Plays imported from a server's own history have no length and add no hours; a note under the chart says how many of the plays those are.
+
+**Fixed**
+- **A healthy converted stream can no longer be recorded as a slow transcode.** Each time Plex starts converting the next piece of a stream it reports a speed of 0 for about a second, before it has measured anything. Horus read that as a server converting at 0x; seen on two polls in a row it would have recorded a *Slow transcode*. A speed of 0 is now treated as "not known yet": no speed is shown and no problem is raised. A stream that really stops is still caught as *Stalled*.
+
 ## 0.4.11 (2026-11-19)
 
 **Fixed**

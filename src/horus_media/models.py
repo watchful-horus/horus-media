@@ -34,7 +34,9 @@ class Session(BaseModel):
     position_ms: int | None = None
     duration_ms: int | None = None
     # How fast the server converts compared with playback: 1.0 keeps up, below 1.0 falls behind.
-    # None when nothing is converted, the server does not say, or converting is paused (below).
+    # None when nothing is converted, the server does not say, converting is paused (below),
+    # or the server reports 0: Plex does that for a moment each time it starts a new burst,
+    # before it has measured anything, so 0 is "not known yet" and never a rate.
     transcode_speed: float | None = None
     # The server has paused converting because it is far enough ahead of playback. The speed it
     # reports then (Plex says 0) is not a rate of anything, so no speed is given.
@@ -44,7 +46,8 @@ class Session(BaseModel):
 
     @model_validator(mode="after")
     def _no_speed_while_paused_ahead(self):
-        if self.transcode_throttled:
+        if self.transcode_throttled or (self.transcode_speed is not None
+                                        and self.transcode_speed <= 0):
             self.transcode_speed = None
         return self
     # Playback problems Horus has confirmed for this stream (see problems.py); filled in for

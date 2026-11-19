@@ -197,12 +197,21 @@ def compute_stats(
     }
 
 
+# One play counts for at most this long, so a player left on pause overnight (or a clock that
+# jumped) cannot swamp a month.
+LONGEST_PLAY_SECONDS = 12 * 3600
+
+
 def compute_monthly(
     conn: sqlite3.Connection, tz: tzinfo | None = None, only_user: str | None = None,
     today: date | None = None, months: int = 12,
 ) -> dict:
-    """Plays per calendar month for the last `months` months, this month included, per server.
-    Independent of the date range chosen on the Graphs page."""
+    """Plays and hours watched per calendar month for the last `months` months, this month
+    included, per server. Independent of the date range chosen on the Graphs page.
+
+    Hours run from the start of a play to the last time it was seen, so a pause counts. A play
+    imported from the server's own history has no length and adds no hours; `imported` says
+    how many of the plays those are, so the page can explain a low month."""
     today = today or datetime.now(tz).date()
     year, month = today.year, today.month - (months - 1)
     while month < 1:
@@ -215,17 +224,32 @@ def compute_monthly(
     lo, hi = _bounds(first, today, tz)
     servers = [dict(r) for r in conn.execute("SELECT id, name FROM servers ORDER BY id")]
     counts = {s["id"]: Counter() for s in servers}
+    seconds = {s["id"]: Counter() for s in servers}
+    imported = 0
     rows = conn.execute(
-        "SELECT server_id, started_at FROM history WHERE started_at >= ? AND started_at < ? "
+        "SELECT server_id, started_at, last_seen_at, imported FROM history "
+        "WHERE started_at >= ? AND started_at < ? "
         + ("AND user = ? COLLATE NOCASE" if only_user is not None else ""),
         (lo, hi) if only_user is None else (lo, hi, only_user),
     ).fetchall()
     for r in rows:
-        if r["server_id"] in counts:
-            counts[r["server_id"]][_local(r["started_at"], tz).date().replace(day=1).isoformat()] += 1
+        if r["server_id"] not in counts:
+            continue
+        key = _local(r["started_at"], tz).date().replace(day=1).isoformat()
+        counts[r["server_id"]][key] += 1
+        if r["imported"]:
+            imported += 1
+            continue
+        length = (datetime.fromisoformat(r["last_seen_at"])
+                  - datetime.fromisoformat(r["started_at"])).total_seconds()
+        seconds[r["server_id"]][key] += min(max(length, 0.0), LONGEST_PLAY_SECONDS)
     return {
         "months": keys,
         "series": [{"server": s["name"], "data": [counts[s["id"]][k] for k in keys]}
                    for s in servers],
+        "hours": [{"server": s["name"],
+                   "data": [round(seconds[s["id"]][k] / 3600, 1) for k in keys]}
+                  for s in servers],
         "total": len(rows),
+        "imported": imported,
     }

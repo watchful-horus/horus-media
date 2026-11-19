@@ -168,11 +168,14 @@ def test_monthly_totals_cover_twelve_months_per_server(tmp_path):
     conn.row_factory = sqlite3.Row
     conn.executescript(
         "CREATE TABLE servers (id INTEGER PRIMARY KEY, name TEXT);"
-        "CREATE TABLE history (server_id INTEGER, user TEXT, started_at TEXT);"
+        "CREATE TABLE history (server_id INTEGER, user TEXT, started_at TEXT, last_seen_at TEXT,"
+        " imported INTEGER DEFAULT 0);"
         "INSERT INTO servers VALUES (1, 'A'), (2, 'B');"
-        "INSERT INTO history VALUES (1, 'x', '2026-10-05T12:00:00+00:00'),"
-        " (1, 'x', '2026-10-06T12:00:00+00:00'), (2, 'y', '2025-11-10T12:00:00+00:00'),"
-        " (2, 'y', '2025-10-31T12:00:00+00:00');"  # one month too old: left out
+        "INSERT INTO history VALUES"
+        " (1, 'x', '2026-10-05T12:00:00+00:00', '2026-10-05T13:30:00+00:00', 0),"  # 1.5 hours
+        " (1, 'x', '2026-10-06T12:00:00+00:00', '2026-10-08T12:00:00+00:00', 0),"  # capped at 12
+        " (2, 'y', '2025-11-10T12:00:00+00:00', '2025-11-10T12:00:00+00:00', 1),"  # imported
+        " (2, 'y', '2025-10-31T12:00:00+00:00', '2025-10-31T14:00:00+00:00', 0);"  # too old
     )
     out = compute_monthly(conn, None, today=date(2026, 10, 29))
     assert out["months"][0] == "2025-11-01" and out["months"][-1] == "2026-10-01"
@@ -180,3 +183,6 @@ def test_monthly_totals_cover_twelve_months_per_server(tmp_path):
     assert out["series"][0] == {"server": "A", "data": [0] * 11 + [2]}
     assert out["series"][1]["data"][0] == 1
     assert out["total"] == 3
+    assert out["hours"][0] == {"server": "A", "data": [0.0] * 11 + [13.5]}
+    assert out["hours"][1]["data"] == [0.0] * 12  # an imported play has no length
+    assert out["imported"] == 1

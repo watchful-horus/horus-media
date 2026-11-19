@@ -308,6 +308,23 @@ def test_a_conversion_paused_ahead_of_playback_gives_no_speed():
     assert busy.transcode_speed == 3.4 and busy.transcode_throttled is False
 
 
+def test_a_speed_of_zero_is_not_a_slow_transcode():
+    """Seen on a real Plex: for about a second at the start of each burst it reports speed 0
+    and not throttled. That is no measurement yet, not a server that cannot keep up."""
+    starting = _plex_session(plex_item(transcode={"speed": 0.0, "throttled": False}))
+    assert starting.play_method == "transcode" and starting.transcode_speed is None
+    slow = _plex_session(plex_item(transcode={"speed": 0.4, "throttled": False}))
+    assert slow.transcode_speed == 0.4
+
+
+def test_two_polls_at_speed_zero_record_no_problem(plex):
+    for i, t in enumerate((0, 15, 30)):
+        plex.sessions[:] = [plex_item(offset=10_000 + i * 15_000, key="9",
+                                      transcode={"speed": 0.0, "throttled": False})]
+        plex.poll(t)
+    assert plex.rows() == []
+
+
 def test_activity_and_the_data_api_say_when_a_conversion_is_ahead(app):
     client, plex = app
     plex.sessions.append(plex_item(transcode={"speed": 0.0, "throttled": True}))
