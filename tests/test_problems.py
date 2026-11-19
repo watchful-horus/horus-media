@@ -308,6 +308,96 @@ def test_a_conversion_paused_ahead_of_playback_gives_no_speed():
     assert busy.transcode_speed == 3.4 and busy.transcode_throttled is False
 
 
+# ---- Emby gives no speed: it is worked out from how far the conversion moved ----
+
+EMBY_REASON = ["ContainerBitrateExceedsLimit"]
+
+
+def emby_converting(reached_s, position_s=600, throttle=None, paused=False):
+    """What a real Emby sends while converting video: no frame rate, how far it has got, and
+    a throttle number only while it waits."""
+    return emby_item(position=position_s * 10_000_000, paused=paused, method="Transcode", info={
+        "IsVideoDirect": False, "TranscodeReasons": EMBY_REASON, "CompletionPercentage": 10.0,
+        "CurrentThrottle": throttle, "TranscodingPositionTicks": reached_s * 10_000_000})
+
+
+def test_emby_says_when_it_is_waiting_and_how_far_it_has_got():
+    waiting = _emby_session(emby_converting(1015, throttle=100))
+    assert waiting.play_method == "transcode" and waiting.transcode_throttled is True
+    assert waiting.transcode_speed is None and waiting.transcoded_ms == 1_015_000
+    working = _emby_session(emby_converting(1020))
+    assert working.transcode_throttled is False and working.transcoded_ms == 1_020_000
+    assert "transcoded_ms" not in working.model_dump()
+    assert _emby_session(emby_item()).transcoded_ms is None  # direct play: nothing converted
+
+
+def test_an_emby_server_that_cannot_keep_up_is_a_slow_transcode(emby):
+    # 9 seconds of film converted in each 15 seconds: 0.6x, and it never gets to wait.
+    for i, t in enumerate((0, 15, 30)):
+        emby.sessions[:] = [emby_converting(700 + 9 * i, position_s=600 + 15 * i)]
+        emby.poll(t)
+    (row,) = emby.rows()
+    assert row["kind"] == "slow_transcode" and row["detail"] == "Converting at 0.6x playback speed"
+    assert row["started_at"] == (T0 + timedelta(seconds=15)).isoformat()
+    # It catches up: the problem ends.
+    emby.sessions[:] = [emby_converting(718 + 40, position_s=645)]
+    emby.poll(45)
+    assert emby.rows()[0]["ended_at"] is not None
+
+
+def test_a_healthy_emby_stream_is_never_slow(emby):
+    # Mostly waiting far ahead; now and then seen working, and it then covers the whole gap.
+    readings = [(720, 100), (720, 100), (735, None), (750, None), (765, 100), (765, 100),
+                (780, None), (795, None), (810, None)]
+    for i, (reached, throttle) in enumerate(readings):
+        emby.sessions[:] = [emby_converting(reached, position_s=600 + 15 * i, throttle=throttle)]
+        emby.poll(15 * i)
+    assert emby.rows() == []
+
+
+def test_the_first_reading_after_waiting_is_not_measured(emby):
+    """Waiting at one poll and just started working at the next: the little it converted since
+    says nothing about its speed."""
+    for i, (reached, throttle) in enumerate([(720, 100), (721, None), (722, 100), (723, None),
+                                             (724, 100), (725, None)]):
+        emby.sessions[:] = [emby_converting(reached, position_s=600 + 15 * i, throttle=throttle)]
+        emby.poll(15 * i)
+    assert emby.rows() == []
+
+
+def test_a_seek_or_a_pause_starts_the_measuring_again(emby):
+    emby.sessions[:] = [emby_converting(700, position_s=600)]
+    emby.poll(0)
+    emby.sessions[:] = [emby_converting(2000, position_s=1900)]  # jumped 20 minutes ahead
+    emby.poll(15)
+    emby.sessions[:] = [emby_converting(1200, position_s=1100)]  # and back: converted "less"
+    emby.poll(30)
+    emby.sessions[:] = [emby_converting(1201, position_s=1100, paused=True)]
+    emby.poll(45)
+    emby.sessions[:] = [emby_converting(1202, position_s=1100, paused=True)]
+    emby.poll(60)
+    assert emby.rows() == []
+
+
+def test_the_worked_out_speed_shows_on_activity_and_in_the_data_api(tmp_path, monkeypatch):
+    monkeypatch.setenv("HORUS_AUTH_DISABLED", "1")
+    env = Env(tmp_path, "emby")
+    monkeypatch.setenv("HORUS_DB_PATH", str(tmp_path / "h.db"))
+    client = TestClient(create_app(transport=env.transport))
+    env.sessions[:] = [emby_converting(700, position_s=600)]
+    assert client.get("/api/activity").json()["sessions"][0]["transcode_speed"] is None
+    env.poll(0)
+    env.sessions[:] = [emby_converting(730, position_s=615)]
+    env.poll(15)
+    assert client.get("/api/activity").json()["sessions"][0]["transcode_speed"] == 2.0
+    assert client.get("/api/v1/activity").json()[0]["transcode_speed"] == 2.0
+    # Once Emby waits, the page says so and shows no speed.
+    env.sessions[:] = [emby_converting(735, position_s=630, throttle=100)]
+    env.poll(30)
+    waiting = client.get("/api/activity").json()["sessions"][0]
+    assert waiting["transcode_speed"] is None and waiting["transcode_throttled"] is True
+
+
 def test_a_speed_of_zero_is_not_a_slow_transcode():
     """Seen on a real Plex: for about a second at the start of each burst it reports speed 0
     and not throttled. That is no measurement yet, not a server that cannot keep up."""

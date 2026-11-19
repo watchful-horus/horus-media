@@ -43,6 +43,9 @@ class Session(BaseModel):
     transcode_throttled: bool = False
     transcode_reason: str | None = None  # why it is converted, in words (Emby only)
     direct_play_failed: bool = Field(False, exclude=True)  # Emby fell back after an error
+    # How far into the file the server has converted so far (Emby). Emby reports no speed, so
+    # the poller works one out from how far this moves between two polls (see problems.py).
+    transcoded_ms: int | None = Field(None, exclude=True)
 
     @model_validator(mode="after")
     def _no_speed_while_paused_ahead(self):

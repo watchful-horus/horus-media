@@ -95,8 +95,10 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
     def activity(request: Request, store: Store, format: Format = "json"):
         """What is playing right now, one row per stream. Empty when nothing is playing."""
         only = limit_to(request, store)
+        servers = fetch_all(store.list_with_tokens(), transport, live.LIVE_MAX_AGE)
+        problems.annotate(servers)  # also fills in a conversion speed the poller worked out
         rows = [s.model_dump(exclude={"poster", "session_key"})
-                for result in fetch_all(store.list_with_tokens(), transport, live.LIVE_MAX_AGE)
+                for result in servers
                 for s in result.sessions
                 if only is None or s.user.casefold() == only.casefold()]
         for row in rows:

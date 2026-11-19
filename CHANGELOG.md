@@ -2,6 +2,12 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.14 (2026-11-19)
+
+**New**
+- **Slow transcodes are now noticed on Emby too.** Emby does not report how fast it converts a stream (checked on a real server), so until now Horus could only notice a slow transcode on Plex. Emby does report how far into the file it has converted, so Horus now works the speed out itself: film time converted between two polls, divided by the time that passed. A server that converts in bursts and waits in between still averages at least 1x; one that cannot keep up stays below it and is recorded as a *Slow transcode*, as on Plex. Readings taken while Emby waits, while the player is paused, or across a seek are not used.
+- **The Activity page shows it:** an Emby stream that is being converted shows *Transcode speed* from its second poll (about 15 seconds in) while Emby is working, and *Ahead of playback* while Emby waits. `/api/v1/activity` carries both, and for Plex nothing changes.
+
 ## 0.4.13 (2026-11-19)
 
 **Changed**

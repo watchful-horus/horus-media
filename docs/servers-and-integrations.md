@@ -37,7 +37,7 @@ While Horus records history it also watches every playing stream for trouble. It
 |---|---|---|---|
 | Buffering | The player itself says it is buffering | Yes | No (Emby has no such state; it shows as Stalled) |
 | Stalled | Not paused, yet the position has not moved for 40 seconds | Yes | Yes |
-| Slow transcode | The server converts the stream slower than it plays, and is not merely pausing because it is far enough ahead | Yes, when Plex reports a speed | Yes |
+| Slow transcode | The server converts the stream slower than it plays, and is not merely pausing because it is far enough ahead | Yes, from the speed Plex reports | Yes. Emby reports no speed, so Horus works it out from how far the conversion moved between two polls; it shows on the Activity page from the second poll of a stream |
 | Direct play failed | The server had to convert because direct play gave an error | No | Yes |
 | Keeps buffering | Three or more interruptions (buffering or stalled) in one play | Yes | Yes |
 

@@ -50,8 +50,9 @@ def _reason_text(reasons: list) -> str | None:
 
 
 def _transcode_health(ti: dict, item: dict) -> dict:
-    """Why Emby converts the stream and how fast: frames converted per second against the
-    file's own frame rate (1.0 = as fast as playback)."""
+    """Why Emby converts the stream, whether it is pausing because it is far enough ahead, how
+    far it has got, and (from servers that report a frame rate) how fast: frames converted per
+    second against the file's own frame rate (1.0 = as fast as playback)."""
     reasons = ti.get("TranscodeReasons") or []
     if isinstance(reasons, str):  # some versions send one comma-separated string
         reasons = [r.strip() for r in reasons.split(",")]
@@ -61,9 +62,15 @@ def _transcode_health(ti: dict, item: dict) -> dict:
     source_fps = video.get("RealFrameRate") or video.get("AverageFrameRate")
     fps, done = ti.get("Framerate"), ti.get("CompletionPercentage")
     converting_video = ti.get("IsVideoDirect") is False
-    if converting_video and fps and source_fps and not (done is not None and done >= 100):
+    if not converting_video or (done is not None and done >= 100):
+        return out
+    # A number (seen: 100) while Emby waits for the player to catch up, nothing while it works.
+    out["transcode_throttled"] = bool(ti.get("CurrentThrottle"))
+    reached = ti.get("TranscodingPositionTicks")
+    if isinstance(reached, int | float) and not isinstance(reached, bool) and reached >= 0:
+        out["transcoded_ms"] = int(reached) // TICKS_PER_MS
+    if fps and source_fps:
         out["transcode_speed"] = round(fps / source_fps, 2)
-        out["transcode_throttled"] = bool(ti.get("CurrentThrottle"))
     return out
 
 

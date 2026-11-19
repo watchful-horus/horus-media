@@ -6,7 +6,9 @@ best guess from the server's side of things:
   buffering          the player itself says it is buffering (Plex only; Emby has no such state)
   stalled            not paused, yet the position has not moved for a while (both servers)
   slow_transcode     the server converts slower than playback and is not just pausing because
-                     it is far enough ahead (both servers, when the server reports a speed)
+                     it is far enough ahead. Plex reports the speed. Emby does not, so for Emby
+                     it is worked out here: how far the conversion moved between two polls,
+                     against the time that passed (see `_measure`)
   direct_play_error  Emby fell back to converting because direct play failed
 
 A problem must be seen on two polls in a row before it counts, so a seek or the short buffer
@@ -53,6 +55,12 @@ class _Track:
     open: dict[str, int] = field(default_factory=dict)  # kind -> row id of the open problem
     interruptions: int = 0
     notified: set[str] = field(default_factory=set)
+    # For a server that reports how far it has converted but no speed (Emby): the last reading
+    # that can be measured from, and the speed worked out at the latest poll.
+    converted: int | None = None
+    converted_at: datetime | None = None
+    converted_from: int | None = None  # the player's position at that reading
+    speed: float | None = None
 
 
 _lock = threading.Lock()
@@ -69,6 +77,38 @@ def _clock(ms: int) -> str:
     total = max(0, ms // 1000)
     hours, minutes, seconds = total // 3600, total % 3600 // 60, total % 60
     return f"{hours}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes}:{seconds:02d}"
+
+
+MEASURE_MIN_SECONDS = 5  # two readings closer together than this say too little
+SEEK_SLACK_MS = 30_000  # the player's position moved this much more or less than the clock
+
+
+def _measure(s: Session, track: _Track, now: datetime) -> None:
+    """Work out a conversion speed for a stream whose server gives none: media time converted
+    since the last poll, divided by the time that passed. A healthy server converts in bursts
+    and waits in between, so over a whole poll it still averages at least 1; one that cannot
+    keep up never gets to wait and stays below 1.
+
+    Only two readings in a row taken while the server was working (not waiting, not paused, no
+    seek in between) are compared; anything else starts again from this reading."""
+    usable = (s.play_method == "transcode" and s.transcoded_ms is not None
+              and s.transcode_speed is None and not s.transcode_throttled
+              and s.state == "playing")
+    track.speed = None
+    if usable and track.converted is not None and track.converted_at is not None:
+        elapsed_ms = (now - track.converted_at).total_seconds() * 1000
+        moved = s.transcoded_ms - track.converted
+        played = (s.position_ms - track.converted_from
+                  if s.position_ms is not None and track.converted_from is not None else None)
+        seeked = played is not None and abs(played - elapsed_ms) > SEEK_SLACK_MS
+        if elapsed_ms >= MEASURE_MIN_SECONDS * 1000 and moved >= 0 and not seeked:
+            track.speed = round(moved / elapsed_ms, 2)
+            s.transcode_speed = track.speed
+    if usable:
+        track.converted, track.converted_at = s.transcoded_ms, now
+        track.converted_from = s.position_ms
+    else:
+        track.converted = track.converted_at = track.converted_from = None
 
 
 def _signals(s: Session, track: _Track, now: datetime, ts: str) -> dict[str, str | None]:
@@ -112,6 +152,7 @@ def observe(conn: sqlite3.Connection, result: ServerActivity, ts: str, emit=None
             track = _tracks.get(key)
             if track is None:
                 track = _tracks[key] = _Track(position=s.position_ms, moved_at=now)
+            _measure(s, track, now)
             found = _signals(s, track, now, ts)
             for kind in KINDS:
                 if kind not in found:
@@ -172,13 +213,17 @@ def close_stale(conn: sqlite3.Connection) -> None:
 
 
 def annotate(servers: list[ServerActivity]) -> None:
-    """Fill in `problems` on live sessions from what the poller has open right now."""
+    """Fill in `problems` on live sessions from what the poller has open right now, and the
+    conversion speed the poller worked out where the server itself gives none."""
     with _lock:
         for server in servers:
             for s in server.sessions:
                 track = _tracks.get((server.id, s.session_key, s.title))
                 if track is None:
                     continue
+                if (track.speed is not None and s.transcode_speed is None
+                        and not s.transcode_throttled and s.state == "playing"):
+                    s.transcode_speed = track.speed
                 s.problems = [k for k in KINDS if k in track.open]
                 if track.interruptions >= REPEATED:
                     s.problems.append("repeated")
