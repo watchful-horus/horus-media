@@ -15,7 +15,9 @@ updates:
     groups:
       web-dependencies:
         patterns: ["*"]
-  # The two base images in the Dockerfile are pinned by digest; this proposes the newer ones.
+  # The two base images in the Dockerfile are pinned by digest; this proposes refreshed builds
+  # of the same Python and Node versions (they carry the security fixes). A newer Python or
+  # Node is a decision of its own, because the lock file and the tests are tied to the version.
   - package-ecosystem: docker
     directory: "/"
     schedule:
@@ -23,6 +25,9 @@ updates:
     groups:
       docker-base-images:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
