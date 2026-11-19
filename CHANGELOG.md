@@ -2,6 +2,14 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.15 (2026-11-19)
+
+**New**
+- **The version is shown in the top bar**, small, next to the Horus name (for example *v0.4.15*), once you are signed in. For an admin it is a link to Settings > Backups and updates, where *Check for updates* is. The sign-in page does not show it.
+
+**Fixed**
+- **On a phone a long user name no longer pushes the top bar to three rows.** The name shortens to fit beside the logo.
+
 ## 0.4.14 (2026-11-19)
 
 **New**

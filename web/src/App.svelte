@@ -64,6 +64,13 @@
   }
 
   onMount(checkAuth)
+
+  // The running version, shown small beside the name once someone is signed in.
+  let version = $state(null)
+  $effect(() => {
+    if (!auth?.authenticated || version) return
+    fetch('/api/health').then((r) => r.json()).then((h) => { version = h.version || null }).catch(() => {})
+  })
   $effect(() => {
     addEventListener('horus:me', checkAuth) // your own details were changed on the Users page
     return () => removeEventListener('horus:me', checkAuth)
@@ -101,6 +108,14 @@
       <img src="/favicon.svg" width="30" height="30" alt="" />
       <h1>Horus</h1>
     </a>
+    {#if version}
+      {#if isAdmin}
+        <a class="ver" href="#settings/maintenance" title="Version {version}. Open Backups and updates."
+          onclick={(e) => { e.preventDefault(); go('settings', 'maintenance') }}>v{version}</a>
+      {:else}
+        <span class="ver" title="Version {version}">v{version}</span>
+      {/if}
+    {/if}
     <nav>
       <button class:active={where.tab === 'activity'} onclick={() => go('activity')}>Activity</button>
       <button class:active={where.tab === 'graphs'} onclick={() => go('graphs')}>Graphs</button>
@@ -155,12 +170,16 @@
   .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
   .brand img { display: block; border-radius: 7px; }
   h1 { margin: 0; font-size: 20px; letter-spacing: .02em; }
+  /* Sits close to the name: pulled back over most of the header's gap. */
+  .ver { margin-left: -14px; flex-shrink: 0; align-self: center; padding-top: 4px; font-size: 12px;
+    color: var(--muted); text-decoration: none; white-space: nowrap; }
+  a.ver:hover { color: inherit; text-decoration: underline; }
   nav, .me { display: flex; gap: 6px; }
-  .me { margin-left: auto; position: relative; }
+  .me { margin-left: auto; position: relative; min-width: 0; }
   header button { border-color: transparent; background: none; }
   header button.active { background: var(--bg); border-color: var(--border); font-weight: 600; }
   .theme { color: var(--muted); }
-  .who { display: flex; align-items: center; gap: 6px; max-width: 220px; }
+  .who { display: flex; align-items: center; gap: 6px; max-width: 220px; min-width: 0; }
   .who .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 180px;
     display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--panel);
@@ -173,6 +192,9 @@
     header { flex-wrap: wrap; gap: 8px 12px; padding: 12px 16px; }
     nav { order: 3; flex-basis: 100%; }
     .who { max-width: 190px; }
+    .ver { margin-left: -4px; }
+    /* Your name takes what is left of the first row and shortens, so it never needs a row of its own. */
+    .me { flex: 1 1 0; justify-content: flex-end; }
     main { padding: 16px; }
   }
 </style>
