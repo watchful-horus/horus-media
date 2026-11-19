@@ -4,6 +4,7 @@
 
   let keys = $state([])
   let name = $state('')
+  let days = $state(0) // 0 = until it is revoked
   let fresh = $state(null) // shown once
   let message = $state(null)
   let busy = $state(false)
@@ -24,7 +25,7 @@
 
   const create = () =>
     guard(async () => {
-      fresh = await api.createMyKey(name)
+      fresh = await api.createMyKey(name, Number(days))
       name = ''
       await load()
     })
@@ -38,6 +39,7 @@
     })
   }
   const when = (iso) => (iso ? new Date(iso).toLocaleString() : 'never')
+  const expired = (k) => k.expires_at && new Date(k.expires_at) <= new Date()
 </script>
 
 <section class="card">
@@ -59,7 +61,7 @@
     <div class="row">
       <div>
         <strong>{k.name}</strong> <code>{k.prefix}...</code>
-        <div class="muted small">Created {when(k.created_at)} &middot; last used {when(k.last_used_at)}</div>
+        <div class="muted small">Created {when(k.created_at)} &middot; last used {when(k.last_used_at)}{#if k.expires_at}{' '}&middot; {expired(k) ? 'expired' : 'expires'} {when(k.expires_at)}{/if}</div>
       </div>
       <button disabled={busy} onclick={() => revoke(k)}>Revoke</button>
     </div>
@@ -68,6 +70,12 @@
   {/each}
   <form onsubmit={(e) => { e.preventDefault(); create() }}>
     <input bind:value={name} placeholder="Name, for example Grafana" maxlength="60" required aria-label="Key name" />
+    <select bind:value={days} aria-label="How long the key lasts">
+      <option value={0}>No end date</option>
+      <option value={30}>Lasts 30 days</option>
+      <option value={90}>Lasts 90 days</option>
+      <option value={365}>Lasts 365 days</option>
+    </select>
     <button class="primary" disabled={busy}>Create key</button>
   </form>
   {#if message}<p class="bad">{message}</p>{/if}
@@ -81,7 +89,7 @@
   .small { font-size: 12px; }
   .row { display: flex; justify-content: space-between; align-items: center; gap: 12px;
     padding: 10px 0; border-top: 1px solid var(--border); }
-  form { display: flex; gap: 8px; margin-top: 12px; }
+  form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .fresh { border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px;
     display: grid; gap: 8px; }
   .bad { color: var(--bad); }

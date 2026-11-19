@@ -334,6 +334,7 @@ def end_user_sessions(conn: sqlite3.Connection, user_id: int, keep: str | None =
 # --- API keys -------------------------------------------------------------------------------
 
 CONTROL_DAYS = (1, 7, 30, 90)  # how long a control key may last, in days
+READ_DAYS = (30, 90, 365)  # a read key may be given one of these, or no end date at all
 # A control key acts as its admin owner on everything except these addresses, so a leaked one
 # can't create people, mint more keys, change passwords or lock the admin out.
 _CONTROL_BLOCKED = re.compile(r"^/api/(users|keys|my-keys|auth)(/|$)")

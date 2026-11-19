@@ -57,7 +57,7 @@ class MyDetails(BaseModel):
 class KeyName(BaseModel):
     name: str
     scope: Literal["read", "control"] = "read"
-    expires_in_days: int | None = None  # required for a control key
+    expires_in_days: int | None = None  # required for a control key, optional for a read key
 
 
 def make_router(get_store: Callable) -> APIRouter:
@@ -70,6 +70,9 @@ def make_router(get_store: Callable) -> APIRouter:
     # let anyone who knows a username keep its owner locked out.
     limiter = auth.LoginLimiter()
     address_limiter = auth.LoginLimiter(limit=30)
+    # Wrong "current password" entries on the change-password form, per signed-in account: a
+    # browser left unlocked (or a stolen session) must not be a way to guess the password.
+    password_limiter = auth.LoginLimiter()
 
     def client(request: Request) -> str:
         return request.client.host if request.client else "unknown"
@@ -175,8 +178,14 @@ def make_router(get_store: Callable) -> APIRouter:
     @router.post("/auth/password")
     def change_password(body: ChangePassword, request: Request, store: Store):
         user = me(request)
+        if password_limiter.blocked(user["id"]):
+            raise HTTPException(429, "Too many attempts, wait a minute")
         if not auth.check_password(store.conn, user["id"], body.current):
+            password_limiter.fail(user["id"])
+            log.warning("wrong current password on the change-password form: %s from %s",
+                        user["username"], client(request))
             raise HTTPException(403, "Current password is wrong")
+        password_limiter.reset(user["id"])
         try:
             auth.set_user_password(store.conn, user["id"], body.new)
         except auth.UserError as e:
@@ -303,7 +312,8 @@ def make_router(get_store: Callable) -> APIRouter:
 
     def new_key(store: ServerStore, body: KeyName, owner: dict | None) -> dict:
         """Make a key for `owner`. A control key also needs an admin owner, the Settings switch
-        turned on, and an expiry."""
+        turned on, and an expiry. A read key may have an expiry; without one it lasts until it
+        is revoked."""
         name = body.name.strip()
         if not name or len(name) > 60:
             raise HTTPException(422, "Give the key a short name, such as Grafana")
@@ -318,6 +328,12 @@ def make_router(get_store: Callable) -> APIRouter:
             if body.expires_in_days not in auth.CONTROL_DAYS:
                 days = ", ".join(str(d) for d in auth.CONTROL_DAYS)
                 raise HTTPException(422, f"Choose how many days it lasts: {days}")
+            expires_at = auth.expiry_in(body.expires_in_days)
+        elif body.expires_in_days is not None:
+            if body.expires_in_days not in auth.READ_DAYS:
+                days = ", ".join(str(d) for d in auth.READ_DAYS)
+                raise HTTPException(
+                    422, f"Choose how many days it lasts ({days}), or leave it out for no end date")
             expires_at = auth.expiry_in(body.expires_in_days)
         key_id, key = auth.create_key(store.conn, name, owner["id"] if owner else None,
                                       body.scope, expires_at)

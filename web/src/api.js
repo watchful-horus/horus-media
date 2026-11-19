@@ -53,7 +53,8 @@ export const api = {
   updateMe: (changes) => request('PATCH', '/api/auth/me', changes),
   changePassword: (current, next) => request('POST', '/api/auth/password', { current, new: next }),
   myKeys: () => request('GET', '/api/my-keys'),
-  createMyKey: (name) => request('POST', '/api/my-keys', { name }),
+  createMyKey: (name, days = null) =>
+    request('POST', '/api/my-keys', { name, expires_in_days: days || null }),
   revokeMyKey: (id) => request('DELETE', `/api/my-keys/${id}`),
   report: (range) => request('GET', `/api/report?${range}`),
   sendReport: (range) => request('POST', `/api/report/send?${range}`),
@@ -64,7 +65,7 @@ export const api = {
   testChannel: (id) => request('POST', `/api/notifications/${id}/test`),
   keys: () => request('GET', '/api/keys'),
   createKey: (name, scope = 'read', days = null) =>
-    request('POST', '/api/keys', { name, scope, expires_in_days: scope === 'control' ? days : null }),
+    request('POST', '/api/keys', { name, scope, expires_in_days: days || null }),
   revokeKey: (id) => request('DELETE', `/api/keys/${id}`),
   restart: () => request('POST', '/api/restart'),
   shutdown: () => request('POST', '/api/shutdown'),

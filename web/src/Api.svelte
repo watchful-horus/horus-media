@@ -12,6 +12,7 @@
   let control = $state(false) // control keys are switched on (a setting)
   let kind = $state('read') // the kind of key to create: 'read' or 'control'
   let days = $state(7) // how long a control key lasts
+  let readDays = $state(0) // how long a read key lasts; 0 = until it is revoked
 
   const base = location.origin
 
@@ -55,7 +56,7 @@
 
   const create = () =>
     guard(async () => {
-      fresh = await api.createKey(name, kind, Number(days))
+      fresh = await api.createKey(name, kind, Number(kind === 'control' ? days : readDays))
       name = ''
       await load()
     })
@@ -133,6 +134,13 @@
         <option value={7}>Lasts 7 days</option>
         <option value={30}>Lasts 30 days</option>
         <option value={90}>Lasts 90 days</option>
+      </select>
+    {:else}
+      <select bind:value={readDays} aria-label="How long the key lasts">
+        <option value={0}>No end date</option>
+        <option value={30}>Lasts 30 days</option>
+        <option value={90}>Lasts 90 days</option>
+        <option value={365}>Lasts 365 days</option>
       </select>
     {/if}
     <button class="primary" disabled={busy}>Create key</button>

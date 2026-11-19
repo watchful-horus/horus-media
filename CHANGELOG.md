@@ -2,6 +2,16 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.10 (2026-11-19)
+
+**Security**
+- **The change-password form now counts wrong tries.** After five wrong entries of the current password in a minute, that account has to wait a minute, the same as on the sign-in page. Before, a browser left signed in could be used to guess the password without any limit. The count is per account, so other people are not held up, and a correct entry clears it.
+- **A read key can be given an end date.** When you create an API key under Account or Settings > API you can now choose *No end date* (as before, and still the default), 30, 90 or 365 days. A key past its date stops working and is shown as expired; keys you already have are not changed. In the API this is `expires_in_days` on `POST /api/keys` and `POST /api/my-keys`.
+
+**Behind the scenes**
+- The web UI is built with vite 8.3.8.
+- Dependabot now proposes only refreshed builds of the Python and Node versions the Docker image already uses; moving to a newer Python or Node is decided separately.
+
 ## 0.4.9 (2026-11-19)
 
 **New: playback problems**
