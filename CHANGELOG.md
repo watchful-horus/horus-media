@@ -2,7 +2,7 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
-## 0.4.13 (unreleased)
+## 0.4.13 (2026-11-19)
 
 **Changed**
 - **The Settings menu is shorter and in a more useful order:** Servers, Users, Notifications, API, General, Backups and updates, Logs (seven entries instead of nine).
