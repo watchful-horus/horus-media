@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ServerType = Literal["plex", "emby"]
 PlayMethod = Literal["direct_play", "direct_stream", "transcode"]
-PlayState = Literal["playing", "paused"]
+PlayState = Literal["playing", "paused", "buffering"]  # buffering: Plex only
 
 
 class Session(BaseModel):
@@ -33,6 +33,16 @@ class Session(BaseModel):
     location: str | None = None
     position_ms: int | None = None
     duration_ms: int | None = None
+    # How fast the server converts compared with playback: 1.0 keeps up, below 1.0 falls behind.
+    # None when nothing is converted or the server does not say.
+    transcode_speed: float | None = None
+    # The server has paused converting because it is far enough ahead; a low speed is then fine.
+    transcode_throttled: bool = Field(False, exclude=True)
+    transcode_reason: str | None = None  # why it is converted, in words (Emby only)
+    direct_play_failed: bool = Field(False, exclude=True)  # Emby fell back after an error
+    # Playback problems Horus has confirmed for this stream (see problems.py); filled in for
+    # the Activity page, empty straight from a client.
+    problems: list[str] = []
     # The server's own id for this stream, used to stop it. Never sent to the browser.
     native_id: str = Field("", exclude=True)
 

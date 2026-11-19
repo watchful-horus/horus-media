@@ -14,7 +14,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import __version__, app_settings, auth, backup, listen, logging_setup
+from . import __version__, app_settings, auth, backup, listen, logging_setup, problems
 from . import activity as live
 from .activity import fetch_all
 from .clients import make_client
@@ -350,6 +350,7 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
         servers = fetch_all(store.list_with_tokens(), transport, live.LIVE_MAX_AGE)
         viewer = getattr(request.state, "user", None)
         only = auth.only_media_user(store.conn, viewer)
+        problems.annotate(servers)
         if only is not None:  # "hide other people's activity" is on for this person
             for s in servers:
                 s.sessions = [x for x in s.sessions if x.user.casefold() == only.casefold()]
@@ -457,6 +458,18 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
         only = auth.only_media_user(store.conn, getattr(request.state, "user", None))
         return compute_stats(store.conn, start, end, app_settings.load(store.conn).zone(), hourly,
                              only_user=only)
+
+    @app.get("/api/problems")
+    def playback_problems(request: Request, store: Store, start: date | None = None,
+                          end: date | None = None):
+        """Playback problems recorded in a date range: counts and the latest ones."""
+        end = end or date.today()
+        start = start or end - timedelta(days=29)
+        if start > end or (end - start).days > 730:
+            raise HTTPException(422, "Invalid date range")
+        only = auth.only_media_user(store.conn, getattr(request.state, "user", None))
+        return problems.compute(store.conn, start, end, app_settings.load(store.conn).zone(),
+                                only_user=only)
 
     @app.get("/api/stats/monthly")
     def stats_monthly(request: Request, store: Store):

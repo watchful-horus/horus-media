@@ -283,6 +283,8 @@ def _apply_staged(db_file: Path) -> None:
         migrate(conn)  # the backup may predate newer migrations
         with conn:  # plays that were "in progress" when it was made are not in progress now
             conn.execute("UPDATE history SET ended_at = last_seen_at WHERE ended_at IS NULL")
+            conn.execute(
+                "UPDATE playback_problems SET ended_at = last_seen_at WHERE ended_at IS NULL")
     finally:
         conn.close()
     _discard_staged(db_file)

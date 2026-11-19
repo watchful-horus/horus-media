@@ -17,7 +17,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from . import activity as live
-from . import app_settings, auth
+from . import app_settings, auth, problems
 from .activity import fetch_all
 from .stats import _bucket, _floor, _local
 from .store import ServerStore
@@ -99,12 +99,14 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
                 for result in fetch_all(store.list_with_tokens(), transport, live.LIVE_MAX_AGE)
                 for s in result.sessions
                 if only is None or s.user.casefold() == only.casefold()]
+        for row in rows:
+            row.pop("problems", None)  # what the Activity page shows; /problems has the record
         if not auth.sees_addresses(getattr(request.state, "user", None)):
             for row in rows:  # a normal user, or their key: LAN or WAN, never the address
                 row["location"] = auth.without_address(row["location"])
         columns = ["server", "user", "title", "episode", "media_type", "device", "platform",
                    "play_method", "state", "bandwidth_kbps", "progress_percent", "position_ms",
-                   "duration_ms",
+                   "duration_ms", "transcode_speed", "transcode_reason",
                    "product", "quality", "container", "video", "audio", "subtitle", "location"]
         return respond(rows, format, columns)
 
@@ -148,6 +150,24 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
         } for r in found]
         return respond(rows, format, ["id", "server", "user", "title", "media_type", "device",
                                       "platform", "play_method", "peak_bandwidth_kbps",
+                                      "started_at", "ended_at", "duration_seconds"])
+
+    @router.get("/problems")
+    def playback_problems(
+        request: Request,
+        store: Store,
+        frm: Annotated[str | None, Query(alias="from")] = None,
+        to: str | None = None,
+        limit: Annotated[int, Query(ge=1, le=10000)] = 1000,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        format: Format = "json",
+    ):
+        """Playback problems Horus noticed (buffering, stalled, slow transcode), newest first."""
+        start, end = window(frm, to, app_settings.load(store.conn).zone())
+        rows = problems.rows_between(store.conn, start.isoformat(), end.isoformat(),
+                                     limit_to(request, store), limit, offset)
+        return respond(rows, format, ["id", "server", "kind", "user", "title", "device",
+                                      "platform", "play_method", "location", "detail",
                                       "started_at", "ended_at", "duration_seconds"])
 
     @router.get("/plays")

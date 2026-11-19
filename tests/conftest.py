@@ -91,6 +91,15 @@ def live_activity_is_always_fresh(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_remembered_streams():
+    """The poller remembers playing streams between polls to spot playback problems. Each test
+    starts with nothing remembered."""
+    from horus_media import problems
+
+    problems.forget()
+
+
+@pytest.fixture(autouse=True)
 def no_background_thread(monkeypatch):
     """A test that starts the app for real (`with TestClient(...)`) would also start the
     background thread, whose daily update check calls GitHub. Tests never touch the network,

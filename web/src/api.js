@@ -87,6 +87,7 @@ export const api = {
   stats: (start, end, hourly = false) =>
     request('GET', `/api/stats?start=${start}&end=${end}${hourly ? '&hourly=true' : ''}`),
   servers: () => request('GET', '/api/servers'),
+  problems: (start, end) => request('GET', `/api/problems?start=${start}&end=${end}`),
   addServer: (s) => request('POST', '/api/servers', s),
   renameServer: (id, name) => request('PATCH', `/api/servers/${id}`, { name }),
   deleteServer: (id) => request('DELETE', `/api/servers/${id}`),

@@ -132,4 +132,25 @@ MIGRATIONS: list[str] = [
     """
     ALTER TABLE bandwidth_samples ADD COLUMN peak_kbps INTEGER;
     """,
+    # Playback problems the poller noticed (buffering, stalled, slow conversion). `location` is
+    # only LAN or WAN, never an address. Removed with the history they belong to.
+    """
+    CREATE TABLE playback_problems (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        server_id INTEGER NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+        session_key TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        user TEXT NOT NULL,
+        title TEXT NOT NULL,
+        device TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        play_method TEXT NOT NULL,
+        location TEXT,
+        detail TEXT,
+        started_at TEXT NOT NULL,
+        last_seen_at TEXT NOT NULL,
+        ended_at TEXT
+    );
+    CREATE INDEX idx_problems_started ON playback_problems (started_at);
+    """,
 ]

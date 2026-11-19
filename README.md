@@ -16,11 +16,12 @@ docker run -d --name horus -p 8000:8000 -v horus-data:/data -e TZ=Europe/London 
 ```
 More ways to install are in [Quick start](#quick-start) and [docs/install.md](docs/install.md).
 
-> Status: early release (0.4.8), public and tested with Docker and a Proxmox container. Plex and Emby are trademarks of their owners; Horus is not affiliated with either.
+> Status: early release (0.4.9), public and tested with Docker and a Proxmox container. Plex and Emby are trademarks of their owners; Horus is not affiliated with either.
 
 ## Features
 - Live activity from Plex and Emby in one view, with posters and full stream details
 - Play history recorded locally (SQLite) from the moment you add a server, with optional import of past history
+- Playback problems: buffering, stalled playback and slow transcodes are marked on the live view, graphed and listed ([what is detected](docs/servers-and-integrations.md#playback-problems))
 - Graphs: plays over time by hour, day, week or month; direct play vs transcode; bandwidth; plays by user, platform, hour and weekday; media types
 - Accounts with admin and user roles (an email address works as a username), API keys, and a read-only data API for Grafana and Prometheus
 - Notifications (Discord, ntfy, webhook), optional alerts, and weekly or monthly summary reports

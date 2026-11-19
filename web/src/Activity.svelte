@@ -29,6 +29,23 @@
 
   const METHOD = { direct_play: 'Direct Play', direct_stream: 'Direct Stream', transcode: 'Transcode' }
 
+  // What Horus has noticed about a stream, in the order shown. 'buffering' comes from the
+  // player itself (Plex); the rest from watching the stream over several polls.
+  const PROBLEMS = { buffering: 'Buffering', stalled: 'Stalled', slow_transcode: 'Slow transcode',
+    direct_play_error: 'Direct play failed', repeated: 'Keeps buffering' }
+  const PROBLEM_HELP = {
+    buffering: 'The player says it is buffering.',
+    stalled: 'Not paused, but the position has not moved for a while.',
+    slow_transcode: 'The server converts this stream slower than it plays.',
+    direct_play_error: 'Direct play failed, so the server is converting instead.',
+    repeated: 'Interrupted three or more times in this play.',
+  }
+  function problemsOf(s) {
+    const list = [...(s.problems ?? [])]
+    if (s.state === 'buffering' && !list.includes('buffering')) list.unshift('buffering')
+    return list.filter((k) => PROBLEMS[k])
+  }
+
   function bandwidth(kbps) {
     if (kbps == null) return '—'
     return kbps >= 1000 ? `${(kbps / 1000).toFixed(1)} Mbps` : `${kbps} kbps`
@@ -55,6 +72,8 @@
       ['Player', s.device],
       ['Quality', s.quality],
       ['Stream', METHOD[s.play_method]],
+      ['Transcode speed', s.transcode_speed != null ? `${s.transcode_speed}x` : null],
+      ['Transcode reason', s.transcode_reason],
       ['Container', s.container],
       ['Video', s.video],
       ['Audio', s.audio],
@@ -220,7 +239,7 @@
                 <div class="poster"></div>
               {/if}
               <div class="body">
-                <h3>{s.title}{#if s.state === 'paused'} <span class="badge paused"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><rect x="2" y="1" width="3" height="10" rx="1" /><rect x="7" y="1" width="3" height="10" rx="1" /></svg>Paused</span>{/if}</h3>
+                <h3>{s.title}{#if s.state === 'paused'} <span class="badge paused"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><rect x="2" y="1" width="3" height="10" rx="1" /><rect x="7" y="1" width="3" height="10" rx="1" /></svg>Paused</span>{/if}{#each problemsOf(s) as k} <span class="badge problem" title={PROBLEM_HELP[k]}>{PROBLEMS[k]}</span>{/each}</h3>
                 {#if s.episode}<p class="who">{s.episode}</p>{/if}
                 <p class="who">{s.user}</p>
 
@@ -314,6 +333,8 @@
     font-size: 13px; font-weight: 600; color: var(--warn); border-color: var(--warn);
     background: color-mix(in srgb, var(--warn) 14%, transparent); }
   .badge.paused svg { fill: currentColor; }
+  .badge.problem { margin-left: 6px; padding: 3px 10px; font-size: 13px; font-weight: 600;
+    color: var(--bad); border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
   button.stop { margin-top: 14px; }
   .stop-box { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--bad); border-radius: 8px; }
   .stop-box p { margin: 0 0 8px; font-size: 13.5px; }

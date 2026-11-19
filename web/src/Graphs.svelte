@@ -19,12 +19,18 @@
   let error = $state(null)
   let granChoice = $state(null) // null = pick automatically from the range length
   let monthly = $state(null) // last 12 calendar months, not tied to the date range
+  let problems = $state(null) // playback problems in the same date range
 
   const PRESETS = [[7, '7 days'], [30, '30 days'], [90, '90 days'], [365, '1 year']]
 
   async function load() {
     try {
-      data = await api.stats(start, end, granChoice === 'hour')
+      const [stats, found] = await Promise.all([
+        api.stats(start, end, granChoice === 'hour'),
+        api.problems(start, end).catch(() => null), // the other graphs still show without it
+      ])
+      data = stats
+      problems = found
       error = null
     } catch (e) {
       error = e.message
@@ -138,7 +144,7 @@
     rows: keys.map((k, i) => [nice(k, g), ...series.map((s) => s.data[i])]),
   })
 
-  const hbar = (items) => {
+  const hbar = (items, unit = 'Plays') => {
     const top = items.slice(0, 10)
     return {
       option: {
@@ -147,11 +153,11 @@
         grid: { top: 8, bottom: 8 },
         xAxis: { type: 'value', minInterval: 1 },
         yAxis: { type: 'category', inverse: true, data: top.map((i) => i.name) },
-        series: [{ name: 'Plays', type: 'bar', data: top.map((i) => i.count), barMaxWidth: 16,
+        series: [{ name: unit, type: 'bar', data: top.map((i) => i.count), barMaxWidth: 16,
           itemStyle: { borderRadius: [0, 4, 4, 0] } }],
       },
       height: Math.max(110, top.length * 30 + 20),
-      table: { head: ['Name', 'Plays'], rows: items.map((i) => [i.name, i.count]) },
+      table: { head: ['Name', unit], rows: items.map((i) => [i.name, i.count]) },
     }
   }
 
@@ -240,6 +246,45 @@
       },
     }
   })
+
+  // Playback problems: stacked bars per day/week/month by kind, who and what had the most,
+  // and the latest ones as a list.
+  const lasted = (sec) => (sec < 90 ? `${sec} s` : `${Math.round(sec / 60)} min`)
+  const problemCharts = $derived.by(() => {
+    if (!problems || problems.total === 0) return null
+    const g = gran === 'hour' ? 'day' : gran
+    const rolled = rollup(problems.per_day.days, problems.per_day.series, g)
+    const series = rolled.series.filter((s) => s.data.some((v) => v))
+    return {
+      time: {
+        option: {
+          tooltip: {
+            trigger: 'axis', axisPointer: { type: 'shadow' },
+            formatter: (params) => `${esc(nice(params[0].axisValue, g))}<br/>` +
+              params.map((p) => `${p.marker} ${esc(p.seriesName)} <b>${p.value}</b>`).join('<br/>'),
+          },
+          xAxis: { type: 'category', data: rolled.keys,
+            axisLabel: { formatter: (k) => parse(k).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) } },
+          yAxis: { type: 'value', minInterval: 1 },
+          series: series.map((s) => ({
+            name: s.name, type: 'bar', stack: 'problems', data: s.data, barMaxWidth: 36,
+            itemStyle: { borderColor: 'transparent', borderWidth: 1 }, emphasis: { focus: 'series' },
+          })),
+        },
+        table: timeTable(rolled.keys, series, g),
+        // Each kind keeps its colour, whichever of them happened in this range.
+        slots: series.map((s) => [3, 4, 2, 5][rolled.series.indexOf(s)]),
+      },
+      user: hbar(problems.by_user, 'Problems'),
+      device: hbar(problems.by_device, 'Problems'),
+    }
+  })
+  const problemsNote = $derived(
+    !problems ? null
+      : !problems.since ? 'Nothing recorded yet. Horus notes buffering, stalled playback and slow transcodes while it is running.'
+        : problems.total === 0 ? 'None in this range.'
+          : problems.since.slice(0, 10) > problems.range.start ? `Recorded since ${nice(problems.since, 'day')}.` : null,
+  )
 
   const monthLabel = (key) => parse(key).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
   const monthlyChart = $derived.by(() => {
@@ -343,6 +388,44 @@
     <section class="card"><h2>Plays by hour of day</h2><Chart option={built.hour.option} table={built.hour.table} slots={[0]} /></section>
     <section class="card"><h2>Plays by weekday</h2><Chart option={built.weekday.option} table={built.weekday.table} slots={[0, 1, 2, 3, 4, 5]} /></section>
     <section class="card"><h2>Media type</h2><Chart option={built.types.option} table={built.types.table} slots={[0]} height={built.types.height} /></section>
+    {#if problems}
+      <section class="card wide">
+        <h2>Playback problems over time</h2>
+        {#if problemCharts}
+          <Chart option={problemCharts.time.option} table={problemCharts.time.table} slots={problemCharts.time.slots} />
+        {/if}
+        {#if problemsNote}<p class="muted note">{problemsNote}</p>{/if}
+      </section>
+      {#if problemCharts}
+        <section class="card"><h2>Problems by user</h2><Chart option={problemCharts.user.option} table={problemCharts.user.table} slots={[3]} height={problemCharts.user.height} /></section>
+        <section class="card"><h2>Problems by player</h2><Chart option={problemCharts.device.option} table={problemCharts.device.table} slots={[3]} height={problemCharts.device.height} /></section>
+        <section class="card wide">
+          <h2>Latest playback problems</h2>
+          <div class="scroll">
+            <table class="problems">
+              <thead><tr><th>When</th><th>Problem</th><th>User</th><th>Title</th><th>Player</th><th>Server</th><th>Lasted</th><th>Detail</th></tr></thead>
+              <tbody>
+                {#each problems.recent as p (p.id)}
+                  <tr>
+                    <td class="nowrap">{new Date(p.started_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                    <td class="nowrap">{problems.kinds[p.kind] ?? p.kind}</td>
+                    <td>{p.user}</td>
+                    <td class="long">{p.title}</td>
+                    <td>{p.device}{#if p.location}{' '}<span class="muted">({p.location})</span>{/if}</td>
+                    <td>{p.server}</td>
+                    <td class="nowrap">{p.ended_at ? lasted(p.duration_seconds) : 'Now'}</td>
+                    <td class="long muted">{p.detail ?? ''}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+          {#if problems.total > problems.recent.length}
+            <p class="muted note">Showing the latest {problems.recent.length} of {problems.total}.</p>
+          {/if}
+        </section>
+      {/if}
+    {/if}
   </div>
 {/if}
 
@@ -361,6 +444,13 @@
   .head { display: flex; justify-content: space-between; align-items: center; }
   h2 { margin: 0 0 6px; font-size: 15px; }
   .seg button { padding: 3px 10px; font-size: 13px; }
+  .scroll { overflow-x: auto; }
+  .problems { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .problems th { text-align: left; color: var(--muted); font-weight: 500; }
+  .problems th, .problems td { padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border);
+    vertical-align: top; }
+  .problems td.long { overflow-wrap: anywhere; min-width: 140px; }
+  .nowrap { white-space: nowrap; }
   .bad { color: var(--bad); }
   @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
 </style>

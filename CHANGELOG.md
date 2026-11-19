@@ -2,6 +2,24 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.9 (unreleased)
+
+**New: playback problems**
+- **Horus notices when a stream has trouble.** While it records history it now watches each playing stream for four things: the player says it is *buffering* (Plex), playback has *stalled* (not paused, yet the position has not moved for 40 seconds; Plex and Emby), the server *converts slower than the stream plays* (a slow transcode), and Emby had to convert because *direct play failed*. A problem has to be seen on two polls in a row, so a seek or the short buffer at the start of a play is not counted.
+- **On the Activity page** a stream with a problem gets a red mark next to its title (Buffering, Stalled, Slow transcode, Direct play failed, or Keeps buffering after three interruptions in one play). A transcoded stream also shows how fast the server converts it and, on Emby, why it is converted (for example "Bitrate over the player's limit").
+- **On the Graphs page** there are four new cards for the chosen dates: problems over time by kind, problems by user, problems by player, and a list of the latest ones with how long each lasted.
+- **A new notification event**, *A stream has a playback problem*, can be ticked on a channel under Settings > Integrations. It is off until you tick it and is sent once per kind for each play, and once more if the play keeps buffering.
+- **`GET /api/v1/problems`** returns the recorded problems as JSON or CSV, and `/api/v1/activity` gains `transcode_speed` and `transcode_reason`. The `state` of a stream can now also be `buffering`.
+
+**Good to know**
+- Horus only sees what Plex and Emby report when it asks, every poll interval (15 seconds by default). A hiccup shorter than that is missed, and "stalled" is Horus's own conclusion, not something the server says. Nothing is recorded while recording is off (poll interval 0).
+- Emby has no buffering state, so buffering there shows up as Stalled.
+- The transcode speed fields for Plex are read as Plex sends them but have not yet been checked against a real transcoding stream.
+- Problems are removed together with old history (Settings > General, *Keep history for*). Only LAN or WAN is stored with a problem, never an address.
+
+**Upgrading**
+- One database change runs automatically at start (migration 13 adds a table for playback problems). A backup made with this version cannot be restored into 0.4.8 or older.
+
 ## 0.4.8 (2026-11-19)
 
 **Data**

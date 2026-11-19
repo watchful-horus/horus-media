@@ -54,6 +54,8 @@ def prune_history(conn: sqlite3.Connection, days: int, now: datetime) -> None:
             "DELETE FROM history WHERE ended_at IS NOT NULL AND started_at < ?", (cutoff,)
         ).rowcount
         samples = conn.execute("DELETE FROM bandwidth_samples WHERE ts < ?", (cutoff,)).rowcount
+        conn.execute("DELETE FROM playback_problems WHERE ended_at IS NOT NULL AND started_at < ?",
+                     (cutoff,))
     if plays or samples:
         log.info("retention: removed %d play(s) and %d bandwidth sample(s) older than %d days",
                  plays, samples, days)

@@ -24,9 +24,27 @@ If the import says the plugin was not found, Emby answered "not found" (usually 
 **Import once, right after you add the server.** Importing only reads from the server and changes nothing on it. Running it again adds nothing new: each play has a stable key, so one already imported is skipped. Plays Horus recorded live are skipped too, matched by user, title and start time (within two minutes). Plex names a play the same way in both places, so those match. Emby's plugin may name a play differently from how Horus saw it live, so on Emby the longer Horus has been recording before you import, the likelier a few plays count twice. A play for which Emby's plugin gives only a date (no time) is placed at 12:00 midday in your Horus time zone, so it lands on the right day. Imported plays have no bandwidth figure, and Plex does not say how a past play was streamed, so those show as "Unknown" in the direct play vs transcode charts.
 
 ## Notifications and alerts
-**Settings > Integrations** can post a message to a Discord channel webhook, an ntfy topic, or any web address (JSON) when someone starts or finishes playing, or a server becomes unreachable or comes back. Channel addresses are secrets: they are stored encrypted and never shown again. Tick the matching event on a channel to receive it.
+**Settings > Integrations** can post a message to a Discord channel webhook, an ntfy topic, or any web address (JSON) when someone starts or finishes playing, a server becomes unreachable or comes back, or a stream has a [playback problem](#playback-problems). Channel addresses are secrets: they are stored encrypted and never shown again. Tick the matching event on a channel to receive it.
 
 Three optional alerts (**Settings > Alerts and reports**, all off by default) use the same channels: too many transcodes at once, a server's bandwidth over a limit, and someone Horus has never seen starting to play. Each is sent once when the limit is crossed.
+
+## Playback problems
+While Horus records history it also watches every playing stream for trouble. It only reads what Plex and Emby report, once per poll, so treat it as a good hint rather than a measurement.
+
+| Problem | What it means | Plex | Emby |
+|---|---|---|---|
+| Buffering | The player itself says it is buffering | Yes | No (Emby has no such state; it shows as Stalled) |
+| Stalled | Not paused, yet the position has not moved for 40 seconds | Yes | Yes |
+| Slow transcode | The server converts the stream slower than it plays, and is not merely pausing because it is far enough ahead | Yes, when Plex reports a speed | Yes |
+| Direct play failed | The server had to convert because direct play gave an error | No | Yes |
+| Keeps buffering | Three or more interruptions (buffering or stalled) in one play | Yes | Yes |
+
+A problem counts once it has been seen on two polls in a row, so a seek or the first seconds of a play are ignored. Something shorter than the poll interval is missed, and a stream without a position (live TV) cannot be seen to stall.
+
+- **Activity** marks the stream in red next to its title, and shows the transcode speed and (Emby) the reason for transcoding.
+- **Graphs** has the problems over time, by user and by player for the chosen dates, and a list of the latest ones.
+- **Notifications**: tick *A stream has a playback problem* on a channel. It is sent once per kind for each play, and once more when a play keeps buffering.
+- Problems are kept as long as history is and are in [`/api/v1/problems`](api.md#data-api-for-grafana-and-other-tools). Someone who may only see their own activity sees only their own problems.
 
 ## Summary reports
 The same section can send a weekly or monthly summary report. **Integrations > Report** shows one on screen, downloads it as CSV, or sends it now.

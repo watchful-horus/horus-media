@@ -27,6 +27,46 @@ def _poster(item: dict) -> str | None:
     return None
 
 
+# Emby's reasons for converting a stream, in plain words. Unknown ones are shown spaced out.
+REASONS = {
+    "ContainerBitrateExceedsLimit": "Bitrate over the player's limit",
+    "DirectPlayError": "Direct play failed",
+    "ContainerNotSupported": "Container not supported",
+    "VideoCodecNotSupported": "Video codec not supported",
+    "AudioCodecNotSupported": "Audio codec not supported",
+    "SubtitleCodecNotSupported": "Subtitle format not supported",
+    "VideoBitrateNotSupported": "Video bitrate not supported",
+    "AudioBitrateNotSupported": "Audio bitrate not supported",
+    "VideoResolutionNotSupported": "Resolution not supported",
+    "VideoRangeNotSupported": "HDR not supported",
+    "AudioChannelsNotSupported": "Audio channels not supported",
+}
+
+
+def _reason_text(reasons: list) -> str | None:
+    words = [REASONS.get(r) or re.sub(r"(?<=[a-z])(?=[A-Z])", " ", r).capitalize()
+             for r in reasons if isinstance(r, str) and r]
+    return ", ".join(words) or None
+
+
+def _transcode_health(ti: dict, item: dict) -> dict:
+    """Why Emby converts the stream and how fast: frames converted per second against the
+    file's own frame rate (1.0 = as fast as playback)."""
+    reasons = ti.get("TranscodeReasons") or []
+    if isinstance(reasons, str):  # some versions send one comma-separated string
+        reasons = [r.strip() for r in reasons.split(",")]
+    out: dict = {"transcode_reason": _reason_text(reasons),
+                 "direct_play_failed": "DirectPlayError" in reasons}
+    video = next((x for x in item.get("MediaStreams") or [] if x.get("Type") == "Video"), {})
+    source_fps = video.get("RealFrameRate") or video.get("AverageFrameRate")
+    fps, done = ti.get("Framerate"), ti.get("CompletionPercentage")
+    converting_video = ti.get("IsVideoDirect") is False
+    if converting_video and fps and source_fps and not (done is not None and done >= 100):
+        out["transcode_speed"] = round(fps / source_fps, 2)
+        out["transcode_throttled"] = bool(ti.get("CurrentThrottle"))
+    return out
+
+
 def _source_bitrate(item: dict) -> int | None:
     """Best-effort bits/s for direct play/stream, where Emby reports no live rate."""
     if item.get("Bitrate"):
@@ -178,6 +218,7 @@ class EmbyClient(MediaServer):
             poster=_poster(item),
             position_ms=position // TICKS_PER_MS if position is not None else None,
             duration_ms=runtime // TICKS_PER_MS if runtime else None,
+            **_transcode_health(s.get("TranscodingInfo") or {}, item),
             **self._details(s, item, play_state, method),
         )
 

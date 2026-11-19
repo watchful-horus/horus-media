@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 import httpx
 
-from . import app_settings, logging_setup, maintenance, notifications
+from . import app_settings, logging_setup, maintenance, notifications, problems
 from .activity import fetch_all
 from .config import db_path
 from .crypto import TokenCipher
@@ -69,6 +69,7 @@ def close_stale(conn: sqlite3.Connection) -> None:
     """Close plays left open by a previous run, ending them at the last time they were seen."""
     with conn:
         conn.execute("UPDATE history SET ended_at = last_seen_at WHERE ended_at IS NULL")
+        problems.close_stale(conn)
 
 
 def _record(conn: sqlite3.Connection, result: ServerActivity, ts: str, emit=None) -> None:
@@ -151,6 +152,7 @@ def poll_once(
         with conn:
             _check_new_users(conn, result, cfg, emit)  # before _record adds them to history
             _record(conn, result, ts, emit)
+            problems.observe(conn, result, ts, emit)
 
 
 TICK_SECONDS = 2.0

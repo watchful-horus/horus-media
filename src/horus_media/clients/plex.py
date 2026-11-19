@@ -27,6 +27,16 @@ def _language(stream: dict) -> str:
     return stream.get("language") or "Unknown"
 
 
+def _transcode_health(ts: dict) -> dict:
+    """Speed of a running conversion (1.0 = as fast as playback). Left out once the whole
+    file has been converted, when the speed no longer says anything."""
+    speed = ts.get("speed")
+    if not isinstance(speed, int | float) or isinstance(speed, bool) or ts.get("complete"):
+        return {}
+    return {"transcode_speed": round(float(speed), 2),
+            "transcode_throttled": bool(ts.get("throttled"))}
+
+
 class PlexClient(MediaServer):
     def _headers(self, token: str) -> dict[str, str]:
         return {"X-Plex-Token": token, "Accept": "application/json"}
@@ -122,7 +132,9 @@ class PlexClient(MediaServer):
             play_method=method,
             bandwidth_kbps=item.get("Session", {}).get("bandwidth"),
             progress_percent=progress,
-            state="paused" if player.get("state") == "paused" else "playing",
+            state=player.get("state") if player.get("state") in ("paused", "buffering")
+            else "playing",
+            **_transcode_health(transcode or {}),
             poster=item.get("grandparentThumb" if item.get("type") == "episode" else "thumb")
             or item.get("thumb"),
             position_ms=offset,
