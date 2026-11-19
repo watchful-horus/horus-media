@@ -17,10 +17,12 @@ _MIGRATE_LOCK = threading.Lock()
 # time; the others wait this long for their turn before giving up with "database is locked".
 BUSY_SECONDS = 30
 
-# Database files this process has already brought up to date, by (device, file id), so the
-# check is made once and not on every request. A restore writes into the same file and migrates
-# it itself; a file swapped in from outside has another id and is checked again.
-_UP_TO_DATE: set[tuple[int, int]] = set()
+# Database files this process has already brought up to date, so the full check is made once
+# and not on every request. Each is remembered by (device, file id) together with SQLite's own
+# counter of layout changes, which is one cheap read. A file swapped in from outside, or
+# restored into, has another id or another count and is checked again. (The file id alone is
+# not enough: a new file can be given the id of one just deleted.)
+_UP_TO_DATE: dict[tuple[int, int], int] = {}
 
 
 class _Connection(sqlite3.Connection):
@@ -64,13 +66,17 @@ def migrate(conn: sqlite3.Connection) -> int:
     """Apply pending migrations; returns the resulting schema version. For a connection from
     `connect` the work is done once per database file and process; later calls return at once."""
     file_id = _file_id(conn)
-    if file_id in _UP_TO_DATE:
+    if file_id and _UP_TO_DATE.get(file_id) == _layout_count(conn):
         return len(MIGRATIONS)
     with _MIGRATE_LOCK:
         version = _migrate(conn)
         if file_id:
-            _UP_TO_DATE.add(file_id)
+            _UP_TO_DATE[file_id] = _layout_count(conn)
         return version
+
+
+def _layout_count(conn: sqlite3.Connection) -> int:
+    return conn.execute("PRAGMA schema_version").fetchone()[0]
 
 
 def _migrate(conn: sqlite3.Connection) -> int:

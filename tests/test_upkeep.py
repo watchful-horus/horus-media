@@ -74,14 +74,30 @@ def test_a_database_swapped_in_from_outside_is_migrated(tmp_path):
     migrate(c)
     c.close()
     path.unlink()
-    older = tmp_path / "older.db"
-    raw = sqlite3.connect(older)
+    # Created right after the delete, so on Linux it is usually handed the same file id.
+    raw = sqlite3.connect(path)
     raw.execute("CREATE TABLE schema_version (version INTEGER NOT NULL)")
     raw.commit()
     raw.close()
-    filler = tmp_path / "filler"  # so the new file cannot be handed the old one's file id
-    filler.write_text("x")
-    older.rename(path)
+    c = connect(path)
+    migrate(c)
+    assert c.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == len(MIGRATIONS)
+    c.close()
+
+
+def test_an_older_database_written_into_the_same_file_is_migrated(tmp_path):
+    """What a restore does: the file stays, its contents become an older layout."""
+    path = tmp_path / "horus.db"
+    c = connect(path)
+    migrate(c)
+    c.close()
+    older = sqlite3.connect(tmp_path / "older.db")
+    older.execute("CREATE TABLE schema_version (version INTEGER NOT NULL)")
+    older.commit()
+    live = sqlite3.connect(path)
+    older.backup(live)
+    live.close()
+    older.close()
     c = connect(path)
     migrate(c)
     assert c.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == len(MIGRATIONS)
