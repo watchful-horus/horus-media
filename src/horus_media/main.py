@@ -1,4 +1,5 @@
 import logging
+import re
 import threading
 import time
 from collections.abc import Iterator
@@ -6,6 +7,7 @@ from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlsplit
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -47,7 +49,53 @@ STATIC_DIR = Path(__file__).parent / "static"
 PUBLIC_API = {"/api/health", "/api/auth/status", "/api/auth/login", "/api/auth/setup",
               "/api/auth/logout", "/api/auth/restore"}
 
+# Requests that change something. A browser sends these with the session cookie attached, so
+# they are only accepted from Horus's own pages (see `same_origin_only`).
+UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+# These two take a backup file as the body; every other body is JSON.
+UPLOAD_PATHS = {"/api/backups/upload", "/api/auth/restore"}
+_HOST = re.compile(r"^(\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9.-]+)$")
+
 log = logging.getLogger(__name__)
+
+
+def from_another_origin(headers, scheme: str = "http") -> bool:
+    """True when a browser says this request was sent by a page that is not Horus itself.
+
+    `Sec-Fetch-Site` is the browser's own verdict and is not affected by a reverse proxy, but
+    browsers send it only over https or to localhost. Otherwise the `Origin` header (sent with
+    every request that changes something) must name the scheme, host and port the request was
+    sent to. `scheme` is how the request reached Horus; a proxy's `X-Forwarded-Proto` is
+    believed for this comparison only, which is safe because a page on another site cannot
+    add that header without the browser asking Horus first.
+    A request with neither header does not come from a web page (curl, scripts, API keys)."""
+    site = headers.get("sec-fetch-site")
+    if site:
+        return site not in ("same-origin", "none")
+    origin = headers.get("origin")
+    if origin is None:
+        return False
+    sent_from = urlsplit(origin)
+    scheme = headers.get("x-forwarded-proto", scheme).split(",")[0].strip().lower()
+    return (sent_from.scheme.lower() != scheme
+            or sent_from.netloc.lower() != headers.get("host", "").lower())
+
+
+def content_security_policy(headers) -> str:
+    """Scripts, styles, images and requests only from Horus itself; no framing by anyone.
+
+    Inline styles stay allowed because the charts position their tooltips with them. After a
+    restart on a new port the page looks for Horus on the same host at that port, so requests
+    to this host on any port are allowed too."""
+    host = headers.get("host", "")
+    if not host.endswith("]"):  # drop the port, but not the end of a bare IPv6 address
+        host = host.rsplit(":", 1)[0]
+    # The Host header is whatever the client sent, so it goes in only if it is a plain name.
+    same_host = f" http://{host}:* https://{host}:*" if _HOST.fullmatch(host) else ""
+    return ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob:; font-src 'self' data:; "
+            f"connect-src 'self'{same_host}; "
+            "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'")
 
 
 @asynccontextmanager
@@ -79,7 +127,10 @@ async def lifespan(app: FastAPI):
 
 def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
     """`transport` lets tests inject fake Plex/Emby responses."""
-    app = FastAPI(title="Horus", version=__version__, lifespan=lifespan)
+    # No generated API pages: they would be open without a login and load scripts from a CDN.
+    # The API is described in docs/api.md.
+    app = FastAPI(title="Horus", version=__version__, lifespan=lifespan,
+                  docs_url=None, redoc_url=None, openapi_url=None)
 
     def get_store() -> Iterator[ServerStore]:
         path = db_path()
@@ -172,6 +223,39 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
         response = await call_next(request)
         log.debug("request: %s %s -> %d (%d ms)", request.method, path, response.status_code,
                   (time.monotonic() - started) * 1000)
+        return response
+
+    @app.middleware("http")
+    async def same_origin_only(request: Request, call_next):
+        """Changes are accepted only from Horus's own pages, and only as JSON (or a backup file
+        on the two upload addresses). Without this, a page on another site, or another web app
+        on the same host, could use the cookie of an admin who has Horus open, or reach a copy
+        that has its login turned off. It applies with the login off as well."""
+        path = request.url.path
+        if request.method in UNSAFE_METHODS and path.startswith("/api/"):
+            if from_another_origin(request.headers, request.url.scheme):
+                log.warning("refused %s %s: sent by a page on another site (%s)", request.method,
+                            path, request.headers.get("origin") or "origin not given")
+                return JSONResponse({"detail": "This request did not come from Horus itself"},
+                                    status_code=403)
+            has_body = (request.headers.get("content-length", "0") != "0"
+                        or "transfer-encoding" in request.headers)
+            kind = request.headers.get("content-type", "").split(";")[0].strip().lower()
+            if has_body and path not in UPLOAD_PATHS and kind != "application/json":
+                return JSONResponse({"detail": "Send the request body as application/json"},
+                                    status_code=415)
+        return await call_next(request)
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        """On every response, including refusals. A route may set a stricter policy of its own
+        (the poster proxy does)."""
+        response = await call_next(request)
+        response.headers.setdefault("Content-Security-Policy",
+                                    content_security_policy(request.headers))
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
         return response
 
     @app.get("/api/health")
@@ -314,8 +398,12 @@ def create_app(transport: httpx.BaseTransport | None = None) -> FastAPI:
             raise HTTPException(404, "Poster not available") from e
         finally:
             client.close()
-        return Response(content, media_type=content_type,
-                        headers={"Cache-Control": "private, max-age=3600"})
+        # The bytes come from the media server, so the browser may show them as an image and
+        # nothing more: no scripts, no requests, even when the address is opened on its own.
+        return Response(content, media_type=content_type, headers={
+            "Cache-Control": "private, max-age=3600",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+        })
 
     @app.get("/api/stats")
     def stats(request: Request, store: Store, start: date | None = None,

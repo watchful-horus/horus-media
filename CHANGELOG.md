@@ -2,6 +2,18 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.4 (2026-11-19)
+
+**Security**
+- **Changes are accepted only from Horus's own pages.** A page at another address, including another web app on the same machine at a different port, could send requests with the cookie of an admin who had Horus open: shut it down, restore a backup, or upload its own. Such requests are now refused. This also protects a copy that runs with the login turned off. Scripts and API keys are not affected.
+- **Security headers on every response:** a content security policy (scripts, styles and requests only from Horus itself), `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`.
+- **Horus can no longer be shown inside another page (a frame).** If you embedded it in a dashboard such as Homarr or Organizr, use a link instead.
+- **Posters can only be pictures.** The poster proxy passes on JPEG, PNG, WebP and GIF only (an SVG can carry scripts) and tells the browser to treat the result as a picture and nothing else.
+- **The generated API pages are gone.** `/docs`, `/redoc` and `/openapi.json` were open without a login. The API is described in [docs/api.md](docs/api.md).
+
+**For scripts that call the API**
+- A request with a body must be sent as `Content-Type: application/json`, and a backup file for a restore as `application/octet-stream`; anything else gets HTTP 415. `scripts/horusctl.py` already does both.
+
 ## 0.4.3 (2026-11-19)
 
 **Security**

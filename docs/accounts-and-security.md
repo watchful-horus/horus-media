@@ -35,6 +35,10 @@ Usernames are 3 to 64 letters, numbers, dots, dashes, underscores, `@` or `+`, s
 - Passwords are stored as scrypt hashes; session tokens and API keys only as SHA-256 hashes. Repeated wrong passwords are slowed down, and sign-in errors do not say whether the username or the password was wrong.
 - Changing or resetting a password signs that person out everywhere else.
 - Server tokens are encrypted at rest, never logged, and never returned by the API.
+- Changes are accepted only from Horus's own pages. A request that adds, changes or deletes something is refused when the browser says it was sent by a page at another address, including another web app on the same machine at a different port. Scripts and API keys are not affected (they are not web pages).
+- Every response carries a content security policy (scripts, styles and requests only from Horus itself), `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`.
+- Horus cannot be shown inside another page (a frame), so it cannot be embedded in a dashboard such as Homarr or Organizr; link to it instead.
+- Posters are passed on only as JPEG, PNG, WebP or GIF, and the browser may show them as pictures and nothing else.
 - Upgrading from the earlier single-admin version keeps your password: that account becomes the admin, with the username `admin`.
 - `HORUS_AUTH_DISABLED=1` turns the login off, for people who put their own sign-in in front of Horus. There are no accounts then, and anyone who can reach Horus can use it.
 
@@ -52,4 +56,4 @@ Control keys are a special kind of key for testing and automation. See [API](api
 Horus reads from Plex and Emby and changes nothing on them, with one exception: an admin can press **Stop stream** on the Activity page to end a playing stream. It works only from a signed-in admin session, never with an API key or control key, it is logged by name, and Plex needs Plex Pass for it.
 
 ## Exposing Horus
-Horus is meant for a home network. If you make it reachable from the internet, put it behind a reverse proxy with HTTPS, use strong passwords and keep Horus up to date. To report a problem privately, see [SECURITY.md](../SECURITY.md).
+Horus is meant for a home network. If you make it reachable from the internet, put it behind a reverse proxy with HTTPS, use strong passwords and keep Horus up to date. The proxy should pass the `Host` header on unchanged and set `X-Forwarded-Proto` (the usual defaults); otherwise an old browser may be told "This request did not come from Horus itself" when saving. To report a problem privately, see [SECURITY.md](../SECURITY.md).

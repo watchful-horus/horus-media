@@ -10,6 +10,7 @@ from .config import db_path
 from .poller import DB_WORK
 
 log = logging.getLogger(__name__)
+UPLOAD_TYPES = {"application/octet-stream", "application/zip"}
 
 
 def _restore(path) -> dict:
@@ -25,7 +26,12 @@ def _restore(path) -> dict:
 
 
 async def restore_upload(request: Request) -> dict:
-    """The request body is the backup file itself (not a form), which needs no extra packages."""
+    """The request body is the backup file itself (not a form), which needs no extra packages.
+    It must be sent as a file: a web page on another site cannot send that type without the
+    browser asking Horus first, which Horus never allows."""
+    kind = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if kind not in UPLOAD_TYPES:
+        raise HTTPException(415, "Send the backup file as application/octet-stream")
     try:
         path = await backup.save_upload(request.stream(), db_path())
     except backup.RestoreError as e:

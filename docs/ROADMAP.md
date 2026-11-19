@@ -1,6 +1,6 @@
 # Roadmap
 
-Status as of 2026-11-19: version 0.4.3. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
+Status as of 2026-11-19: version 0.4.4. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
 
 ## Done
 
@@ -31,6 +31,7 @@ Status as of 2026-11-19: version 0.4.3. The original v1 scope is complete and th
 - Control keys (off by default, always expiring, never able to touch users, keys, sign-in, Stop stream, backup downloads, uploaded restores or the release address, every use logged) and `scripts/horusctl.py`
 - Hide other people's activity from normal users (per-account Plex/Emby name link)
 - Prometheus `/metrics`
+- Browser protections: changes accepted only from Horus's own pages, a content security policy and related headers on every response, no framing, picture-only posters, no generated API pages
 
 **Operations**
 - Settings: time zone, poll interval, retention, HTTP port, "allow other computers", Restart, Shut down (disabled in containers), update address and daily check with a time of day, backups
@@ -47,7 +48,7 @@ Status as of 2026-11-19: version 0.4.3. The original v1 scope is complete and th
 - MIT licence, `CONTRIBUTING.md`, `SECURITY.md`, issue and pull request templates, Dependabot, CODEOWNERS
 - Public repository with secret scanning, private vulnerability reporting, CodeQL, Dependabot alerts, protected `main`, SHA-pinned Actions
 - CI (tests, lint, Docker image, web build) on every push and pull request
-- 284 tests (fake responses, no live servers), `ruff` clean; README and docs
+- 330 tests (fake responses, no live servers), `ruff` clean; README and docs
 
 **Verified**
 - Backup Download then Restore across installs (Proxmox container to Docker); Emby history import; lint and the full suite on real Linux; the Docker image in CI and a real Docker host, including an anonymous pull; all tests on emulated aarch64

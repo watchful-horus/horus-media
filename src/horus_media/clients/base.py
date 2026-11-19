@@ -10,6 +10,9 @@ from ..models import HistoryRecord, Session
 log = logging.getLogger(__name__)
 TIMEOUT = 10.0
 MAX_IMAGE_BYTES = 5_000_000
+# Plain picture formats only. SVG is left out on purpose: it can carry scripts, and the poster
+# proxy serves these bytes from Horus's own address.
+IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 
 
 @dataclass
@@ -66,7 +69,7 @@ class MediaServer(ABC):
         resp = self._http.get(path, params=params)
         resp.raise_for_status()
         content_type = resp.headers.get("content-type", "").split(";")[0].strip()
-        if not content_type.startswith("image/") or len(resp.content) > MAX_IMAGE_BYTES:
+        if content_type.lower() not in IMAGE_TYPES or len(resp.content) > MAX_IMAGE_BYTES:
             raise ValueError("not a usable image")
         return resp.content, content_type
 
