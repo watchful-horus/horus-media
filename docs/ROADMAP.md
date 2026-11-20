@@ -1,6 +1,6 @@
 # Roadmap
 
-Status as of 2026-11-19: version 0.4.15. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
+Status as of 2026-11-20: version 0.4.16 (not released yet). The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
 
 ## Done
 
@@ -30,7 +30,7 @@ Status as of 2026-11-19: version 0.4.15. The original v1 scope is complete and t
 - API keys (hashed, shown once), per-user keys, and a read-only `/api/v1` data API for Grafana: plays, bandwidth, history, activity, servers; JSON and CSV
 - Control keys (off by default, always expiring, never able to touch users, keys, sign-in, Stop stream, backup downloads, uploaded restores or the release address, every use logged) and `scripts/horusctl.py`
 - Hide other people's activity from normal users (per-account Plex/Emby name link)
-- Prometheus `/metrics`
+- Prometheus `/metrics`, including playback problem counts by kind
 - Playback problems: buffering (Plex), stalled playback, slow transcodes and Emby's failed direct play are noticed while recording, marked on the Activity page, graphed and listed on the Graphs page, available at `/api/v1/problems` and as an opt-in notification
 - Browser protections: changes accepted only from Horus's own pages, a content security policy and related headers on every response, no framing, picture-only posters, no generated API pages
 
@@ -51,7 +51,7 @@ Status as of 2026-11-19: version 0.4.15. The original v1 scope is complete and t
 - Public repository with secret scanning, private vulnerability reporting, CodeQL, Dependabot alerts, protected `main`, SHA-pinned Actions
 - CI (tests, lint, Docker image, web build) on every push and pull request
 - Build supply chain: hash-locked Python dependencies and digest-pinned base images for the Docker image, signed build provenance for the release file and the image, release notes taken from the changelog, immutable releases and protected version tags
-- 445 tests (fake responses, no live servers), `ruff` clean; README and docs
+- 447 tests (fake responses, no live servers), `ruff` clean; README and docs
 
 **Verified**
 - Backup Download then Restore across installs (Proxmox container to Docker); Emby history import; lint and the full suite on real Linux; the Docker image in CI and a real Docker host, including an anonymous pull; all tests on emulated aarch64
@@ -65,7 +65,7 @@ Status as of 2026-11-19: version 0.4.15. The original v1 scope is complete and t
 - [ ] Not yet tried on real hardware: restoring a backup that is older than the current database version
 - [ ] Mobile: pages laid out properly on a phone (a mobile web view), or a mobile app. To decide which: responsive web layout first, installable PWA next, native app only if those fall short
 - [ ] More notification kinds
-- [ ] Playback problems: check the Plex transcode speed fields against a real transcoding stream, and add the counts to `/metrics`
+- [ ] Playback problems: check the Plex transcode speed fields against a real transcoding stream
 - [ ] GitHub Discussions
 - [ ] Community-scripts submission is a long way off: a new app must be 6+ months old, actively maintained and have 600+ stars with release tarballs. The `ct/`, `install/` and `json/` files are kept in their format so it stays possible
 - [ ] A `horus-media` console command (not `horus`: another package already installs that name)
@@ -78,7 +78,7 @@ Status as of 2026-11-19: version 0.4.15. The original v1 scope is complete and t
 ## Known limits
 - Emby history import uses the Playback Reporting plugin's `UserPlaylist` endpoint; field names were read from the plugin's source and imports have only been tried on one Emby server
 - Imported plays carry no bandwidth, and Plex imports have no play method (shown as Unknown)
-- "Play started" notifications also fire for streams already running when Horus starts
+- A stream that begins in the few seconds before Horus first reads a server counts as already playing, so it gets no "play started" notification
 - Plays are only recorded while Horus is running; very short plays are counted too
 - Plex servers shared with you usually do not expose live sessions to non-owners, so activity for them will probably not work
 - Playback problems are a best guess from what the servers report once per poll: anything shorter than the poll interval is missed, Emby reports no buffering state (it shows as Stalled), and a stream with no position (live TV) cannot be seen to stall

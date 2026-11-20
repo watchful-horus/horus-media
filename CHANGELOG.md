@@ -2,6 +2,15 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.16 (unreleased)
+
+**New**
+- **Playback problems in `/metrics`**, for Prometheus and Grafana. `horus_playback_problems_total` is how many problems Horus has in its history and `horus_playback_problems_active` is how many are going on right now. Both are split by server and by kind (`buffering`, `stalled`, `slow_transcode`, `direct_play_error`). As with the other metrics, no user names or titles appear. The total falls when old history is removed by the retention setting, as `horus_plays_recorded_total` does.
+
+**Fixed**
+- **No more "started playing" notifications for streams that were already running.** When Horus starts, or a server is added or first answers, the streams it finds there are recorded as before but no *Someone starts playing* notification is sent for them; the log says *already playing*. Anything that starts after that notifies as usual, and so does the end of every play.
+- **After restoring a backup, Horus forgets what it remembered about streams from before the restore.** Until now it could mark a playback problem against the wrong record after a restore, until the stream ended.
+
 ## 0.4.15 (2026-11-19)
 
 **New**

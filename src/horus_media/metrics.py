@@ -17,6 +17,7 @@ from fastapi.responses import PlainTextResponse
 from . import __version__
 from . import activity as live
 from .activity import fetch_all
+from .problems import KINDS
 from .store import ServerStore
 
 CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8"
@@ -40,6 +41,12 @@ def render(store: ServerStore, transport: httpx.BaseTransport | None) -> str:
         r["server_id"]: r["n"]
         for r in store.conn.execute(
             "SELECT server_id, COUNT(*) AS n FROM history GROUP BY server_id")
+    }
+    problems = {
+        (r["server_id"], r["kind"]): (r["n"], r["active"] or 0)
+        for r in store.conn.execute(
+            "SELECT server_id, kind, COUNT(*) AS n, SUM(ended_at IS NULL) AS active "
+            "FROM playback_problems GROUP BY server_id, kind")
     }
     out: list[str] = []
 
@@ -73,6 +80,19 @@ def render(store: ServerStore, transport: httpx.BaseTransport | None) -> str:
     for r in results:
         out.append(_line("horus_plays_recorded_total", {"server": r.name, "type": r.type},
                          recorded.get(r.id, 0)))
+
+    # From what the poller has recorded, so these need no answer from the server just now.
+    for name, kind, text, column in (
+        ("horus_playback_problems_total", "counter",
+         "Playback problems Horus has in its history, by kind.", 0),
+        ("horus_playback_problems_active", "gauge",
+         "Playback problems going on right now, by kind.", 1),
+    ):
+        family(name, kind, text)
+        for r in results:
+            for problem in KINDS:
+                out.append(_line(name, {"server": r.name, "type": r.type, "kind": problem},
+                                 problems.get((r.id, problem), (0, 0))[column]))
     return "\n".join(out) + "\n"
 
 

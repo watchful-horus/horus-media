@@ -137,6 +137,54 @@ def test_a_new_address_repairs_an_unreadable_channel(api, tmp_path):
     assert api.post(f"{path}/test").json() == {"ok": True, "error": None}
 
 
+def test_streams_already_playing_at_the_first_read_do_not_notify_a_start(tmp_path):
+    SENT.clear()
+    conn = connect(tmp_path / "h.db")
+    migrate(conn)
+    cipher = TokenCipher(tmp_path / "h.key")
+    ServerStore(conn, cipher).add("emby", "Emby", "http://emby", TOKEN)
+    notifications.add_channel(conn, cipher, "All", "webhook", HOOK,
+                              ["play_started", "play_ended"])
+    sessions = [emby_session("s1", "i1", "Film A")]
+    state = {"up": False}
+
+    def fake(request):
+        if request.url.host == "hooks.example.com":
+            SENT.append(request)
+            return httpx.Response(200)
+        return httpx.Response(200, json=sessions) if state["up"] else httpx.Response(503)
+
+    transport = httpx.MockTransport(fake)
+    t0 = datetime(2026, 3, 10, 12, 0, tzinfo=UTC)
+    real = notifications.notify
+    notifications.notify = lambda *a, **k: real(*a, **{**k, "wait": True})
+
+    def events():
+        return [json.loads(r.content)["event"] for r in SENT]
+
+    try:
+        # The server does not answer when Horus starts: the first read is the one that works.
+        poller.poll_once(conn, cipher, transport, now=t0)
+        state["up"] = True
+        poller.poll_once(conn, cipher, transport, now=t0 + timedelta(minutes=1))
+        assert events() == []  # Film A was already playing
+        assert conn.execute("SELECT COUNT(*) FROM history").fetchone()[0] == 1  # still recorded
+        sessions.append(emby_session("s2", "i2", "Film B"))
+        poller.poll_once(conn, cipher, transport, now=t0 + timedelta(minutes=2))
+        assert events() == ["play_started"]  # Film B started while Horus was watching
+        sessions.clear()
+        poller.poll_once(conn, cipher, transport, now=t0 + timedelta(minutes=3))
+        assert events() == ["play_started", "play_ended", "play_ended"]
+
+        # After a restore the database is another one, so the next read is a first read again.
+        poller.forget()
+        sessions.append(emby_session("s3", "i3", "Film C"))
+        poller.poll_once(conn, cipher, transport, now=t0 + timedelta(minutes=4))
+        assert events().count("play_started") == 1
+    finally:
+        notifications.notify = real
+
+
 def test_poller_notifies_on_play_start_end_and_server_changes(tmp_path):
     SENT.clear()
     conn = connect(tmp_path / "h.db")
@@ -163,6 +211,7 @@ def test_poller_notifies_on_play_start_end_and_server_changes(tmp_path):
     real = notifications.notify
     notifications.notify = lambda *a, **k: real(*a, **{**k, "wait": True})
     try:
+        poller.poll_once(conn, cipher, transport, now=t0 - timedelta(minutes=1))
         sessions.append(emby_session("s1", "i1", "Film A"))
         poller.poll_once(conn, cipher, transport, now=t0)
         sessions.clear()

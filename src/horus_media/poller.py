@@ -23,6 +23,20 @@ _server_up: dict[int, bool] = {}
 _down_since: dict[int, float] = {}  # when each unreachable server first failed (monotonic seconds)
 
 
+# Servers read at least once since Horus started (or since a restore). On the first read the
+# streams found were already playing, so they are recorded without a "play started" notification.
+_read: set[int] = set()
+
+
+def forget() -> None:
+    """Drop what is remembered between polls (tests, and a restore that swapped the database:
+    its server ids and row ids are not the ones remembered here)."""
+    _read.clear()
+    _server_up.clear()
+    _down_since.clear()
+    problems.forget()
+
+
 def _duration(seconds: float) -> str:
     seconds = int(seconds)
     if seconds < 90:
@@ -72,7 +86,10 @@ def close_stale(conn: sqlite3.Connection) -> None:
         problems.close_stale(conn)
 
 
-def _record(conn: sqlite3.Connection, result: ServerActivity, ts: str, emit=None) -> None:
+def _record(conn: sqlite3.Connection, result: ServerActivity, ts: str, emit=None,
+            first_read: bool = False) -> None:
+    """`first_read`: nothing is known about this server yet, so a stream found now was already
+    playing. It is recorded from now on, without telling anyone that it started."""
     emit = emit or (lambda *args: None)
     open_rows = conn.execute(
         "SELECT id, session_key, user, title, bandwidth_kbps FROM history "
@@ -86,10 +103,13 @@ def _record(conn: sqlite3.Connection, result: ServerActivity, ts: str, emit=None
         seen.add(key)
         row = by_key.get(key)
         if row is None:
-            log.info("play started: %s - %s on %s (%s, %s)", s.user, s.title, result.name,
-                     s.device, s.play_method)
-            emit("play_started", f"{s.user} started playing",
-                 f"{s.title} on {result.name} ({s.device}, {s.play_method.replace('_', ' ')})")
+            log.info("%s: %s - %s on %s (%s, %s)",
+                     "already playing" if first_read else "play started",
+                     s.user, s.title, result.name, s.device, s.play_method)
+            if not first_read:
+                emit("play_started", f"{s.user} started playing",
+                     f"{s.title} on {result.name} ({s.device}, "
+                     f"{s.play_method.replace('_', ' ')})")
             conn.execute(
                 "INSERT INTO history (server_id, session_key, user, title, media_type, device, "
                 "platform, play_method, bandwidth_kbps, progress_percent, started_at, "
@@ -147,11 +167,13 @@ def poll_once(
             log.info("server %s is reachable again%s", result.name, gone)
             emit("server_up", f"{result.name} is back", f"It is answering again{gone}.")
         _server_up[result.id] = True
+        first_read = result.id not in _read
+        _read.add(result.id)
         log.debug("polled %s: %d session(s)", result.name, len(result.sessions))
         _check_limits(result, cfg, emit)
         with conn:
             _check_new_users(conn, result, cfg, emit)  # before _record adds them to history
-            _record(conn, result, ts, emit)
+            _record(conn, result, ts, emit, first_read)
             problems.observe(conn, result, ts, emit)
 
 

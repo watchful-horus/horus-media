@@ -92,11 +92,11 @@ def live_activity_is_always_fresh(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def no_remembered_streams():
-    """The poller remembers playing streams between polls to spot playback problems. Each test
-    starts with nothing remembered."""
-    from horus_media import problems
+    """The poller remembers playing streams between polls to spot playback problems, and which
+    servers it has read. Each test starts with nothing remembered."""
+    from horus_media import poller
 
-    problems.forget()
+    poller.forget()
 
 
 @pytest.fixture(autouse=True)

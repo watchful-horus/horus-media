@@ -28,6 +28,7 @@ from . import (
 )
 from .config import db_path
 from .poller import DB_WORK
+from .poller import forget as forget_polls
 from .restore_upload import restore_upload
 from .store import ServerStore
 
@@ -189,7 +190,9 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
         if not DB_WORK.acquire(timeout=60):  # pauses the background poller while we swap files
             raise HTTPException(409, "Horus is busy, try again in a moment")
         try:
-            return backup.restore(db_path(), name)
+            done = backup.restore(db_path(), name)
+            forget_polls()  # what the poller remembered belongs to the old database
+            return done
         except backup.RestoreError as e:
             log.warning("restore of %s refused: %s", name, e)
             raise HTTPException(404 if str(e) == "Backup not found" else 422, str(e)) from e

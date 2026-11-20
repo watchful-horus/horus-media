@@ -188,11 +188,13 @@ def test_play_lifecycle_and_server_outages_are_logged(tmp_path, caplog):
     migrate(conn)
     cipher = TokenCipher.for_db(path)
     ServerStore(conn, cipher).add("emby", "Emby", "http://emby", TOKEN)
-    sessions = [emby_session("s1", "i1", "Film A", user="carol")]
+    sessions = [emby_session("s0", "i0", "Film Zero", user="carol")]
     up = httpx.MockTransport(lambda r: httpx.Response(200, json=sessions))
     down = httpx.MockTransport(lambda r: httpx.Response(500))
     caplog.set_level(logging.DEBUG, logger="horus_media")
 
+    poller.poll_once(conn, cipher, up, now=T0 - timedelta(minutes=1))  # playing before Horus was
+    sessions[:] = [emby_session("s1", "i1", "Film A", user="carol")]
     poller.poll_once(conn, cipher, up, now=T0)
     poller.poll_once(conn, cipher, down, now=T0 + timedelta(minutes=1))
     poller.poll_once(conn, cipher, down, now=T0 + timedelta(minutes=2))  # still down: no repeat
@@ -200,6 +202,7 @@ def test_play_lifecycle_and_server_outages_are_logged(tmp_path, caplog):
     poller.poll_once(conn, cipher, up, now=T0 + timedelta(minutes=3))
 
     messages = [r.getMessage() for r in caplog.records]
+    assert "already playing: carol - Film Zero on Emby (TV, direct_stream)" in messages
     assert "play started: carol - Film A on Emby (TV, direct_stream)" in messages
     assert "play ended: carol - Film A on Emby" in messages
     assert sum("is unreachable" in m for m in messages) == 1

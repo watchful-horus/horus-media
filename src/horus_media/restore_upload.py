@@ -8,6 +8,7 @@ from starlette.concurrency import run_in_threadpool
 from . import backup
 from .config import db_path
 from .poller import DB_WORK
+from .poller import forget as forget_polls
 
 log = logging.getLogger(__name__)
 UPLOAD_TYPES = {"application/octet-stream", "application/zip"}
@@ -17,7 +18,9 @@ def _restore(path) -> dict:
     if not DB_WORK.acquire(timeout=60):  # pauses the background poller while files are swapped
         raise HTTPException(409, "Horus is busy, try again in a moment")
     try:
-        return backup.restore_file(db_path(), path, "uploaded file")
+        done = backup.restore_file(db_path(), path, "uploaded file")
+        forget_polls()  # what the poller remembered belongs to the old database
+        return done
     except backup.RestoreError as e:
         log.warning("restore of an uploaded file refused: %s", e)
         raise HTTPException(422, str(e)) from e
