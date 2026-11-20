@@ -9,6 +9,13 @@ Newest first. Each version is a tag on GitHub, with a Docker image and a release
 - These three were built from the services' published API descriptions and tested against stand-ins only. Press **Send test** after adding one, and please report what happens.
 - This version changes the database (the notification channels table is rebuilt; your channels are kept). A backup made by 0.4.19 cannot be restored on an older version.
 
+**Changed**
+- **Horus reads better on a phone.** Phones only (720 px and narrower); nothing changes in a desktop browser.
+  - No page scrolls sideways any more. On Graphs the range buttons are on one row, the two dates on the next, and the arrows and Apply below; the latest playback problems are one small block each instead of a wide table; long names beside the bar charts are shortened (the full name shows on tap and in *View as table*).
+  - Buttons, drop-downs and text boxes are tall enough for a finger, and text boxes use larger text so an iPhone does not zoom in when one is tapped.
+  - Logs show the time and level on one line with the message full width below. API keys, notification channels, backups and users lay their details and buttons out to fit the width.
+  - Checked at a phone-sized window in a desktop browser, not yet on a real phone.
+
 **Fixed**
 - **The first admin made from `HORUS_ADMIN_USER` is now recorded in the log.** That step ran before logging was switched on, so the line saying the account was created never appeared, and a problem with it (a password file that cannot be read, a password that is too weak) reached the console but not the log file or Settings > Logs. Found while trying the variables with the published image on a real Docker host; the variables themselves worked.
 

@@ -37,7 +37,7 @@ Status as of 2026-11-20: version 0.4.19 (not released yet). The original v1 scop
 **Operations**
 - Settings: time zone, poll interval, retention, HTTP port, "allow other computers", Restart, Shut down (disabled in containers), update address and daily check with a time of day, backups
 - Backups: manual and scheduled zips (with a time of day) and retention, token-free export, restore from the UI or an uploaded file (validates first, saves the current state first), delete backups
-- Settings menu in seven entries (a drop-down list on a phone); Account, Theme and Sign out in a menu under your name
+- Settings menu in seven entries (a drop-down list on a phone); Account, Theme and Sign out in a menu under your name; every page laid out to fit a phone, with the desktop look unchanged
 - Application logging: rotating file and console, secret scrubbing, level setting, Settings > Logs viewer
 - Update check with install-specific update steps; an admin-only Update now button for a Proxmox container that can write to its own environment (works on a real container, confirmed 2026-10-29) (Docker and manual installs are never updated by Horus)
 - Notification channels (Discord, ntfy, Telegram, Gotify, Pushover, webhook; each can be edited in place), optional alerts, weekly/monthly summary reports with CSV. (A read-only Seerr requests tab was added and then removed on 2026-10-29: it had nothing to do with plays or stats)
@@ -62,7 +62,7 @@ Status as of 2026-11-20: version 0.4.19 (not released yet). The original v1 scop
 - [ ] Try Stop stream on a real Emby (never without the author's say-so)
 - [ ] Real-server test run by hand (a real Plex and Emby in a throwaway setup) to catch API changes the fakes can't
 - [ ] Try the arm64 image on a real small board (it is built and started on an arm64 machine at GitHub, nothing more)
-- [ ] Mobile: pages laid out properly on a phone (a mobile web view), or a mobile app. To decide which: responsive web layout first, installable PWA next, native app only if those fall short
+- [ ] Mobile: the responsive web layout is done (every page fits a phone-sized window; not yet tried on a real phone). Next if wanted: an installable PWA, a native app only if that falls short
 - [ ] Try Telegram, Gotify and Pushover channels against the real services (built from their API descriptions, tested with stand-ins); more kinds on request (email was left out for now)
 - [ ] Playback problems: check the Plex transcode speed fields against a real transcoding stream
 - [ ] GitHub Discussions

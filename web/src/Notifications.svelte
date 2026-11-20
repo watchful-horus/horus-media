@@ -8,7 +8,9 @@
   let events = $state({})
   let kinds = $state([])
   let channels = $state([])
-  let form = $state({ name: '', kind: 'discord', url: '', events: ['server_down', 'server_up'] })
+  // Kinds that need several values instead of one address: kind -> [{ key, label, secret, hint }]
+  let boxes = $state({})
+  let form = $state({ name: '', kind: 'discord', url: '', fields: {}, events: ['server_down', 'server_up'] })
   let results = $state({}) // channel id -> test outcome
   let message = $state(null)
   let busy = $state(false)
@@ -17,7 +19,13 @@
     discord: 'Discord (channel webhook address)',
     ntfy: 'ntfy (full topic address)',
     webhook: 'Any web address (receives JSON)',
+    telegram: 'Telegram (bot token and chat ID)',
+    gotify: 'Gotify (server address and app token)',
+    pushover: 'Pushover (app token and user key)',
   }
+  // What to send for a channel's address: the boxes of its kind, or the one address.
+  const filled = (f) => Object.values(f.fields).some((v) => (v ?? '').trim())
+  const addressOf = (f) => (boxes[f.kind] ? { fields: { ...f.fields } } : { url: f.url })
 
   async function guard(fn) {
     busy = true
@@ -35,6 +43,7 @@
     const n = await api.notifications()
     events = n.events
     kinds = n.kinds
+    boxes = n.fields ?? {}
     channels = n.channels
   }
   onMount(() => guard(load))
@@ -48,14 +57,15 @@
   let editing = $state(null) // { id, name, kind, url, events, host, was, unreadable }
   const edit = (c) => {
     message = null
-    editing = { id: c.id, name: c.name, kind: c.kind, url: '', events: [...c.events],
+    editing = { id: c.id, name: c.name, kind: c.kind, url: '', fields: {}, events: [...c.events],
       host: c.host, was: c.kind, unreadable: c.unreadable }
   }
   const needsAddress = $derived(!!editing && (editing.unreadable || editing.kind !== editing.was))
   const save = () =>
     guard(async () => {
       const { id, name, kind, url, events } = editing
-      await api.updateChannel(id, { name, kind, events, ...(url.trim() ? { url } : {}) })
+      const entered = boxes[kind] ? filled(editing) : url.trim()
+      await api.updateChannel(id, { name, kind, events, ...(entered ? addressOf(editing) : {}) })
       delete results[id]
       editing = null
       await load()
@@ -63,8 +73,9 @@
 
   const add = () =>
     guard(async () => {
-      await api.addChannel({ ...form })
-      form = { ...form, name: '', url: '' }
+      const { name, kind, events } = form
+      await api.addChannel({ name, kind, events, ...addressOf(form) })
+      form = { ...form, name: '', url: '', fields: {} }
       await load()
     })
   const test = (c) =>
@@ -110,9 +121,10 @@
 <section class="card">
   <h2>Channels</h2>
   <p class="hint">
-    A channel is where Horus posts a message when something happens: Discord, ntfy or any web
-    address. Each channel gets only the events ticked on it. The address you enter is a secret: it is
-    stored encrypted and never shown again, only its host name.
+    A channel is where Horus posts a message when something happens: Discord, ntfy, Telegram,
+    Gotify, Pushover or any web address. Each channel gets only the events ticked on it. The
+    address, token or key you enter is a secret: it is stored encrypted and never shown again,
+    only its host name.
   </p>
   {#each channels as c (c.id)}
     {#if editing?.id === c.id}
@@ -124,6 +136,26 @@
             {#each kinds as k}<option value={k}>{KIND_TEXT[k] ?? k}</option>{/each}
           </select>
         </label>
+        {#if boxes[editing.kind]}
+          {#each boxes[editing.kind] as box (box.key)}
+            <label>{box.label}
+              <input type={box.secret ? 'password' : 'text'} bind:value={editing.fields[box.key]}
+                required={needsAddress || filled(editing)} autocomplete={box.secret ? 'new-password' : 'off'}
+                placeholder={needsAddress ? '' : 'Leave empty to keep the current one'} />
+              <span class="small">{box.hint}</span>
+            </label>
+          {/each}
+          <div class="muted small">
+            {#if editing.unreadable}
+              What was stored can no longer be read: enter it again.
+            {:else if needsAddress}
+              A different type needs its own details: enter them.
+            {:else}
+              Now sends to {editing.host}. What you entered is never shown again; leave the boxes
+              empty to keep it, or fill in all of them to replace it.
+            {/if}
+          </div>
+        {:else}
         <label>Address
           <input type="url" bind:value={editing.url} required={needsAddress} autocomplete="off"
             placeholder={needsAddress ? 'https://...' : 'Leave empty to keep the current address'} />
@@ -138,6 +170,7 @@
             {/if}
           </span>
         </label>
+        {/if}
         <fieldset>
           <legend>Send a message when</legend>
           {#each Object.entries(events) as [id, text]}
@@ -192,7 +225,17 @@
         {#each kinds as k}<option value={k}>{KIND_TEXT[k] ?? k}</option>{/each}
       </select>
     </label>
-    <label>Address<input type="url" bind:value={form.url} required autocomplete="off" placeholder="https://..." /></label>
+    {#if boxes[form.kind]}
+      {#each boxes[form.kind] as box (box.key)}
+        <label>{box.label}
+          <input type={box.secret ? 'password' : 'text'} bind:value={form.fields[box.key]} required
+            autocomplete={box.secret ? 'new-password' : 'off'} />
+          <span class="small">{box.hint}</span>
+        </label>
+      {/each}
+    {:else}
+      <label>Address<input type="url" bind:value={form.url} required autocomplete="off" placeholder="https://..." /></label>
+    {/if}
     <fieldset>
       <legend>Send a message when</legend>
       {#each Object.entries(events) as [id, text]}
