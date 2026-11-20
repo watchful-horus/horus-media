@@ -2,7 +2,7 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
-## 0.4.18 (unreleased)
+## 0.4.18 (2026-11-20)
 
 **New**
 - **A `horus-media` command.** Installing the package now also installs a `horus-media` command that does what `python -m horus_media` does: `horus-media` starts Horus, and `horus-media startup ...`, `horus-media create-admin ...` and `horus-media configure ...` work the same way. The old form keeps working, and the installers, the Docker image and the Restart button still use it, so nothing changes for an existing install.
