@@ -12,7 +12,7 @@ Open port 8000 and **create the first account straight away**: the container lis
 
 - It is a wizard (default or advanced settings, with menus for storage and network). It does not create a login: when it finishes it prints the address, and you open it and **create the administrator account yourself** (your own username and password). Do that straight away, because until the account exists anyone on your network could. For automation, `ADMIN_USER` and `ADMIN_PASSWORD` create the account during the install instead.
 - The install shows one line per step with a spinner and keeps the full output in a log file (`HORUS_VERBOSE=1` prints everything instead).
-- Point `HORUS_PACKAGE` at a Horus wheel and copy it to the host first, for example `HORUS_PACKAGE=/root/horus_media-0.4.17-py3-none-any.whl bash horus-lxc.sh`. Build a wheel with `cd web && npm run build && cd .. && pip wheel . --no-deps -w dist`.
+- Point `HORUS_PACKAGE` at a Horus wheel and copy it to the host first, for example `HORUS_PACKAGE=/root/horus_media-0.4.18-py3-none-any.whl bash horus-lxc.sh`. Build a wheel with `cd web && npm run build && cd .. && pip wheel . --no-deps -w dist`.
 - CPU, RAM, disk, storage, network and port can be set with environment variables (listed at the top of the script).
 - Update later with `bash horus-lxc.sh update <container id>`; the data is kept.
 - Restart and shut down work from the web UI.
@@ -27,21 +27,23 @@ python -m venv .venv
 .venv\Scripts\activate        # Windows (use source .venv/bin/activate on Linux/macOS)
 pip install -e ".[dev]"
 cd web && npm install && npm run build && cd ..
-python -m horus_media         # 127.0.0.1:8000 unless changed in Settings or HORUS_HOST / HORUS_PORT
+horus-media                   # 127.0.0.1:8000 unless changed in Settings or HORUS_HOST / HORUS_PORT
 ```
+`horus-media` is the command installed with the package. `python -m horus_media` does the same and still works, also where the command is not on your PATH; the installers and the Docker image use that form.
+
 Open http://127.0.0.1:8000/. The first visit asks you to create the first account. For development, `npm run dev` in `web/` serves the UI on :5173 with hot reload and proxies `/api` to a running Horus, and `uvicorn horus_media.main:app --reload` gives the backend hot reload (the port is then set on the command line). See [CONTRIBUTING.md](../CONTRIBUTING.md) for the checks to run.
 
 ### Start at login (Windows)
 ```
-python -m horus_media startup install
-python -m horus_media startup status
-python -m horus_media startup remove
+horus-media startup install
+horus-media startup status
+horus-media startup remove
 ```
 This adds or removes one entry under your own account's Run key (no administrator rights) that starts Horus without a console window, using the data folder you installed it from.
 
 ## Command line helpers
-- `python -m horus_media create-admin --username NAME` creates the first admin (the password is read from standard input). Scripts and automation can use it.
-- `python -m horus_media configure --port N [--listen-all]` saves the port and whether other computers may connect, without the web UI. The installers use it. `--db PATH` (before the command) picks another database file.
+- `horus-media create-admin --username NAME` creates the first admin (the password is read from standard input). Scripts and automation can use it.
+- `horus-media configure --port N [--listen-all]` saves the port and whether other computers may connect, without the web UI. The installers use it. `--db PATH` (before the command) picks another database file.
 
 ## Moving to a new install
 On a fresh install the first screen has **Already use Horus? Restore from a backup instead**. Choose a backup zip (Settings > Backups and updates > Download on the old install) and your accounts, servers and history come back. In an existing install use **Restore from a file...** under Settings > Backups and updates. Backups can be deleted from the same list.
@@ -56,8 +58,8 @@ Horus checks once a day for a newer release and, when there is one, shows how to
 Every release file and Docker image from 0.4.6 on carries a signed statement, made by GitHub while it was built, of which repository and commit it came from. With the GitHub command-line tool you can check one before using it:
 
 ```
-gh attestation verify horus-media-v0.4.17.tar.gz --repo watchful-horus/horus-media
-gh attestation verify oci://ghcr.io/watchful-horus/horus-media:0.4.17 --repo watchful-horus/horus-media
+gh attestation verify horus-media-v0.4.18.tar.gz --repo watchful-horus/horus-media
+gh attestation verify oci://ghcr.io/watchful-horus/horus-media:0.4.18 --repo watchful-horus/horus-media
 ```
 
 The Docker image is built from `requirements.txt`, which lists the exact version and file hash of every Python package in it, on base images pinned by digest. Published releases cannot be changed afterwards: a fix is always a new version.

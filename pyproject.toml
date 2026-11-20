@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "horus-media"
-version = "0.4.17"
+version = "0.4.18"
 description = "Self-hosted dashboard for Plex and Emby: live activity and history graphs"
 requires-python = ">=3.12"
 license = "MIT"
@@ -16,6 +16,10 @@ dependencies = [
     "cryptography>=42",
     "tzdata>=2024.1",
 ]
+
+# Not `horus`: another package on PyPI already installs a command of that name.
+[project.scripts]
+horus-media = "horus_media.__main__:cli"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]

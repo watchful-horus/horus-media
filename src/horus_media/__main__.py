@@ -1,4 +1,7 @@
-"""`python -m horus_media`: run Horus.
+"""`horus-media`, or `python -m horus_media`: run Horus.
+
+Both do the same; `horus-media` is the command installed with the package (`cli` below). The
+examples use the long form, which also works where the command is not on the PATH.
 
 Host and port come from HORUS_HOST / HORUS_PORT if set, otherwise from the Settings page
 (default: this computer only, port 8000).
@@ -100,8 +103,8 @@ def configure_command(port: int | None, listen_all: bool) -> None:
     print("Saved: " + ", ".join(f"{k}={v}" for k, v in changes.items()))
 
 
-def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m horus_media")
+def main(argv: list[str] | None = None, prog: str = "python -m horus_media") -> None:
+    parser = argparse.ArgumentParser(prog=prog)
     parser.add_argument("--db", help="path of the database file (default ./data/horus.db)")
     sub = parser.add_subparsers(dest="command")
     start = sub.add_parser("startup", help="start Horus when you sign in (Windows)")
@@ -122,6 +125,11 @@ def main(argv: list[str] | None = None) -> None:
         configure_command(args.port, args.listen_all)
     else:
         serve()
+
+
+def cli() -> None:
+    """The `horus-media` command (see `[project.scripts]` in pyproject.toml)."""
+    main(sys.argv[1:], prog="horus-media")
 
 
 if __name__ == "__main__":

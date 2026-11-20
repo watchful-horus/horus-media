@@ -35,3 +35,33 @@ def test_without_listen_all_it_stays_local(db_file):
 def test_refuses_a_port_out_of_range(db_file):
     with pytest.raises(SystemExit):
         entry.main(["configure", "--port", "80"])
+
+
+# ---- the `horus-media` command ----
+
+def test_the_command_is_declared_and_points_at_the_same_code():
+    import tomllib
+    from importlib import import_module
+    from pathlib import Path
+
+    project = tomllib.loads((Path(__file__).parent.parent / "pyproject.toml").read_text("utf-8"))
+    scripts = project["project"]["scripts"]
+    assert list(scripts) == ["horus-media"]  # never `horus`: another package installs that
+    module, name = scripts["horus-media"].split(":")
+    assert getattr(import_module(module), name) is entry.cli
+
+
+def test_the_command_takes_its_arguments_from_the_command_line(db_file, monkeypatch):
+    monkeypatch.setattr("sys.argv", ["horus-media", "configure", "--port", "8123"])
+    entry.cli()
+    assert saved(db_file).http_port == 8123
+
+
+def test_help_names_the_form_that_was_typed(monkeypatch, capsys):
+    monkeypatch.setattr("sys.argv", ["horus-media", "--help"])
+    with pytest.raises(SystemExit):
+        entry.cli()
+    assert capsys.readouterr().out.startswith("usage: horus-media ")
+    with pytest.raises(SystemExit):
+        entry.main(["--help"])
+    assert capsys.readouterr().out.startswith("usage: python -m horus_media ")
