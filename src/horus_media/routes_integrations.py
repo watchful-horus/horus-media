@@ -16,10 +16,22 @@ log = logging.getLogger(__name__)
 
 
 class ChannelIn(BaseModel):
+    """`url` for the kinds that take one address, `fields` for the ones that take several
+    values (see `notifications.FIELDS`)."""
+
     name: str
     kind: str
-    url: str
+    url: str = ""
+    fields: dict[str, str] | None = None
     events: list[str]
+
+
+def _address(kind: str, url: str, fields: dict[str, str] | None) -> str:
+    """The one address to store: given as it is, or put together from the boxes of the kinds
+    that take several values. Empty boxes mean nothing new was entered."""
+    if fields and any(str(v).strip() for v in fields.values()):
+        return notifications.compose(kind, fields)
+    return url
 
 
 class ChannelChange(BaseModel):
@@ -30,6 +42,7 @@ class ChannelChange(BaseModel):
     name: str | None = None
     kind: str | None = None
     url: str | None = None
+    fields: dict[str, str] | None = None
 
 
 def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> APIRouter:
@@ -69,14 +82,17 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
 
     @router.get("/notifications")
     def channels(store: Store):
-        return {"events": notifications.EVENTS, "kinds": notifications.KINDS,
+        boxes = {kind: [{k: v for k, v in box.items() if k != "pattern"} for box in spec]
+                 for kind, spec in notifications.FIELDS.items()}
+        return {"events": notifications.EVENTS, "kinds": notifications.KINDS, "fields": boxes,
                 "channels": notifications.list_channels(store.conn, store.cipher)}
 
     @router.post("/notifications", status_code=201)
     def add_channel(body: ChannelIn, store: Store):
         try:
             channel = notifications.add_channel(store.conn, store.cipher, body.name, body.kind,
-                                                body.url, body.events)
+                                                _address(body.kind, body.url, body.fields),
+                                                body.events)
         except notifications.ChannelError as e:
             raise HTTPException(422, str(e)) from None
         log.info("notification channel added: %s (%s)", channel["name"], channel["kind"])
@@ -85,14 +101,20 @@ def make_router(get_store: Callable, transport: httpx.BaseTransport | None) -> A
     @router.patch("/notifications/{channel_id}")
     def change_channel(channel_id: int, body: ChannelChange, store: Store):
         try:
-            channel = notifications.update_channel(store.conn, store.cipher, channel_id,
-                                                   body.enabled, body.events, body.name,
-                                                   body.kind, body.url)
+            kind = body.kind
+            if kind is None and body.fields:  # new values for the type it already has
+                row = store.conn.execute("SELECT kind FROM notification_channels WHERE id = ?",
+                                         (channel_id,)).fetchone()
+                kind = row["kind"] if row else None
+            channel = notifications.update_channel(
+                store.conn, store.cipher, channel_id, body.enabled, body.events, body.name,
+                body.kind, _address(kind or "", body.url or "", body.fields) or None)
         except notifications.ChannelError as e:
             raise HTTPException(422, str(e)) from None
         if channel is None:
             raise HTTPException(404, "Channel not found")
-        changed = sorted(body.model_fields_set - {"url"}) + (["address"] if body.url else [])
+        changed = (sorted(body.model_fields_set - {"url", "fields"})
+                   + (["address"] if body.url or body.fields else []))
         log.info("notification channel changed: %s (%s): %s", channel["name"], channel["kind"],
                  ", ".join(changed) or "nothing")
         return channel

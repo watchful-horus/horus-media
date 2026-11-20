@@ -24,9 +24,18 @@ If the import says the plugin was not found, Emby answered "not found" (usually 
 **Import once, right after you add the server.** Importing only reads from the server and changes nothing on it. Running it again adds nothing new: each play has a stable key, so one already imported is skipped. Plays Horus recorded live are skipped too, matched by user, title and start time (within two minutes). Plex names a play the same way in both places, so those match. Emby's plugin may name a play differently from how Horus saw it live, so on Emby the longer Horus has been recording before you import, the likelier a few plays count twice. A play for which Emby's plugin gives only a date (no time) is placed at 12:00 midday in your Horus time zone, so it lands on the right day. Imported plays have no bandwidth figure, and Plex does not say how a past play was streamed, so those show as "Unknown" in the direct play vs transcode charts.
 
 ## Notifications and alerts
-**Settings > Notifications** can post a message to a Discord channel webhook, an ntfy topic, or any web address (JSON) when someone starts or finishes playing, a server becomes unreachable or comes back, or a stream has a [playback problem](#playback-problems). Channel addresses are secrets: they are stored encrypted and never shown again. Tick the matching event on a channel to receive it.
+**Settings > Notifications** can post a message to a Discord channel webhook, an ntfy topic, a Telegram chat, a Gotify server, Pushover, or any web address (JSON) when someone starts or finishes playing, a server becomes unreachable or comes back, or a stream has a [playback problem](#playback-problems). Channel addresses, tokens and keys are secrets: they are stored encrypted and never shown again. Tick the matching event on a channel to receive it.
 
-**Edit** on a channel changes its name, type, address and events in place. The address field starts empty: leave it empty to keep the current address, or enter a new one to replace it. Changing the type needs a new address. Nothing is sent when you save; press **Send test** afterwards to check a new address. A channel whose address can no longer be read (the encryption key was lost or replaced) is repaired the same way, by entering its address again.
+| Type | What you enter |
+|---|---|
+| Discord, ntfy, web address | One address: the channel webhook, the full topic address, or your own URL |
+| Telegram | The bot token from @BotFather and the chat ID to send to (a number, or `@channelname`). Start a chat with your bot first, or add it to the group or channel |
+| Gotify | Your Gotify server's address and an app token (Apps in Gotify) |
+| Pushover | The API token of an application you created at Pushover, and your user or group key |
+
+Telegram messages are sent as plain text. Telegram, Gotify and Pushover were built from their published API descriptions and tested against stand-ins, not yet against the real services: press **Send test** after adding one and please report what happens.
+
+**Edit** on a channel changes its name, type, address and events in place. The address field starts empty: leave it empty to keep the current address, or enter a new one to replace it (for Telegram, Gotify and Pushover the boxes work the same way: leave them all empty to keep what is stored). Changing the type needs a new address. Nothing is sent when you save; press **Send test** afterwards to check a new address. A channel whose address can no longer be read (the encryption key was lost or replaced) is repaired the same way, by entering its address again.
 
 Three optional alerts (*Alerts and reports* on the same page, all off by default) use the same channels: too many transcodes at once, a server's bandwidth over a limit, and someone Horus has never seen starting to play. Each is sent once when the limit is crossed.
 

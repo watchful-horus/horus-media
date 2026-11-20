@@ -4,6 +4,11 @@ Newest first. Each version is a tag on GitHub, with a Docker image and a release
 
 ## 0.4.19 (unreleased)
 
+**New**
+- **Three more kinds of notification channel: Telegram, Gotify and Pushover.** Each asks for its own two values in labelled boxes (a bot token and chat ID, a server address and app token, an app token and user key). They are stored encrypted and never shown again, like channel addresses. Everything else works as for the other channels: events, Edit, Send test, pause. Telegram messages are plain text.
+- These three were built from the services' published API descriptions and tested against stand-ins only. Press **Send test** after adding one, and please report what happens.
+- This version changes the database (the notification channels table is rebuilt; your channels are kept). A backup made by 0.4.19 cannot be restored on an older version.
+
 **Fixed**
 - **The first admin made from `HORUS_ADMIN_USER` is now recorded in the log.** That step ran before logging was switched on, so the line saying the account was created never appeared, and a problem with it (a password file that cannot be read, a password that is too weak) reached the console but not the log file or Settings > Logs. Found while trying the variables with the published image on a real Docker host; the variables themselves worked.
 

@@ -40,7 +40,7 @@ Status as of 2026-11-20: version 0.4.19 (not released yet). The original v1 scop
 - Settings menu in seven entries (a drop-down list on a phone); Account, Theme and Sign out in a menu under your name
 - Application logging: rotating file and console, secret scrubbing, level setting, Settings > Logs viewer
 - Update check with install-specific update steps; an admin-only Update now button for a Proxmox container that can write to its own environment (works on a real container, confirmed 2026-10-29) (Docker and manual installs are never updated by Horus)
-- Notification channels (Discord, ntfy, webhook; each can be edited in place), optional alerts, weekly/monthly summary reports with CSV. (A read-only Seerr requests tab was added and then removed on 2026-10-29: it had nothing to do with plays or stats)
+- Notification channels (Discord, ntfy, Telegram, Gotify, Pushover, webhook; each can be edited in place), optional alerts, weekly/monthly summary reports with CSV. (A read-only Seerr requests tab was added and then removed on 2026-10-29: it had nothing to do with plays or stats)
 - Auto / light / dark theme toggle; Windows "start at login"; `create-admin` and `configure` commands; a `horus-media` command next to `python -m horus_media` (not `horus`: another package already installs that name)
 
 **Installing and project**
@@ -51,7 +51,7 @@ Status as of 2026-11-20: version 0.4.19 (not released yet). The original v1 scop
 - Public repository with secret scanning, private vulnerability reporting, CodeQL, Dependabot alerts, protected `main`, SHA-pinned Actions
 - CI (tests, lint, Docker image, web build) on every push and pull request
 - Build supply chain: hash-locked Python dependencies and digest-pinned base images for the Docker image, signed build provenance for the release file and the image, release notes taken from the changelog, immutable releases and protected version tags
-- 451 tests (fake responses, no live servers), `ruff` clean; README and docs
+- 471 tests (fake responses, no live servers), `ruff` clean; README and docs
 
 **Verified**
 - Backup Download then Restore across installs (Proxmox container to Docker); Emby history import; lint and the full suite on real Linux; the Docker image in CI and a real Docker host, including an anonymous pull; all tests on emulated aarch64
@@ -63,7 +63,7 @@ Status as of 2026-11-20: version 0.4.19 (not released yet). The original v1 scop
 - [ ] Real-server test run by hand (a real Plex and Emby in a throwaway setup) to catch API changes the fakes can't
 - [ ] Try the arm64 image on a real small board (it is built and started on an arm64 machine at GitHub, nothing more)
 - [ ] Mobile: pages laid out properly on a phone (a mobile web view), or a mobile app. To decide which: responsive web layout first, installable PWA next, native app only if those fall short
-- [ ] More notification kinds
+- [ ] Try Telegram, Gotify and Pushover channels against the real services (built from their API descriptions, tested with stand-ins); more kinds on request (email was left out for now)
 - [ ] Playback problems: check the Plex transcode speed fields against a real transcoding stream
 - [ ] GitHub Discussions
 - [ ] Community-scripts submission is a long way off: a new app must be 6+ months old, actively maintained and have 600+ stars with release tarballs. The `ct/`, `install/` and `json/` files are kept in their format so it stays possible

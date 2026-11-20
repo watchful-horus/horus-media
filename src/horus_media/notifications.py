@@ -1,9 +1,14 @@
 """Notification channels: Horus sends a message when something happens on your servers.
 
-Three kinds of channel, all plain HTTPS posts to an address you provide:
-  webhook  JSON {event, title, message, time} to any URL
-  discord  a Discord channel webhook
-  ntfy     a topic on ntfy.sh (or your own ntfy server): the full topic URL
+Six kinds of channel, all plain HTTPS posts. Three take one address you provide:
+  webhook   JSON {event, title, message, time} to any URL
+  discord   a Discord channel webhook
+  ntfy      a topic on ntfy.sh (or your own ntfy server): the full topic URL
+Three take two values each (`FIELDS`), which `compose` joins into one address so that every
+kind is stored the same way:
+  telegram  a bot token and a chat id (Telegram Bot API, `sendMessage`)
+  gotify    your Gotify server's address and an app token (`POST /message`)
+  pushover  an app token and a user key (Pushover Message API)
 
 A channel's address is a secret (anyone holding it can post to your channel), so it is encrypted
 at rest, never logged and never returned by the API; only its host is shown.
@@ -15,7 +20,7 @@ import re
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, quote, urlencode, urlsplit
 
 import httpx
 from cryptography.fernet import InvalidToken
@@ -24,7 +29,37 @@ from .crypto import TokenCipher
 
 log = logging.getLogger(__name__)
 
-KINDS = ("webhook", "discord", "ntfy")
+KINDS = ("webhook", "discord", "ntfy", "telegram", "gotify", "pushover")
+# What the page asks for where one address is not enough: per kind, the boxes in order. `secret`
+# boxes are typed like a password. `pattern` is what a value must look like.
+FIELDS: dict[str, list[dict]] = {
+    "telegram": [
+        {"key": "token", "label": "Bot token", "secret": True,
+         "hint": "From @BotFather, for example 123456789:AA...",
+         "pattern": r"\d{5,}:[A-Za-z0-9_-]{30,}"},
+        {"key": "chat", "label": "Chat ID", "secret": False,
+         "hint": "A number such as 123456789 or -1001234567890, or @channelname",
+         "pattern": r"-?\d{3,}|@[A-Za-z][A-Za-z0-9_]{4,}"},
+    ],
+    "gotify": [
+        {"key": "server", "label": "Server address", "secret": False,
+         "hint": "For example https://gotify.example.com",
+         "pattern": r"https?://[^\s?#]+"},
+        {"key": "token", "label": "App token", "secret": True,
+         "hint": "From Apps in Gotify",
+         "pattern": r"[A-Za-z0-9._-]{8,}"},
+    ],
+    "pushover": [
+        {"key": "token", "label": "App token", "secret": True,
+         "hint": "The API token of your Pushover application (30 characters)",
+         "pattern": r"[A-Za-z0-9]{30}"},
+        {"key": "user", "label": "User key", "secret": False,
+         "hint": "Your user or group key (30 characters)",
+         "pattern": r"[A-Za-z0-9]{30}"},
+    ],
+}
+_TELEGRAM = "https://api.telegram.org"
+_PUSHOVER = "https://api.pushover.net/1/messages.json"
 EVENTS = {
     "play_started": "Someone starts playing",
     "play_ended": "A play ends",
@@ -46,11 +81,45 @@ class ChannelError(ValueError):
     """A rejected channel. The message is safe to show."""
 
 
+def compose(kind: str, fields: dict[str, str]) -> str:
+    """One address from the boxes of a kind in `FIELDS`, after checking each value. The result
+    is what gets encrypted and stored, and what `_request` takes apart again."""
+    spec = FIELDS.get(kind)
+    if spec is None:
+        raise ChannelError("This channel type takes one address")
+    got = {}
+    for box in spec:
+        value = str(fields.get(box["key"], "")).strip()
+        if not re.fullmatch(box["pattern"], value):
+            raise ChannelError(f"{box['label']} does not look right. {box['hint']}")
+        got[box["key"]] = value
+    if kind == "telegram":
+        return f"{_TELEGRAM}/bot{got['token']}/sendMessage?" + urlencode({"chat_id": got["chat"]})
+    if kind == "gotify":
+        return f"{got['server'].rstrip('/')}/message?" + urlencode({"token": got["token"]})
+    return f"{_PUSHOVER}?" + urlencode({"token": got["token"], "user": got["user"]})
+
+
 def validate(kind: str, url: str, events: list[str]) -> list[str]:
     if kind not in KINDS:
         raise ChannelError("Unknown channel type")
     if not _URL.fullmatch(url.strip()):
-        raise ChannelError("The address must start with http:// or https://")
+        raise ChannelError("Fill in every box for this channel type" if kind in FIELDS
+                           else "The address must start with http:// or https://")
+    if kind in FIELDS:  # only ever an address made by `compose`
+        parts = urlsplit(url.strip())
+        query = parse_qs(parts.query)
+        fits = {
+            "telegram": url.startswith(f"{_TELEGRAM}/bot") and "chat_id" in query,
+            "gotify": parts.path.endswith("/message") and "token" in query,
+            "pushover": url.startswith(f"{_PUSHOVER}?") and {"token", "user"} <= set(query),
+        }[kind]
+        if not fits:
+            raise ChannelError("Fill in every box for this channel type")
+    return _events(events)
+
+
+def _events(events: list[str]) -> list[str]:
     unknown = [e for e in events if e not in EVENTS]
     if unknown or not events:
         raise ChannelError("Pick at least one event to send")
@@ -130,14 +199,15 @@ def update_channel(conn: sqlite3.Connection, cipher: TokenCipher, channel_id: in
         if url is None:
             raise ChannelError("Enter the new address too when you change the type")
         changes["kind"] = kind
-    if url is not None or events is not None or "kind" in changes:
-        # Without a new address only the events are being checked; an unreadable stored address
+    wanted = json.loads(row["events"]) if events is None else events
+    if url is not None:
+        checked = validate(kind or row["kind"], url, wanted)
+    else:
+        # Without a new address only the events are checked; an unreadable stored address
         # must not block pausing or changing them.
-        checked = validate(kind or row["kind"],
-                           url or address(row, cipher) or "https://unreadable.invalid",
-                           json.loads(row["events"]) if events is None else events)
-        if events is not None:
-            changes["events"] = json.dumps(checked)
+        checked = _events(wanted)
+    if events is not None:
+        changes["events"] = json.dumps(checked)
     if url is not None:
         changes["url"] = cipher.encrypt(url)
     if enabled is not None:
@@ -166,6 +236,19 @@ def _request(kind: str, url: str, event: str, title: str, message: str) -> httpx
         return httpx.Request("POST", url, content=message.encode(),
                              headers={"Title": title.encode("ascii", "replace").decode(),
                                       "Tags": event})
+    if kind in FIELDS:  # an address from `compose`: the values travel in the body or a header
+        parts = urlsplit(url)
+        query = {k: v[0] for k, v in parse_qs(parts.query).items()}
+        base = f"{parts.scheme}://{parts.netloc}{quote(parts.path, safe='/:@')}"
+        if kind == "telegram":  # plain text: no parse_mode, so nothing in a title is markup
+            return httpx.Request("POST", base, json={
+                "chat_id": query.get("chat_id", ""), "text": f"{title}\n{message}"})
+        if kind == "gotify":
+            return httpx.Request("POST", base, json={"title": title, "message": message},
+                                 headers={"X-Gotify-Key": query.get("token", "")})
+        return httpx.Request("POST", base, data={
+            "token": query.get("token", ""), "user": query.get("user", ""),
+            "title": title, "message": message})
     return httpx.Request("POST", url, json={
         "event": event, "title": title, "message": message,
         "time": datetime.now(UTC).isoformat()})

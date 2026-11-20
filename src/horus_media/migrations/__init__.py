@@ -153,4 +153,22 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX idx_problems_started ON playback_problems (started_at);
     """,
+    # More kinds of notification channel (Telegram, Gotify, Pushover). The table listed the
+    # allowed kinds itself, and SQLite cannot change that in place, so it is rebuilt without
+    # the list: `notifications.KINDS` is what decides now. Ids and everything else are kept.
+    """
+    CREATE TABLE notification_channels_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        url TEXT NOT NULL,
+        events TEXT NOT NULL,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL
+    );
+    INSERT INTO notification_channels_new (id, name, kind, url, events, enabled, created_at)
+        SELECT id, name, kind, url, events, enabled, created_at FROM notification_channels;
+    DROP TABLE notification_channels;
+    ALTER TABLE notification_channels_new RENAME TO notification_channels;
+    """,
 ]
