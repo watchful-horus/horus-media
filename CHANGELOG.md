@@ -2,7 +2,7 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
-## 0.4.19 (unreleased)
+## 0.4.19 (2026-11-20)
 
 **New**
 - **Three more kinds of notification channel: Telegram, Gotify and Pushover.** Each asks for its own two values in labelled boxes (a bot token and chat ID, a server address and app token, an app token and user key). They are stored encrypted and never shown again, like channel addresses. Everything else works as for the other channels: events, Edit, Send test, pause. Telegram messages are plain text.
