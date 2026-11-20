@@ -243,4 +243,13 @@
   .steps { margin: 0 0 8px; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
   .link { border: 0; background: none; padding: 4px 0; color: var(--muted); text-decoration: underline; font-size: 12.5px; }
   .bad { color: var(--bad); }
+  /* Phones only: the key's details get the full width, with Revoke below them. */
+  @media (max-width: 720px) {
+    .row { flex-direction: column; align-items: stretch; gap: 8px; }
+    .row > div { min-width: 0; overflow-wrap: anywhere; }
+    .row > button { align-self: flex-start; }
+    .create input { flex-basis: 100%; }
+    .create select, .create button { flex: 1 1 auto; }
+    .copyrow input { min-width: 0; }
+  }
 </style>

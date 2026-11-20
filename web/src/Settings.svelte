@@ -527,7 +527,16 @@
   .files .info { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; min-width: 0; }
   .files .btns { display: grid; grid-template-columns: repeat(3, 84px); gap: 6px; }
   .files .btns > * { text-align: center; box-sizing: border-box; }
-  @media (max-width: 720px) { .files li { grid-template-columns: 1fr; } }
+  /* Phones only: a backup's three buttons share the full width, and a notice or a command
+     puts its button below its text. */
+  @media (max-width: 720px) {
+    .files li { grid-template-columns: 1fr; }
+    .files .btns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .files .btns > * { display: flex; align-items: center; justify-content: center; }
+    .notice { flex-wrap: wrap; }
+    .copyrow { flex-wrap: wrap; }
+    .copyrow code { flex-basis: 100%; }
+  }
   .small-btn { padding: 2px 10px; font-size: 12.5px; }
   h3 { margin: 18px 0 6px; font-size: 14px; }
   .notice { display: flex; align-items: center; justify-content: space-between; gap: 12px;

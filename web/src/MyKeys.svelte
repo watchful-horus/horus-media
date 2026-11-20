@@ -93,4 +93,12 @@
   .fresh { border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px;
     display: grid; gap: 8px; }
   .bad { color: var(--bad); }
+  /* Phones only: the key's details get the full width, with Revoke below them. */
+  @media (max-width: 720px) {
+    .row { flex-direction: column; align-items: stretch; gap: 8px; }
+    .row > div { min-width: 0; overflow-wrap: anywhere; }
+    .row > button { align-self: flex-start; }
+    form input { flex-basis: 100%; }
+    form select, form button { flex: 1 1 auto; }
+  }
 </style>

@@ -144,15 +144,30 @@
     rows: keys.map((k, i) => [nice(k, g), ...series.map((s) => s.data[i])]),
   })
 
+  // Phones only: a long name beside a bar ends in "..." so the bars keep their room. The whole
+  // name still shows when the bar is tapped, and in "View as table".
+  const PHONE = '(max-width: 720px)'
+  let narrow = $state(matchMedia(PHONE).matches)
+  $effect(() => {
+    const mq = matchMedia(PHONE)
+    const on = () => (narrow = mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  })
+  const NAME_MAX = 16
+  const shortName = (s) => (String(s).length > NAME_MAX ? `${String(s).slice(0, NAME_MAX - 1)}\u2026` : s)
+
   const hbar = (items, unit = 'Plays') => {
     const top = items.slice(0, 10)
     return {
       option: {
         legend: { show: false },
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+          ...(narrow ? { formatter: (params) => `${esc(top[params[0].dataIndex].name)}<br/>` +
+            params.map((p) => `${p.marker} ${esc(p.seriesName)} <b>${p.value}</b>`).join('<br/>') } : {}) },
         grid: { top: 8, bottom: 8 },
         xAxis: { type: 'value', minInterval: 1 },
-        yAxis: { type: 'category', inverse: true, data: top.map((i) => i.name) },
+        yAxis: { type: 'category', inverse: true, data: top.map((i) => (narrow ? shortName(i.name) : i.name)) },
         series: [{ name: unit, type: 'bar', data: top.map((i) => i.count), barMaxWidth: 16,
           itemStyle: { borderRadius: [0, 4, 4, 0] } }],
       },
@@ -447,15 +462,16 @@
               <thead><tr><th>When</th><th>Problem</th><th>User</th><th>Title</th><th>Player</th><th>Server</th><th>Lasted</th><th>Detail</th></tr></thead>
               <tbody>
                 {#each problems.recent as p (p.id)}
+                  <!-- data-label is shown on phones, where each row becomes a small block. -->
                   <tr>
-                    <td class="nowrap">{new Date(p.started_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</td>
-                    <td class="nowrap">{problems.kinds[p.kind] ?? p.kind}</td>
-                    <td>{p.user}</td>
-                    <td class="long">{p.title}</td>
-                    <td>{p.device}{#if p.location}{' '}<span class="muted">({p.location})</span>{/if}</td>
-                    <td>{p.server}</td>
-                    <td class="nowrap">{p.ended_at ? lasted(p.duration_seconds) : 'Now'}</td>
-                    <td class="long muted">{p.detail ?? ''}</td>
+                    <td class="nowrap when">{new Date(p.started_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                    <td class="nowrap kind">{problems.kinds[p.kind] ?? p.kind}</td>
+                    <td data-label="User">{p.user}</td>
+                    <td class="long" data-label="Title">{p.title}</td>
+                    <td data-label="Player"><span>{p.device}{#if p.location}{' '}<span class="muted">({p.location})</span>{/if}</span></td>
+                    <td data-label="Server">{p.server}</td>
+                    <td class="nowrap" data-label="Lasted">{p.ended_at ? lasted(p.duration_seconds) : 'Now'}</td>
+                    <td class="long muted" class:none={!p.detail} data-label="Detail">{p.detail ?? ''}</td>
                   </tr>
                 {/each}
               </tbody>
@@ -493,5 +509,33 @@
   .problems td.long { overflow-wrap: anywhere; min-width: 140px; }
   .nowrap { white-space: nowrap; }
   .bad { color: var(--bad); }
-  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  /* Phones only. The range buttons share one row; the two dates share the next and the arrows
+     and Apply the one after; the latest problems become one small block each instead of a
+     table that is wider than the screen. */
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+    .toolbar { gap: 8px; }
+    .presets, form { width: 100%; }
+    .presets button { flex: 1 1 0; padding: 6px 2px; white-space: nowrap; }
+    form { flex-wrap: wrap; }
+    form input, form span { order: 1; }
+    form input { flex: 1 1 40%; min-width: 0; }
+    form button { order: 2; flex: 1 1 25%; }
+    .card { padding: 12px 14px; }
+    .head { flex-wrap: wrap; gap: 4px 12px; margin-bottom: 6px; }
+    .head h2 { margin: 0; }
+    .seg button { padding: 3px 12px; }
+    .scroll { overflow-x: visible; }
+    .problems thead { display: none; }
+    .problems, .problems tbody, .problems tr, .problems td { display: block; }
+    .problems tr { padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .problems tr:last-child { border-bottom: 0; }
+    .problems td, .problems td.long { border: 0; padding: 1px 0; min-width: 0; white-space: normal;
+      overflow-wrap: anywhere; }
+    .problems td[data-label] { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 10px; }
+    .problems td[data-label]::before { content: attr(data-label); color: var(--muted); }
+    .problems td.when { font-size: 12.5px; color: var(--muted); }
+    .problems td.kind { font-size: 14.5px; font-weight: 600; padding-bottom: 3px; }
+    .problems td.none { display: none; }
+  }
 </style>

@@ -171,5 +171,15 @@
   .debug .lvl, .debug .msg { color: var(--muted); }
   .small { font-size: 12px; }
   .bad { color: var(--bad); }
-  @media (max-width: 720px) { .line { grid-template-columns: 70px 48px 1fr; } .src { display: none; } }
+  /* Phones only: the time and level share a first line and the message gets the full width
+     below, instead of a thin column beside them. */
+  @media (max-width: 720px) {
+    .src { display: none; }
+    .line { grid-template-columns: max-content 1fr; padding: 5px 12px; }
+    .when { white-space: nowrap; }
+    .msg { grid-column: 1 / -1; }
+    .search { flex-basis: 100%; max-width: none; }
+    .search, .toolbar select, .toolbar > button, .toolbar > a.button { min-height: 40px; }
+    .record select { flex: 1; min-width: 0; }
+  }
 </style>

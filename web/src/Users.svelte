@@ -249,5 +249,8 @@
     .person { grid-template-columns: 40px minmax(0, 1fr); }
     .manage { grid-column: 2; justify-self: start; }
     .panel { grid-column: 1 / -1; }
+    /* A long name breaks over two lines from the left, not centred like a button. */
+    .namebtn { text-align: left; min-height: 0; }
+    .reset input { width: 100%; }
   }
 </style>

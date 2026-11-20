@@ -251,4 +251,10 @@
   a.button { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
     color: inherit; text-decoration: none; font-size: 14px; }
   .bad { color: var(--bad); }
+  /* Phones only: a channel's buttons fill the row two by two, like the ones under Servers. */
+  @media (max-width: 720px) {
+    .row > div:first-child { min-width: 0; overflow-wrap: anywhere; }
+    .row > .actions { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .row > .actions > button { min-width: 0; }
+  }
 </style>

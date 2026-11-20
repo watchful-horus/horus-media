@@ -44,3 +44,11 @@ button:disabled { opacity: .5; cursor: default; }
 input, select { background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
   padding: 6px 10px; width: 100%; }
 .muted { color: var(--muted); }
+/* Phones only: controls tall enough for a finger, and 16px text in boxes so an iPhone does not
+   zoom in when one is tapped. */
+@media (max-width: 720px) {
+  button, select, a.button, label.button,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) { min-height: 40px; }
+  .actions > button, .actions > a.button, .actions > label.button { min-height: 40px; }
+  select, input:not([type="checkbox"]):not([type="radio"]) { font-size: 16px; }
+}
