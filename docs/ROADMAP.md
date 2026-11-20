@@ -55,14 +55,13 @@ Status as of 2026-11-20: version 0.4.18. The original v1 scope is complete and t
 
 **Verified**
 - Backup Download then Restore across installs (Proxmox container to Docker); Emby history import; lint and the full suite on real Linux; the Docker image in CI and a real Docker host, including an anonymous pull; all tests on emulated aarch64
+- With the published image on a real Docker host (2026-11-20, 0.4.18): `HORUS_ADMIN_USER` with a password file creates the admin before the first page can be opened, the first-run screen is closed, the password shows in neither `docker inspect` nor the log, and a restart changes nothing; a backup made by 0.4.4 restores on the first-run screen of 0.4.18, the database is brought up to date and the old account signs in
 
 ## Next
 
 - [ ] Try Stop stream on a real Emby (never without the author's say-so)
-- [ ] Try the new Docker admin variables (`HORUS_ADMIN_USER` and a password file) in a real container (Update now was confirmed on a real Proxmox container on 2026-10-29)
 - [ ] Real-server test run by hand (a real Plex and Emby in a throwaway setup) to catch API changes the fakes can't
 - [ ] Try the arm64 image on a real small board (it is built and started on an arm64 machine at GitHub, nothing more)
-- [ ] Not yet tried on real hardware: restoring a backup that is older than the current database version
 - [ ] Mobile: pages laid out properly on a phone (a mobile web view), or a mobile app. To decide which: responsive web layout first, installable PWA next, native app only if those fall short
 - [ ] More notification kinds
 - [ ] Playback problems: check the Plex transcode speed fields against a real transcoding stream
