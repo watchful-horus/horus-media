@@ -1,6 +1,6 @@
 # Roadmap
 
-Status as of 2026-11-20: version 0.4.16. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
+Status as of 2026-11-20: version 0.4.17 (not released yet). The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
 
 ## Done
 
@@ -44,7 +44,7 @@ Status as of 2026-11-20: version 0.4.16. The original v1 scope is complete and t
 - Auto / light / dark theme toggle; Windows "start at login"; `create-admin` and `configure` commands
 
 **Installing and project**
-- `Dockerfile`, `compose.example.yaml` and the image on ghcr.io (amd64), published by a tag workflow
+- `Dockerfile`, `compose.example.yaml` and the image on ghcr.io (amd64 and arm64, each built and started on a machine of its own type), published by a tag workflow
 - Proxmox installer wizard (`scripts/proxmox/horus-lxc.sh`), run on a real host; the first admin is created in the browser (or optionally during the install with `ADMIN_USER`/`ADMIN_PASSWORD`)
 - Community-scripts style installer (`ct/horus.sh`, `install/horus-install.sh`, `json/horus.json`) and a release workflow that builds the web UI and wheel on a `v*` tag (its install steps ran in a throwaway container; `ct/horus.sh` itself ran on a real Proxmox host on 2026-10-29: 0.3.0 installed, first admin created in the browser, Plex added, history imported)
 - MIT licence, `CONTRIBUTING.md`, `SECURITY.md`, issue and pull request templates, Dependabot, CODEOWNERS
@@ -61,7 +61,7 @@ Status as of 2026-11-20: version 0.4.16. The original v1 scope is complete and t
 - [ ] Try Stop stream on a real Emby (never without the author's say-so)
 - [ ] Try the new Docker admin variables (`HORUS_ADMIN_USER` and a password file) in a real container (Update now was confirmed on a real Proxmox container on 2026-10-29)
 - [ ] Real-server test run by hand (a real Plex and Emby in a throwaway setup) to catch API changes the fakes can't
-- [ ] arm64 Docker image (the app and its tests pass on aarch64 under emulation; the image build is untried)
+- [ ] Try the arm64 image on a real small board (it is built and started on an arm64 machine at GitHub, nothing more)
 - [ ] Not yet tried on real hardware: restoring a backup that is older than the current database version
 - [ ] Mobile: pages laid out properly on a phone (a mobile web view), or a mobile app. To decide which: responsive web layout first, installable PWA next, native app only if those fall short
 - [ ] More notification kinds

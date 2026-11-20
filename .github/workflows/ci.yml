@@ -36,8 +36,20 @@ jobs:
       - name: Test
         run: pytest -q
 
+  # The image is published for both processor types, so it is built and started on a runner of
+  # each type (no emulation).
   docker:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    env:
+      ARCH: ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -45,7 +57,11 @@ jobs:
         run: docker compose -f compose.example.yaml config --quiet
 
       - name: Build the image
-        run: docker build -t horus-media:ci .
+        run: |
+          docker build -t horus-media:ci .
+          built="$(docker image inspect --format '{{.Architecture}}' horus-media:ci)"
+          echo "built for: ${built}"
+          [ "${built}" = "${ARCH}" ]
 
       - name: Start it and wait until it reports healthy
         run: |

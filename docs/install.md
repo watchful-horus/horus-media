@@ -3,7 +3,7 @@
 Pick one. All three keep your data (database, encryption key, backups, logs) in one folder, so moving later is easy (see [Moving to a new install](#moving-to-a-new-install)).
 
 ## Docker
-Needs Docker with Compose. Copy `compose.example.yaml` to `compose.yaml`, set your time zone, and run `docker compose up -d`. The image is `ghcr.io/watchful-horus/horus-media` (amd64).
+Needs Docker with Compose. Copy `compose.example.yaml` to `compose.yaml`, set your time zone, and run `docker compose up -d`. The image is `ghcr.io/watchful-horus/horus-media`, for amd64 and arm64 (Docker picks the right one).
 
 Open port 8000 and **create the first account straight away**: the container listens on the network from the start, so until the account exists anyone who can reach the page could create it. To avoid that window, set `HORUS_ADMIN_USER` and `HORUS_ADMIN_PASSWORD_FILE` (lines to uncomment are in `compose.example.yaml`); the account is then created when the container starts. See [Accounts and security](accounts-and-security.md#creating-the-admin-from-the-environment-docker). Data lives in the `horus-data` volume. Restart and shut down are done with Docker, not the web UI, and so is changing the port (change the port mapping and restart the container).
 
@@ -12,7 +12,7 @@ Open port 8000 and **create the first account straight away**: the container lis
 
 - It is a wizard (default or advanced settings, with menus for storage and network). It does not create a login: when it finishes it prints the address, and you open it and **create the administrator account yourself** (your own username and password). Do that straight away, because until the account exists anyone on your network could. For automation, `ADMIN_USER` and `ADMIN_PASSWORD` create the account during the install instead.
 - The install shows one line per step with a spinner and keeps the full output in a log file (`HORUS_VERBOSE=1` prints everything instead).
-- Point `HORUS_PACKAGE` at a Horus wheel and copy it to the host first, for example `HORUS_PACKAGE=/root/horus_media-0.4.16-py3-none-any.whl bash horus-lxc.sh`. Build a wheel with `cd web && npm run build && cd .. && pip wheel . --no-deps -w dist`.
+- Point `HORUS_PACKAGE` at a Horus wheel and copy it to the host first, for example `HORUS_PACKAGE=/root/horus_media-0.4.17-py3-none-any.whl bash horus-lxc.sh`. Build a wheel with `cd web && npm run build && cd .. && pip wheel . --no-deps -w dist`.
 - CPU, RAM, disk, storage, network and port can be set with environment variables (listed at the top of the script).
 - Update later with `bash horus-lxc.sh update <container id>`; the data is kept.
 - Restart and shut down work from the web UI.
@@ -56,8 +56,8 @@ Horus checks once a day for a newer release and, when there is one, shows how to
 Every release file and Docker image from 0.4.6 on carries a signed statement, made by GitHub while it was built, of which repository and commit it came from. With the GitHub command-line tool you can check one before using it:
 
 ```
-gh attestation verify horus-media-v0.4.16.tar.gz --repo watchful-horus/horus-media
-gh attestation verify oci://ghcr.io/watchful-horus/horus-media:0.4.16 --repo watchful-horus/horus-media
+gh attestation verify horus-media-v0.4.17.tar.gz --repo watchful-horus/horus-media
+gh attestation verify oci://ghcr.io/watchful-horus/horus-media:0.4.17 --repo watchful-horus/horus-media
 ```
 
 The Docker image is built from `requirements.txt`, which lists the exact version and file hash of every Python package in it, on base images pinned by digest. Published releases cannot be changed afterwards: a fix is always a new version.
