@@ -352,8 +352,10 @@ def test_the_data_api_reports_the_kept_peak(tmp_path, monkeypatch):
     add_samples(c, sid, old, 20, lambda i: 9000 if i == 7 else 1000)
     assert maintenance.thin_samples(c, datetime.now(UTC)) == (20, 1)
     c.close()
-    day, next_day = old.date().isoformat(), (old.date() + timedelta(days=1)).isoformat()
-    r = client.get(f"/api/v1/bandwidth?from={day}&to={next_day}&interval=5m")
+    # Dates in the address are read in the server's time zone and `old` is in UTC, so ask for
+    # a day either side: near midnight UTC the two calendars are a day apart.
+    before, after = old.date() - timedelta(days=1), old.date() + timedelta(days=2)
+    r = client.get(f"/api/v1/bandwidth?from={before}&to={after}&interval=5m")
     assert r.status_code == 200, r.text
     rows = r.json()
     assert [(r["avg_kbps"], r["peak_kbps"]) for r in rows] == [(1400, 9000)]
