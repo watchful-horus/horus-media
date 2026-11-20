@@ -2,7 +2,7 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
-## 0.4.16 (unreleased)
+## 0.4.16 (2026-11-20)
 
 **New**
 - **Playback problems in `/metrics`**, for Prometheus and Grafana. `horus_playback_problems_total` is how many problems Horus has in its history and `horus_playback_problems_active` is how many are going on right now. Both are split by server and by kind (`buffering`, `stalled`, `slow_transcode`, `direct_play_error`). As with the other metrics, no user names or titles appear. The total falls when old history is removed by the retention setting, as `horus_plays_recorded_total` does.
