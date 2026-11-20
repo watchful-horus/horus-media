@@ -2,7 +2,7 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
-## 0.4.17 (unreleased)
+## 0.4.17 (2026-11-20)
 
 **New**
 - **The Docker image is now also published for arm64** (64-bit ARM boards and servers), next to amd64. The tags are the same as before (`0.4.17`, `0.4`, `latest`) and Docker picks the right one for your machine, so `compose.yaml` does not change. Each one is built and started on a machine of its own type before anything is published. Not yet tried by us on a real small board such as a Raspberry Pi; please report how it goes.
