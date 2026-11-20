@@ -2,6 +2,11 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.19 (unreleased)
+
+**Fixed**
+- **The first admin made from `HORUS_ADMIN_USER` is now recorded in the log.** That step ran before logging was switched on, so the line saying the account was created never appeared, and a problem with it (a password file that cannot be read, a password that is too weak) reached the console but not the log file or Settings > Logs. Found while trying the variables with the published image on a real Docker host; the variables themselves worked.
+
 ## 0.4.18 (2026-11-20)
 
 **New**

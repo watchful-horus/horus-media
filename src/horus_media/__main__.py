@@ -22,13 +22,18 @@ import sys
 import uvicorn
 from pydantic import ValidationError
 
-from . import app_settings, auth, backup, listen, startup
+from . import app_settings, auth, backup, listen, logging_setup, startup
 from .config import db_path
 from .db import connect, migrate
 
 
 def serve() -> None:
+    if sys.stderr is None or sys.stdout is None:  # started by pythonw at login: no console
+        sys.stdout = sys.stderr = open(os.devnull, "w")  # noqa: SIM115 - lives as long as Horus
     backup.finish_restore(db_path())  # before anything opens the database
+    # Before the first thing that can log: the admin from the environment is created here, and
+    # what it says (done, or why not) belongs in the log file too. The app sets it up again.
+    logging_setup.configure(db_path())
     conn = connect(db_path())
     try:
         migrate(conn)
@@ -44,8 +49,6 @@ def serve() -> None:
     if not listen.wait_until_free(where.host, where.port):
         sys.exit(f"Port {where.port} is already in use. Pick another one with HORUS_PORT, "
                  "or stop whatever is using it.")
-    if sys.stderr is None or sys.stdout is None:  # started by pythonw at login: no console
-        sys.stdout = sys.stderr = open(os.devnull, "w")  # noqa: SIM115 - lives as long as Horus
     # forwarded_allow_ips=None leaves the web server's default: only a proxy on this machine.
     uvicorn.run("horus_media.main:app", host=where.host, port=where.port,
                 forwarded_allow_ips=proxies)
