@@ -2,6 +2,11 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.23 (unreleased)
+
+**Changed**
+- **Settings > Backups and updates** now starts with the **System** card (version, running since, data folder and Updates), so the version and the update check are the first thing on the page. **Backups** follows, and **Restart** and **Shut down** have their own **Power** card at the bottom. Nothing else changed.
+
 ## 0.4.22 (2026-11-28)
 
 **Fixed**

@@ -319,62 +319,6 @@
 
     {#if part === 'maintenance'}
     <section class="card">
-      <h2>Backups</h2>
-      <p class="hint">
-        A backup is the database plus its encryption key, saved as a zip in
-        <code>{info.backup_dir}</code>. Download it to keep a copy somewhere safe. It contains your
-        server tokens, so treat it as a secret.
-      </p>
-      <label class="check">
-        <input type="checkbox" bind:checked={form.backup_enabled} /> Back up automatically
-      </label>
-      {#if form.backup_enabled}
-        <div class="two">
-          <label>Every (hours)<input type="number" min="1" max="720" bind:value={form.backup_interval_hours} /></label>
-          <label>Keep the last<input type="number" min="1" max="100" bind:value={form.backup_keep} /></label>
-        </div>
-        {#if form.backup_interval_hours % 24 === 0}
-          <label>
-            Back up at
-            <input type="time" bind:value={form.backup_time} required />
-            <span class="hint">Time of day, in the time zone set under General (or this machine's own). Used when the interval is a whole number of days (24, 48, ...); other intervals count hours from the last backup.</span>
-          </label>
-        {/if}
-      {/if}
-      <div class="actions">
-        <button type="button" disabled={busy} onclick={backUpNow}>Back up now</button>
-        <label class="button upload">
-          Restore from a file...
-          <input type="file" accept=".zip,.db" disabled={busy} onchange={uploadBackup} hidden />
-        </label>
-      </div>
-      <p class="hint">Last backup: {when(info.last_backup_at)}.</p>
-      {#if backups.length}
-        <ul class="files">
-          {#each backups as b}
-            <li>
-              <div class="info">
-                <code>{b.name}</code>
-                <span class="muted">{when(b.created_at)} &middot; {size(b.size)}</span>
-              </div>
-              <div class="btns">
-                <a class="button small-btn" href="/api/backups/{b.name}/download" download>Download</a>
-                <button type="button" class="small-btn" disabled={busy} onclick={() => restore(b)}>Restore</button>
-                <button type="button" class="small-btn" disabled={busy} onclick={() => removeBackup(b)}>Delete</button>
-              </div>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-      <p class="hint">
-        Restore replaces your servers, settings and history with a backup. Horus saves the current
-        state first, so a restore can be undone. "Restore from a file" takes a backup zip, for
-        example one you downloaded from another Horus. You can also restore by hand: stop Horus,
-        unzip a backup over <code>horus.db</code> and <code>horus.key</code>, and start it again.
-      </p>
-    </section>
-
-    <section class="card">
       <h2>System</h2>
       <dl>
         <dt>Version</dt><dd>{info.version}</dd>
@@ -454,8 +398,66 @@
           {/if}
         {/if}
       {/if}
+    </section>
 
-      <h3>Power</h3>
+    <section class="card">
+      <h2>Backups</h2>
+      <p class="hint">
+        A backup is the database plus its encryption key, saved as a zip in
+        <code>{info.backup_dir}</code>. Download it to keep a copy somewhere safe. It contains your
+        server tokens, so treat it as a secret.
+      </p>
+      <label class="check">
+        <input type="checkbox" bind:checked={form.backup_enabled} /> Back up automatically
+      </label>
+      {#if form.backup_enabled}
+        <div class="two">
+          <label>Every (hours)<input type="number" min="1" max="720" bind:value={form.backup_interval_hours} /></label>
+          <label>Keep the last<input type="number" min="1" max="100" bind:value={form.backup_keep} /></label>
+        </div>
+        {#if form.backup_interval_hours % 24 === 0}
+          <label>
+            Back up at
+            <input type="time" bind:value={form.backup_time} required />
+            <span class="hint">Time of day, in the time zone set under General (or this machine's own). Used when the interval is a whole number of days (24, 48, ...); other intervals count hours from the last backup.</span>
+          </label>
+        {/if}
+      {/if}
+      <div class="actions">
+        <button type="button" disabled={busy} onclick={backUpNow}>Back up now</button>
+        <label class="button upload">
+          Restore from a file...
+          <input type="file" accept=".zip,.db" disabled={busy} onchange={uploadBackup} hidden />
+        </label>
+      </div>
+      <p class="hint">Last backup: {when(info.last_backup_at)}.</p>
+      {#if backups.length}
+        <ul class="files">
+          {#each backups as b}
+            <li>
+              <div class="info">
+                <code>{b.name}</code>
+                <span class="muted">{when(b.created_at)} &middot; {size(b.size)}</span>
+              </div>
+              <div class="btns">
+                <a class="button small-btn" href="/api/backups/{b.name}/download" download>Download</a>
+                <button type="button" class="small-btn" disabled={busy} onclick={() => restore(b)}>Restore</button>
+                <button type="button" class="small-btn" disabled={busy} onclick={() => removeBackup(b)}>Delete</button>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      <p class="hint">
+        Restore replaces your servers, settings and history with a backup. Horus saves the current
+        state first, so a restore can be undone. "Restore from a file" takes a backup zip, for
+        example one you downloaded from another Horus. You can also restore by hand: stop Horus,
+        unzip a backup over <code>horus.db</code> and <code>horus.key</code>, and start it again.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Power</h2>
       {#if stopped}
         <div class="notice" role="status">
           <span>Horus has stopped. Start it again with <code>python -m horus_media</code> (or however you normally start it).</span>
