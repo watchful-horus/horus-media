@@ -2,13 +2,13 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
-## 0.4.20 (unreleased)
+## 0.4.20 (2026-11-28)
 
 **New**
 - **Jellyfin.** Add a Jellyfin server under **Settings > Servers > Add a server manually** with its address and an API key (Jellyfin: **Dashboard > API Keys**). It then works like the others: live activity with posters and stream details, recorded history, graphs, notifications, the per-server summary and, for an admin, **Stop stream**. **Test connection** also checks the key.
 - **Import history** works for Jellyfin through its Playback Reporting plugin (**Dashboard > Plugins > Catalog**), with read calls only. Times come to the minute and are read as UTC. [Details](docs/servers-and-integrations.md#importing-past-history).
 - Playback problems on Jellyfin: stalled playback, failed direct play and repeated interruptions, plus the reason for a transcode on the Activity page. Slow transcodes are not detected there.
-- Built from the API description a Jellyfin server publishes and tested against stand-ins. The history import has not run against a real plugin yet, and Stop stream has not been pressed on a real Jellyfin: please report what you see.
+- Built from the API description a Jellyfin server publishes and tested against stand-ins. On a real Jellyfin, connecting with a key and reading an idle server were seen to work. A real playing stream has not been read yet, the history import has not run against a real plugin, and Stop stream has not been pressed on a real Jellyfin: please report what you see.
 - This version changes the database (the servers table is rebuilt; servers, history and everything else are kept). A backup made by 0.4.20 cannot be restored on an older version.
 
 ## 0.4.19 (2026-11-20)
