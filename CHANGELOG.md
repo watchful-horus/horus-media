@@ -2,6 +2,16 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.21 (unreleased)
+
+**New**
+- **Transcode speed for Jellyfin.** Jellyfin says how much of a file it has converted, so Horus now works the speed out from how far that moves between two polls, as it does for Emby. The Activity page shows it from the second poll of a stream, and **Slow transcode** problems (and their notification) now work on Jellyfin too.
+- Jellyfin never says when a conversion is resting because it is far enough ahead. Horus takes a conversion that is a minute or more ahead of the player and not moving at playback speed to be resting: the Activity page then shows **Ahead of playback** and no problem is raised.
+- The numbers behind this were checked against a real Jellyfin transcode (its own frame rate and its completion figure agreed, about 27 times playback speed). A real slow or resting Jellyfin transcode has not been seen yet.
+
+**Changed**
+- A real Jellyfin stream has now been read: direct play, a switch to a transcode, bitrate, position and the reason for transcoding all showed correctly.
+
 ## 0.4.20 (2026-11-28)
 
 **New**

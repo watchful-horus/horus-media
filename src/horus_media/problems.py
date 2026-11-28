@@ -1,6 +1,6 @@
 """Playback problems: buffering, stalled playback, a conversion that cannot keep up.
 
-Horus only reads what Plex and Emby say about a playing stream, once per poll, so this is a
+Horus only reads what Plex, Emby and Jellyfin say about a playing stream, once per poll, so this is a
 best guess from the server's side of things:
 
   buffering          the player itself says it is buffering (Plex only; Emby has no such state)
@@ -8,7 +8,9 @@ best guess from the server's side of things:
   slow_transcode     the server converts slower than playback and is not just pausing because
                      it is far enough ahead. Plex reports the speed. Emby does not, so for Emby
                      it is worked out here: how far the conversion moved between two polls,
-                     against the time that passed (see `_measure`)
+                     against the time that passed (see `_measure`). Jellyfin is measured
+                     the same way, and as it never says when a conversion is resting, one
+                     that is well ahead of the player is taken to be resting, not slow
   direct_play_error  Emby fell back to converting because direct play failed
 
 A problem must be seen on two polls in a row before it counts, so a seek or the short buffer
@@ -61,6 +63,7 @@ class _Track:
     converted_at: datetime | None = None
     converted_from: int | None = None  # the player's position at that reading
     speed: float | None = None
+    waiting: bool = False  # judged to be resting ahead of playback (Jellyfin)
 
 
 _lock = threading.Lock()
@@ -81,6 +84,9 @@ def _clock(ms: int) -> str:
 
 MEASURE_MIN_SECONDS = 5  # two readings closer together than this say too little
 SEEK_SLACK_MS = 30_000  # the player's position moved this much more or less than the clock
+# A conversion this far ahead of the player that is not moving at playback speed is resting,
+# not struggling: one that cannot keep up never builds a lead.
+AHEAD_MS = 60_000
 
 
 def _measure(s: Session, track: _Track, now: datetime) -> None:
@@ -95,6 +101,7 @@ def _measure(s: Session, track: _Track, now: datetime) -> None:
               and s.transcode_speed is None and not s.transcode_throttled
               and s.state == "playing")
     track.speed = None
+    track.waiting = False
     if usable and track.converted is not None and track.converted_at is not None:
         elapsed_ms = (now - track.converted_at).total_seconds() * 1000
         moved = s.transcoded_ms - track.converted
@@ -104,6 +111,11 @@ def _measure(s: Session, track: _Track, now: datetime) -> None:
         if elapsed_ms >= MEASURE_MIN_SECONDS * 1000 and moved >= 0 and not seeked:
             track.speed = round(moved / elapsed_ms, 2)
             s.transcode_speed = track.speed
+            if (not s.throttle_reported and track.speed < SLOW_BELOW
+                    and s.position_ms is not None
+                    and s.transcoded_ms - s.position_ms >= AHEAD_MS):
+                track.speed = s.transcode_speed = None
+                track.waiting = s.transcode_throttled = True
     if usable:
         track.converted, track.converted_at = s.transcoded_ms, now
         track.converted_from = s.position_ms
@@ -224,6 +236,8 @@ def annotate(servers: list[ServerActivity]) -> None:
                 if (track.speed is not None and s.transcode_speed is None
                         and not s.transcode_throttled and s.state == "playing"):
                     s.transcode_speed = track.speed
+                if track.waiting and s.state == "playing":
+                    s.transcode_throttled = True
                 s.problems = [k for k in KINDS if k in track.open]
                 if track.interruptions >= REPEATED:
                     s.problems.append("repeated")

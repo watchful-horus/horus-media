@@ -5,14 +5,24 @@ import sqlite3
 from datetime import UTC, datetime
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 
+from horus_media import problems
 from horus_media.clients import JellyfinClient, make_client
 from horus_media.db import connect, migrate
 from horus_media.main import create_app
 from horus_media.migrations import MIGRATIONS
+from horus_media.models import ServerActivity
 
 from .conftest import TOKEN
+from .test_problems import Env
+
+
+@pytest.fixture
+def jellyfin(tmp_path):
+    problems.forget()
+    return Env(tmp_path, "jellyfin")
 
 HEADER = f'MediaBrowser Token="{TOKEN}"'
 USER = "0a1b2c3d4e5f60718293a4b5c6d7e8f9"
@@ -124,10 +134,77 @@ def test_session_is_read_like_the_card_shows_it():
     assert s.location == "LAN: 192.168.1.20"
 
 
-def test_no_speed_is_claimed_so_a_waiting_conversion_is_not_called_slow():
+def test_the_frame_rate_is_not_a_speed_but_how_far_it_has_got_is_read():
     s = client_for(Jellyfin()).get_sessions()[0]  # 3 frames a second against a 24 fps file
-    assert s.transcode_speed is None
-    assert s.transcode_throttled is False
+    assert s.transcode_speed is None and s.transcode_throttled is False
+    assert s.transcoded_ms == 300_000  # 30% of 1000 seconds
+    assert s.throttle_reported is False
+    assert "transcoded_ms" not in s.model_dump() and "throttle_reported" not in s.model_dump()
+
+
+def converting(done_percent, position_s, paused=False):
+    """A 6000-second film being converted, as Jellyfin reports it."""
+    return {"Id": "s1", "UserName": "erin", "DeviceName": "Chrome", "Client": "Jellyfin Web",
+            "NowPlayingItem": {"Id": "i1", "Name": "Film J", "Type": "Movie",
+                               "RunTimeTicks": 60_000_000_000},
+            "PlayState": {"PlayMethod": "Transcode", "PositionTicks": position_s * 10_000_000,
+                          "IsPaused": paused},
+            "TranscodingInfo": {"IsVideoDirect": False, "Framerate": 600,
+                                "CompletionPercentage": done_percent, "TranscodeReasons": []}}
+
+
+def shown(env):
+    """The one stream as the Activity page would get it."""
+    client = make_client("jellyfin", "Box", "http://box", TOKEN, transport=env.transport)
+    server = ServerActivity(id=1, name="Box", type="jellyfin", ok=True,
+                            sessions=client.get_sessions())
+    problems.annotate([server])
+    return server.sessions[0]
+
+
+def test_speed_is_worked_out_between_polls(jellyfin):
+    # 16 seconds apart, the conversion moves from 10% to 14.5% of 6000 s: 270 s, about 17x.
+    jellyfin.sessions[:] = [converting(10.0, 300)]
+    jellyfin.poll(0)
+    assert shown(jellyfin).transcode_speed is None  # one reading says nothing yet
+    jellyfin.sessions[:] = [converting(14.5, 316)]
+    jellyfin.poll(16)
+    s = shown(jellyfin)
+    assert s.transcode_speed == 16.88 and s.transcode_throttled is False
+    assert jellyfin.rows() == []
+
+
+def test_a_conversion_resting_well_ahead_is_not_slow(jellyfin):
+    # 20% done (1200 s) with the player at 300 s, and it no longer moves: resting, not slow.
+    for i, t in enumerate((0, 16, 32, 48)):
+        jellyfin.sessions[:] = [converting(20.0, 300 + 16 * i)]
+        jellyfin.poll(t)
+    s = shown(jellyfin)
+    assert s.transcode_throttled is True and s.transcode_speed is None
+    assert jellyfin.rows() == []
+
+
+def test_a_conversion_that_cannot_keep_up_is_a_slow_transcode(jellyfin):
+    # 9.6 s of film converted in each 16 s (0.6x), never more than a few seconds ahead.
+    for i, t in enumerate((0, 16, 32)):
+        jellyfin.sessions[:] = [converting((310 + 9.6 * i) / 60, 300 + 16 * i)]
+        jellyfin.poll(t)
+    (row,) = jellyfin.rows()
+    assert row["kind"] == "slow_transcode" and row["detail"] == "Converting at 0.6x playback speed"
+    assert shown(jellyfin).problems == ["slow_transcode"]
+
+
+def test_a_seek_or_a_finished_conversion_gives_no_speed(jellyfin):
+    jellyfin.sessions[:] = [converting(10.0, 300)]
+    jellyfin.poll(0)
+    jellyfin.sessions[:] = [converting(50.0, 2900)]  # jumped far ahead in the film
+    jellyfin.poll(16)
+    assert shown(jellyfin).transcode_speed is None
+    jellyfin.sessions[:] = [converting(100.0, 2916)]  # everything is converted
+    jellyfin.poll(32)
+    s = shown(jellyfin)
+    assert s.transcode_speed is None and s.transcode_throttled is False
+    assert jellyfin.rows() == []
 
 
 def test_add_show_and_stop_through_the_app(tmp_path, monkeypatch):

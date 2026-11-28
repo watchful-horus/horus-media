@@ -53,7 +53,7 @@ While Horus records history it also watches every playing stream for trouble. It
 | Direct play failed | The server had to convert because direct play gave an error | No | Yes |
 | Keeps buffering | Three or more interruptions (buffering or stalled) in one play | Yes | Yes |
 
-**Jellyfin** is read like Emby for Stalled, Direct play failed and Keeps buffering, and has no buffering state either. Slow transcode is not detected on Jellyfin: it reports a frame rate but not when a conversion is merely pausing because it is far enough ahead, so the two cannot be told apart.
+**Jellyfin** is read like Emby in every row, and has no buffering state either. For Slow transcode Horus works the speed out from how far Jellyfin's completion figure moves between two polls. Jellyfin never says when a conversion is merely resting because it is far enough ahead, so a conversion that is a minute or more ahead of the player and not moving at playback speed is taken to be resting (the Activity page shows *Ahead of playback*) and is not counted as slow.
 
 A problem counts once it has been seen on two polls in a row, so a seek or the first seconds of a play are ignored. Something shorter than the poll interval is missed, and a stream without a position (live TV) cannot be seen to stall.
 

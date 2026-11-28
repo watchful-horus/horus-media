@@ -46,6 +46,9 @@ class Session(BaseModel):
     # How far into the file the server has converted so far (Emby). Emby reports no speed, so
     # the poller works one out from how far this moves between two polls (see problems.py).
     transcoded_ms: int | None = Field(None, exclude=True)
+    # False for a server that never says when a conversion is resting (Jellyfin): the poller
+    # then judges that itself from how far the conversion is ahead of the player.
+    throttle_reported: bool = Field(True, exclude=True)
 
     @model_validator(mode="after")
     def _no_speed_while_paused_ahead(self):

@@ -1,6 +1,6 @@
 # Roadmap
 
-Status as of 2026-11-28: version 0.4.20. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
+Status as of 2026-11-28: version 0.4.21 (not released yet). The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
 
 ## Done
 
@@ -51,7 +51,7 @@ Status as of 2026-11-28: version 0.4.20. The original v1 scope is complete and t
 - Public repository with secret scanning, private vulnerability reporting, CodeQL, Dependabot alerts, protected `main`, SHA-pinned Actions
 - CI (tests, lint, Docker image, web build) on every push and pull request
 - Build supply chain: hash-locked Python dependencies and digest-pinned base images for the Docker image, signed build provenance for the release file and the image, release notes taken from the changelog, immutable releases and protected version tags
-- 479 tests (fake responses, no live servers), `ruff` clean; README and docs
+- 483 tests (fake responses, no live servers), `ruff` clean; README and docs
 
 **Verified**
 - Backup Download then Restore across installs (Proxmox container to Docker); Emby history import; lint and the full suite on real Linux; the Docker image in CI and a real Docker host, including an anonymous pull; all tests on emulated aarch64
@@ -75,7 +75,7 @@ Status as of 2026-11-28: version 0.4.20. The original v1 scope is complete and t
 - [ ] Switch tests to `httpx2` once FastAPI/Starlette require it (the warning is filtered for now)
 
 ## Known limits
-- Jellyfin (0.4.20) was built from the API description a Jellyfin server publishes about itself and tested with stand-ins. Its history import reads the Playback Reporting plugin (`user_list`, `type_filter_list`, `PlayActivity`, `GetItems`; names read from the plugin's source) with read calls only, has not run against a real plugin, and takes times as UTC. Slow transcodes are not detected on Jellyfin
+- Jellyfin (0.4.20) was built from the API description a Jellyfin server publishes about itself and tested with stand-ins. Its history import reads the Playback Reporting plugin (`user_list`, `type_filter_list`, `PlayActivity`, `GetItems`; names read from the plugin's source) with read calls only, has not run against a real plugin, and takes times as UTC. A real direct play and a real transcode were read correctly (2026-11-28). Its transcode speed is worked out between polls from the completion figure, and a conversion at least a minute ahead of the player is taken to be resting; a real slow or resting Jellyfin transcode has not been seen
 - Emby history import uses the Playback Reporting plugin's `UserPlaylist` endpoint; field names were read from the plugin's source and imports have only been tried on one Emby server
 - Imported plays carry no bandwidth, and Plex imports have no play method (shown as Unknown)
 - A stream that begins in the few seconds before Horus first reads a server counts as already playing, so it gets no "play started" notification

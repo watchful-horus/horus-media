@@ -10,7 +10,7 @@ import httpx
 
 from ..models import HistoryRecord
 from .base import ConnectionResult
-from .emby import HISTORY_DAYS, EmbyClient, _method, _reason_text
+from .emby import HISTORY_DAYS, TICKS_PER_MS, EmbyClient, _method, _reason_text
 
 log = logging.getLogger(__name__)
 DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -43,12 +43,20 @@ class JellyfinClient(EmbyClient):
         return ConnectionResult(info.get("ServerName") or self.name, info.get("Version"))
 
     def _health(self, ti: dict, item: dict) -> dict:
-        """Why Jellyfin converts the stream. It does not say when a conversion is pausing because
-        it is far enough ahead, so its frame rate cannot be told apart from a slow conversion
-        and no speed is reported."""
+        """Why Jellyfin converts the stream and how far into the file the conversion has got,
+        from the share it says is done. Jellyfin never says when a conversion is resting because
+        it is far enough ahead, so its frame rate is not used as a speed: the poller works one
+        out from how far the conversion moves between two polls (see problems.py)."""
         reasons = [r for r in ti.get("TranscodeReasons") or [] if isinstance(r, str)]
-        return {"transcode_reason": _reason_text(reasons),
-                "direct_play_failed": "DirectPlayError" in reasons}
+        out: dict = {"transcode_reason": _reason_text(reasons),
+                     "direct_play_failed": "DirectPlayError" in reasons}
+        done, runtime = ti.get("CompletionPercentage"), item.get("RunTimeTicks")
+        if (ti.get("IsVideoDirect") is False and isinstance(done, int | float)
+                and not isinstance(done, bool) and 0 <= done < 100
+                and isinstance(runtime, int) and runtime > 0):
+            out["transcoded_ms"] = int(runtime * done / 100) // TICKS_PER_MS
+            out["throttle_reported"] = False
+        return out
 
     def get_history(self) -> list[HistoryRecord]:
         """Plays recorded by Jellyfin's Playback Reporting plugin. Raises LookupError if it is
