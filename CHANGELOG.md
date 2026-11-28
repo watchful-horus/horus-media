@@ -2,7 +2,7 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
-## 0.4.22 (unreleased)
+## 0.4.22 (2026-11-28)
 
 **Fixed**
 - **Jellyfin history import missed plays.** On a real Jellyfin with the Playback Reporting plugin, the plugin counts a play on the day the server's own clock showed but lists it under the UTC day. Horus asked for the list of the counted day only, so a play made late in the evening (on a server behind UTC) or early in the morning (ahead of UTC) was never found; on a server several hours from UTC an import could find nothing at all. Horus now also reads the day before and the day after, and takes each play once.
