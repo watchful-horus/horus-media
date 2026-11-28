@@ -2,7 +2,7 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
-## 0.4.24 (unreleased)
+## 0.4.24 (2026-11-28)
 
 **New**
 - **Hours watched over time.** The first chart on **Graphs** has an **Hours / Plays** switch and now opens on hours watched, because a count treats a ten-second play like a two-hour film. One click shows plays as before, and your browser remembers the choice. Hour, Day, Week and Month and **View as table** work for both.
