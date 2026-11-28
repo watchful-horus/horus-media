@@ -2,7 +2,7 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
-## 0.4.21 (unreleased)
+## 0.4.21 (2026-11-28)
 
 **New**
 - **Transcode speed for Jellyfin.** Jellyfin says how much of a file it has converted, so Horus now works the speed out from how far that moves between two polls, as it does for Emby. The Activity page shows it from the second poll of a stream, and **Slow transcode** problems (and their notification) now work on Jellyfin too.
