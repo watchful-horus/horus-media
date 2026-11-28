@@ -4,7 +4,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-ServerType = Literal["plex", "emby"]
+ServerType = Literal["plex", "emby", "jellyfin"]
 PlayMethod = Literal["direct_play", "direct_stream", "transcode"]
 PlayState = Literal["playing", "paused", "buffering"]  # buffering: Plex only
 

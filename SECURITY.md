@@ -18,11 +18,11 @@ publicly.
 ## What counts
 Things that matter most, because Horus stores credentials for people's media servers:
 
-- a way to read, steal or log the stored Plex or Emby tokens or the encryption key,
+- a way to read, steal or log the stored Plex, Emby or Jellyfin tokens or the encryption key,
 - signing in, or reaching admin features, without the right account,
 - reading or writing files outside Horus's data folder (for example through backup upload,
   restore or log download),
-- a way to make Horus change anything on a Plex or Emby server (it only reads, except the admin-only
+- a way to make Horus change anything on a Plex, Emby or Jellyfin server (it only reads, except the admin-only
   "Stop stream" button, which no API key or control key may use),
 - a way to trigger "Update now" (the admin-only button that installs a new release into a Proxmox container) without a signed-in admin session, or to make it install something other than the official GitHub release,
 - a way around the limits of control keys: using one when control keys are switched off or the key
@@ -30,7 +30,7 @@ Things that matter most, because Horus stores credentials for people's media ser
   backup, to restore from an uploaded file or to change the release address.
 
 ## What doesn't
-- Problems in Plex, Emby or other software that Horus talks to.
+- Problems in Plex, Emby, Jellyfin or other software that Horus talks to.
 - Issues that need an admin account to start with, or physical access to the machine.
 - Missing hardening on a setup the documentation advises against. For example, until the first account exists anyone who can open the page can create it (Docker listens on the network from the start); the docs say to create the account straight away.
 - A setup with `HORUS_AUTH_DISABLED=1`, which turns the login off on purpose.

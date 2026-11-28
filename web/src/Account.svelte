@@ -4,7 +4,7 @@
 
   let { user, onchanged = () => {} } = $props()
 
-  // Your details: sign-in name, a friendly display name and (admins only) your Plex/Emby name.
+  // Your details: sign-in name, a friendly display name and (admins only) your Plex/Emby/Jellyfin name.
   let details = $state({ username: user.username, display_name: user.display_name ?? '', media_username: user.media_username ?? '' })
   let detailsMsg = $state(null)
   let detailsOk = $state(true)
@@ -84,11 +84,11 @@
       <input bind:value={details.display_name} maxlength="60" autocomplete="name" placeholder="Shown in the top bar instead of your username" />
     </label>
     {#if user.role === 'admin'}
-      <label>Your Plex/Emby name (optional)
+      <label>Your Plex/Emby/Jellyfin name (optional)
         <input bind:value={details.media_username} maxlength="100" placeholder="So your own plays can be matched to you" />
       </label>
     {:else}
-      <dl><dt>Plex/Emby name</dt><dd>{user.media_username || 'Not set (an admin sets it)'}</dd></dl>
+      <dl><dt>Plex/Emby/Jellyfin name</dt><dd>{user.media_username || 'Not set (an admin sets it)'}</dd></dl>
     {/if}
     <dl><dt>Role</dt><dd>{user.role === 'admin' ? 'Admin' : 'User'}</dd></dl>
     <div class="actions">

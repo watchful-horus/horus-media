@@ -117,7 +117,7 @@
             {#if u.id === me.id}<span class="badge">you</span>{/if}
             <span class="badge" class:admin={u.role === 'admin'}>{u.role === 'admin' ? 'Admin' : 'User'}</span>
           </div>
-          <div class="muted small">{u.last_login_at ? `Last signed in ${when(u.last_login_at)}` : 'Has not signed in yet'}{u.media_username ? ` · Plex/Emby: ${u.media_username}` : ''}</div>
+          <div class="muted small">{u.last_login_at ? `Last signed in ${when(u.last_login_at)}` : 'Has not signed in yet'}{u.media_username ? ` · Plex/Emby/Jellyfin: ${u.media_username}` : ''}</div>
         </div>
         <button type="button" class="manage" aria-expanded={openId === u.id} onclick={() => openPanel(u)}>{openId === u.id ? 'Close' : 'Edit'}</button>
 
@@ -130,7 +130,7 @@
               <label>Display name (optional)
                 <input bind:value={draft.display_name} maxlength="60" autocomplete="off" placeholder="Shown instead of the username" />
               </label>
-              <label>Plex/Emby name
+              <label>Plex/Emby/Jellyfin name
                 <input bind:value={draft.media_username} maxlength="100" autocomplete="off" placeholder="Needed when users only see their own activity" />
               </label>
               {#if u.id !== me.id}
@@ -177,7 +177,7 @@
     Normal users see only their own activity
   </label>
   <p class="hint">
-    When on, a normal user sees only plays by the Plex/Emby name you link to their account above
+    When on, a normal user sees only plays by the Plex/Emby/Jellyfin name you link to their account above
     (and no server-wide bandwidth). With no name linked they see nothing. Admins always see
     everything, and a person's API keys follow the same rule. This saves as soon as you tick it.
   </p>
@@ -192,7 +192,7 @@
     <label>Password
       <input type="password" bind:value={form.password} autocomplete="new-password" required minlength="8" placeholder="At least 8 characters" />
     </label>
-    <label>Plex/Emby name (optional)
+    <label>Plex/Emby/Jellyfin name (optional)
       <input bind:value={form.media_username} autocomplete="off" maxlength="100" placeholder="Used when users only see their own activity" />
     </label>
     <label>Role

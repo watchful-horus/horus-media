@@ -67,7 +67,8 @@
       else if (shown.length === 0 && !showShared) message = 'Added. Only shared servers are left; tick the box above to see them.'
     })
 
-  const PLACEHOLDER = { plex: 'http://host:32400', emby: 'http://host:8096' }
+  const PLACEHOLDER = { plex: 'http://host:32400', emby: 'http://host:8096', jellyfin: 'http://host:8096' }
+  const PRODUCT = { plex: 'Plex', emby: 'Emby', jellyfin: 'Jellyfin' }
 
   async function load() {
     servers = await api.servers()
@@ -180,10 +181,10 @@
           <div class="small" class:ok={imported[s.id].ok} class:bad={!imported[s.id].ok}>{imported[s.id].text}</div>
         {/if}
         <div class="muted small note">
-          {#if s.type === 'emby'}
-            To import Emby's past plays, install the Playback Reporting plugin in Emby (Dashboard &gt; Plugins &gt; Catalogue).
+          {#if s.type !== 'plex'}
+            To import {PRODUCT[s.type]}'s past plays, install the Playback Reporting plugin in {PRODUCT[s.type]} (Dashboard &gt; Plugins &gt; {s.type === 'emby' ? 'Catalogue' : 'Catalog'}).
             It only has plays from after it was installed.
-            Import once, soon after adding the server: Emby may name a play differently than Horus saw it live, so a play recorded both ways can count twice.
+            Import once, soon after adding the server: {PRODUCT[s.type]} may name a play differently than Horus saw it live, so a play recorded both ways can count twice.
           {:else}
             <strong>Import history</strong> copies this server's past plays into Horus. Do it once, right after adding the server.
             Running it again won't add duplicates, but there is nothing new to gain.
@@ -192,7 +193,7 @@
       </div>
       <div class="actions">
         <button disabled={busy} onclick={() => testSaved(s.id)}>Test</button>
-        <button disabled={busy} onclick={() => importHistory(s)} title={s.type === 'emby' ? 'Needs the Playback Reporting plugin' : 'Reads the history Plex keeps'}>Import history</button>
+        <button disabled={busy} onclick={() => importHistory(s)} title={s.type !== 'plex' ? 'Needs the Playback Reporting plugin' : 'Reads the history Plex keeps'}>Import history</button>
         <button disabled={busy} onclick={() => (renaming = { id: s.id, name: s.name })}>Rename</button>
         <button disabled={busy} onclick={() => remove(s)}>Remove</button>
       </div>
@@ -247,17 +248,18 @@
 
 <section class="card">
   <h2>Add a server manually</h2>
-  <p class="muted small">For Emby, or a Plex server you would rather connect with a token.</p>
+  <p class="muted small">For Emby or Jellyfin (make an API key in the server's dashboard), or a Plex server you would rather connect with a token.</p>
   <form onsubmit={(e) => { e.preventDefault(); add() }}>
     <label>Type
       <select bind:value={form.type}>
         <option value="plex">Plex</option>
         <option value="emby">Emby</option>
+        <option value="jellyfin">Jellyfin</option>
       </select>
     </label>
     <label>Name <input bind:value={form.name} placeholder="Living room" required /></label>
     <label>URL <input bind:value={form.url} placeholder={PLACEHOLDER[form.type]} required /></label>
-    <label>{form.type === 'plex' ? 'Plex token' : 'Emby API key'}
+    <label>{form.type === 'plex' ? 'Plex token' : `${PRODUCT[form.type]} API key`}
       <input type="password" bind:value={form.token} autocomplete="off" required />
     </label>
     <p class="muted small">The token is stored encrypted and is never shown again.</p>

@@ -22,7 +22,7 @@ There are two roles. Admins add people in **Settings > Users** and choose each p
 | Activity and Graphs | yes | yes |
 | Change own password, username and display name, sign out their other browsers, and create own API keys (Account) | yes | yes |
 | See the IP address a stream is played from | yes | no (only "LAN" or "WAN") |
-| Set own Plex/Emby name | yes | no (an admin sets it) |
+| Set own Plex/Emby/Jellyfin name | yes | no (an admin sets it) |
 | Edit anyone's details (click their name under Settings > Users) | yes | no |
 | Servers, settings, backups, logs, restart | yes | no |
 | Add or remove people, see and revoke everyone's API keys, control keys | yes | no |
@@ -30,7 +30,7 @@ There are two roles. Admins add people in **Settings > Users** and choose each p
 
 Usernames are 3 to 64 letters, numbers, dots, dashes, underscores, `@` or `+`, so an email address works, and they are not case-sensitive. Usernames show up in the log (for example "login: name from address"), so treat a shared log as personal data. There is always at least one admin: the last one cannot be deleted or demoted, and you cannot delete or demote yourself. Anything added to Horus later is admin-only until it is deliberately opened to users.
 
-**Your details.** Your name in the top bar opens a small menu: **Account**, the theme (auto, light or dark) and **Sign out**. On the Account page you can change your username (your other browsers stay signed in), set an optional display name that the top bar and the Users list show instead of the username, and change your password. Admins can also set their own Plex/Emby name there. Admins can open anyone's details by clicking their name under **Settings > Users**: username, display name, Plex/Emby name, role, password reset, sign out everywhere and delete. A normal user can't set a Plex/Emby name, because with privacy on it decides whose plays they can see. Control keys can't change any of this.
+**Your details.** Your name in the top bar opens a small menu: **Account**, the theme (auto, light or dark) and **Sign out**. On the Account page you can change your username (your other browsers stay signed in), set an optional display name that the top bar and the Users list show instead of the username, and change your password. Admins can also set their own Plex/Emby/Jellyfin name there. Admins can open anyone's details by clicking their name under **Settings > Users**: username, display name, Plex/Emby/Jellyfin name, role, password reset, sign out everywhere and delete. A normal user can't set a Plex/Emby/Jellyfin name, because with privacy on it decides whose plays they can see. Control keys can't change any of this.
 
 ## What is protected
 - Passwords are stored as scrypt hashes (about 32 MB of memory per sign-in, one of the settings OWASP lists; a hash made by an older version is renewed the next time that person signs in) and can be up to 1024 characters. At most two passwords are checked at the same moment, so a burst of sign-in attempts cannot use up the memory of a small container. Session tokens and API keys only as SHA-256 hashes. Repeated wrong passwords are slowed down: after five in a minute for one username from one address, that username has to wait a minute from that address (other people there, and the same person elsewhere, are not affected), and an address that fails thirty times in a minute across any usernames has to wait too. Sign-in errors do not say whether the username or the password was wrong. The change-password form counts the same way per account: five wrong entries of the current password in a minute, then a minute's wait.
@@ -47,7 +47,7 @@ Usernames are 3 to 64 letters, numbers, dots, dashes, underscores, `@` or `+`, s
 ## Privacy between users
 Users on a normal account can see everyone's Activity and Graphs, including other people's names and what they watched. Only give accounts to people you are happy to show that.
 
-To limit this, turn on *Normal users see only their own activity* under **Settings > Users**. Normal users (and their API keys) then see only plays by one Plex/Emby name. Link that name to each account under **Settings > Users**. Without a linked name they see nothing. Admins always see everything. Server-wide bandwidth is hidden from limited users, because it would reveal what others are watching.
+To limit this, turn on *Normal users see only their own activity* under **Settings > Users**. Normal users (and their API keys) then see only plays by one Plex/Emby/Jellyfin name. Link that name to each account under **Settings > Users**. Without a linked name they see nothing. Admins always see everything. Server-wide bandwidth is hidden from limited users, because it would reveal what others are watching.
 
 Whatever that setting says, only admins see the IP address a stream is played from. A normal user, and a key that belongs to one, sees "LAN" or "WAN" in its place.
 
@@ -57,7 +57,7 @@ Every signed-in person can create their own API keys under **Account**; a key ac
 Control keys are a special kind of key for testing and automation. See [API](api.md#control-keys-for-testing-and-automation).
 
 ## The one write action
-Horus reads from Plex and Emby and changes nothing on them, with one exception: an admin can press **Stop stream** on the Activity page to end a playing stream. It works only from a signed-in admin session, never with an API key or control key, it is logged by name, and Plex needs Plex Pass for it.
+Horus reads from Plex, Emby and Jellyfin and changes nothing on them, with one exception: an admin can press **Stop stream** on the Activity page to end a playing stream. It works only from a signed-in admin session, never with an API key or control key, it is logged by name, and Plex needs Plex Pass for it.
 
 ## Without a login
 While Horus answers without a login (no account exists yet, or `HORUS_AUTH_DISABLED` is set), it answers only when it is opened by its IP address, by `localhost`, or by a name listed in [`HORUS_ALLOWED_HOSTS`](configuration.md#environment-variables). Any other name gets a short page that says so. This stops a web page on another site from pointing a domain name of its own at your Horus and using it through your browser ("DNS rebinding"). Once an account exists and the login is on, any name works and nothing needs to be set.

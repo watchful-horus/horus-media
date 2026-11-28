@@ -2,11 +2,11 @@
 
 # Horus
 
-<p align="center"><b>Plex and Emby in one dashboard.</b><br>Live activity and watch history for both servers, free and open source (MIT), one container to run.</p>
+<p align="center"><b>Plex, Emby and Jellyfin in one dashboard.</b><br>Live activity and watch history for all your servers, free and open source (MIT), one container to run.</p>
 
 <p align="center"><img src="docs/screenshots/graphs-dark.png" width="90%" alt="Horus graphs, dark theme"></p>
 
-- **One place for both servers:** see every stream on Plex and Emby right now, and how your libraries get watched over time
+- **One place for all your servers:** see every stream on Plex, Emby and Jellyfin right now, and how your libraries get watched over time
 - **Private and read-only:** runs on your own hardware, keeps data in a local SQLite file, and changes nothing on your servers (apart from an admin's optional Stop stream button)
 - **Easy to run:** one Docker command, or a guided Proxmox container install; no database to set up
 
@@ -16,10 +16,10 @@ docker run -d --name horus -p 8000:8000 -v horus-data:/data -e TZ=Europe/London 
 ```
 More ways to install are in [Quick start](#quick-start) and [docs/install.md](docs/install.md).
 
-> Status: early release (0.4.19), public and tested with Docker and a Proxmox container. Plex and Emby are trademarks of their owners; Horus is not affiliated with either.
+> Status: early release (0.4.20), public and tested with Docker and a Proxmox container. Plex, Emby and Jellyfin are names and trademarks of their owners; Horus is not affiliated with any of them.
 
 ## Features
-- Live activity from Plex and Emby in one view, with posters and full stream details
+- Live activity from Plex, Emby and Jellyfin in one view, with posters and full stream details
 - Play history recorded locally (SQLite) from the moment you add a server, with optional import of past history
 - Playback problems: buffering, stalled playback and slow transcodes are marked on the live view, graphed and listed ([what is detected](docs/servers-and-integrations.md#playback-problems))
 - Graphs: plays over time by hour, day, week or month; direct play vs transcode; bandwidth; plays by user, platform, hour and weekday; media types
@@ -47,6 +47,7 @@ Other ways to install (a Proxmox VE container with a guided script, or from sour
 Next, add a server under **Settings > Servers**:
 - **Plex:** *Sign in with Plex* (or paste an `X-Plex-Token`).
 - **Emby:** create an API key in the Emby dashboard (Advanced > API Keys) and paste it in.
+- **Jellyfin:** create an API key in the Jellyfin dashboard (API Keys) and paste it in.
 
 Horus starts recording plays as soon as a server is added. See [Servers, history and integrations](docs/servers-and-integrations.md) to import older history.
 
@@ -64,4 +65,4 @@ Horus starts recording plays as soon as a server is added. See [Servers, history
 Help is welcome: see [CONTRIBUTING.md](CONTRIBUTING.md) for the ground rules and how to set up. To report a security problem privately, see [SECURITY.md](SECURITY.md).
 
 ## Licence
-Horus is released under the [MIT licence](LICENSE). Plex and Emby are trademarks of their owners; Horus is not affiliated with or endorsed by either.
+Horus is released under the [MIT licence](LICENSE). Plex, Emby and Jellyfin are names and trademarks of their owners; Horus is not affiliated with or endorsed by any of them.

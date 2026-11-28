@@ -82,12 +82,27 @@ def _layout_count(conn: sqlite3.Connection) -> int:
 def _migrate(conn: sqlite3.Connection) -> int:
     conn.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)")
     current = conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] or 0
-    for version, sql in enumerate(MIGRATIONS, start=1):
-        if version <= current:
-            continue
-        with conn:
-            for statement in sql.split(";"):
-                if statement.strip():
-                    conn.execute(statement)
-            conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
+    if current >= len(MIGRATIONS):
+        return len(MIGRATIONS)
+    # A step that rebuilds a table drops the old one, and with the foreign-key rule on that
+    # would delete every row pointing at it. The rule can only be changed outside a
+    # transaction, so it is switched off for the whole run and put back afterwards.
+    conn.commit()
+    enforced = conn.execute("PRAGMA foreign_keys").fetchone()[0]
+    conn.execute("PRAGMA foreign_keys = OFF")
+    try:
+        for version, sql in enumerate(MIGRATIONS, start=1):
+            if version <= current:
+                continue
+            with conn:
+                for statement in sql.split(";"):
+                    if statement.strip():
+                        conn.execute(statement)
+                if conn.execute("PRAGMA foreign_key_check").fetchone():
+                    raise sqlite3.IntegrityError(f"migration {version} left rows without a parent")
+                conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
+    finally:
+        conn.commit()
+        if enforced:
+            conn.execute("PRAGMA foreign_keys = ON")
     return len(MIGRATIONS)

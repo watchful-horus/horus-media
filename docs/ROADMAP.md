@@ -1,11 +1,11 @@
 # Roadmap
 
-Status as of 2026-11-20: version 0.4.19. The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
+Status as of 2026-11-27: version 0.4.20 (not released yet). The original v1 scope is complete and the project is public (repository and Docker image). Per-version details are in [CHANGELOG.md](../CHANGELOG.md). `1.0.0` comes once `ct/horus.sh` has run on a real Proxmox host and the published image has had real use.
 
 ## Done
 
 **Connections**
-- Plex and Emby clients behind one `MediaServer` interface (`test_connection`, `get_sessions`, posters; reads only, apart from the admin-only `stop_session`)
+- Plex, Emby and Jellyfin clients behind one `MediaServer` interface (`test_connection`, `get_sessions`, posters; reads only, apart from the admin-only `stop_session`)
 - "Sign in with Plex" (plex.tv PIN flow: pick a server, no token hunting); manual token / API key entry still works
 - Server tokens encrypted at rest (Fernet, key next to the database); never logged, never returned by the API
 - Rename a server (everything follows, since history joins on the id)
@@ -23,7 +23,7 @@ Status as of 2026-11-20: version 0.4.19. The original v1 scope is complete and t
 - Graphs: plays over time (hour / day / week / month, up to 90 days for hours), direct play vs transcode over time, bandwidth over time (with combined Total), plays by user / platform / hour of day / weekday, media type
 - Plays and hours watched per month for the last 12 months, stacked by server; the Graphs page loads on demand
 - Earlier/later arrows, presets and All time, "View as table" on every chart, validated colour palette, light and dark themes
-- Import of past history (Plex history, Emby Playback Reporting plugin), safe to repeat
+- Import of past history (Plex history, the Playback Reporting plugins of Emby and Jellyfin), safe to repeat
 
 **Accounts and API**
 - First-run account creation (the first person picks their username and becomes admin); admin and user roles; admins manage people; scrypt, sessions, sign-in rate limited per username and address (`HORUS_TRUSTED_PROXIES` for the real address behind a proxy); an email address works as a username
@@ -51,7 +51,7 @@ Status as of 2026-11-20: version 0.4.19. The original v1 scope is complete and t
 - Public repository with secret scanning, private vulnerability reporting, CodeQL, Dependabot alerts, protected `main`, SHA-pinned Actions
 - CI (tests, lint, Docker image, web build) on every push and pull request
 - Build supply chain: hash-locked Python dependencies and digest-pinned base images for the Docker image, signed build provenance for the release file and the image, release notes taken from the changelog, immutable releases and protected version tags
-- 471 tests (fake responses, no live servers), `ruff` clean; README and docs
+- 479 tests (fake responses, no live servers), `ruff` clean; README and docs
 
 **Verified**
 - Backup Download then Restore across installs (Proxmox container to Docker); Emby history import; lint and the full suite on real Linux; the Docker image in CI and a real Docker host, including an anonymous pull; all tests on emulated aarch64
@@ -59,7 +59,8 @@ Status as of 2026-11-20: version 0.4.19. The original v1 scope is complete and t
 
 ## Next
 
-- [ ] Try Stop stream on a real Emby (never without the author's say-so)
+- [ ] Try Stop stream on a real Emby and a real Jellyfin (never without the author's say-so)
+- [ ] Try the Jellyfin history import against a real Jellyfin with the Playback Reporting plugin installed
 - [ ] Real-server test run by hand (a real Plex and Emby in a throwaway setup) to catch API changes the fakes can't
 - [ ] Try the arm64 image on a real small board (it is built and started on an arm64 machine at GitHub, nothing more)
 - [ ] Mobile: the responsive web layout is done (every page fits a phone-sized window; not yet tried on a real phone). Next if wanted: an installable PWA, a native app only if that falls short
@@ -68,12 +69,13 @@ Status as of 2026-11-20: version 0.4.19. The original v1 scope is complete and t
 - [ ] GitHub Discussions
 - [ ] Community-scripts submission is a long way off: a new app must be 6+ months old, actively maintained and have 600+ stars with release tarballs. The `ct/`, `install/` and `json/` files are kept in their format so it stays possible
 
-**Later (not planned yet):** Jellyfin. (A watchlist view was dropped.)
+(A watchlist view was dropped.)
 
 **Tidy-ups**
 - [ ] Switch tests to `httpx2` once FastAPI/Starlette require it (the warning is filtered for now)
 
 ## Known limits
+- Jellyfin (0.4.20) was built from the API description a Jellyfin server publishes about itself and tested with stand-ins. Its history import reads the Playback Reporting plugin (`user_list`, `type_filter_list`, `PlayActivity`, `GetItems`; names read from the plugin's source) with read calls only, has not run against a real plugin, and takes times as UTC. Slow transcodes are not detected on Jellyfin
 - Emby history import uses the Playback Reporting plugin's `UserPlaylist` endpoint; field names were read from the plugin's source and imports have only been tried on one Emby server
 - Imported plays carry no bandwidth, and Plex imports have no play method (shown as Unknown)
 - A stream that begins in the few seconds before Horus first reads a server counts as already playing, so it gets no "play started" notification

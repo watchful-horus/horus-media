@@ -39,6 +39,7 @@ REASONS = {
     "AudioBitrateNotSupported": "Audio bitrate not supported",
     "VideoResolutionNotSupported": "Resolution not supported",
     "VideoRangeNotSupported": "HDR not supported",
+    "VideoRangeTypeNotSupported": "HDR not supported",
     "AudioChannelsNotSupported": "Audio channels not supported",
 }
 
@@ -188,6 +189,9 @@ class EmbyClient(MediaServer):
                 ))
         return records
 
+    def _health(self, ti: dict, item: dict) -> dict:
+        return _transcode_health(ti, item)
+
     def get_image(self, path: str) -> tuple[bytes, str]:
         if not POSTER_PATH.fullmatch(path):
             raise ValueError("unsupported image path")
@@ -225,7 +229,7 @@ class EmbyClient(MediaServer):
             poster=_poster(item),
             position_ms=position // TICKS_PER_MS if position is not None else None,
             duration_ms=runtime // TICKS_PER_MS if runtime else None,
-            **_transcode_health(s.get("TranscodingInfo") or {}, item),
+            **self._health(s.get("TranscodingInfo") or {}, item),
             **self._details(s, item, play_state, method),
         )
 

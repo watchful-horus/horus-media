@@ -1,6 +1,6 @@
 # Contributing to Horus
 
-Thanks for wanting to help. Horus is a small self-hosted dashboard for Plex and Emby, and it is
+Thanks for wanting to help. Horus is a small self-hosted dashboard for Plex, Emby and Jellyfin, and it is
 looked after by one person in their spare time, so a few ground rules keep it manageable.
 
 ## Before you start
@@ -12,20 +12,20 @@ looked after by one person in their spare time, so a few ground rules keep it ma
 ## Ground rules
 These protect the people who run Horus, so they are not negotiable.
 
-1. **Read-only against Plex and Emby**, with one exception: an admin can stop a playing stream
+1. **Read-only against Plex, Emby and Jellyfin**, with one exception: an admin can stop a playing stream
    (`stop_session`, from a signed-in session only, never from an API key). No other changes, no
    deletes, no other playback control.
 2. **Server tokens are secrets.** They are encrypted at rest, and they must never be logged, shown
    in the UI or an API response, or printed in an error message. If your change touches tokens,
    say so in the pull request.
-3. **Write your own code.** Build from the official Plex and Emby API documentation. Do not copy
+3. **Write your own code.** Build from the official Plex, Emby and Jellyfin API documentation. Do not copy
    code or assets from other projects (Tautulli and others use licences that are not compatible
    with this one). If you use a library, check its licence first.
-4. **Trademarks.** "Plex" and "Emby" belong to their owners. Use them only to describe what
+4. **Trademarks.** "Plex", "Emby" and "Jellyfin" belong to their owners. Use them only to describe what
    Horus works with, never in a product name or logo.
 5. **Keep personal details out.** No real IP addresses, usernames, tokens, server names or file
    paths in code, tests, screenshots or commit messages. Tests use `192.168.1.x` and made-up names.
-6. **Tests use recorded or fake responses.** Never require a live Plex or Emby server.
+6. **Tests use recorded or fake responses.** Never require a live Plex, Emby or Jellyfin server.
 
 ## Setting up
 [docs/install.md](docs/install.md) (From source) has the full steps. In short:

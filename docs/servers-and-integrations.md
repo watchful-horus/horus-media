@@ -3,6 +3,7 @@
 ## Adding servers
 - **Plex:** use *Sign in with Plex* in Settings > Servers: Horus opens plex.tv in a new tab, you approve, then pick a server. Horus contacts plex.tv only for this step. Or paste an `X-Plex-Token` manually.
 - **Emby:** create an API key in the Emby dashboard (Advanced > API Keys) and paste it in.
+- **Jellyfin:** create an API key in the Jellyfin dashboard (**Dashboard > API Keys**) and paste it in. **Test connection** checks the key too, so a wrong key is caught before you save.
 
 Use the **Test connection** button before saving. A server can be renamed later; its history follows.
 
@@ -21,7 +22,9 @@ The plugin only has plays from the day it was installed, so a new install has li
 
 If the import says the plugin was not found, Emby answered "not found" (usually the plugin is not installed, or Emby was not restarted after installing it) or refused the key (it is not an administrator's). Turn the log level to DEBUG under **Settings > Logs** and try again: the log shows the status Emby answered (404 means the plugin is missing, 401 or 403 means the key is not an administrator's).
 
-**Import once, right after you add the server.** Importing only reads from the server and changes nothing on it. Running it again adds nothing new: each play has a stable key, so one already imported is skipped. Plays Horus recorded live are skipped too, matched by user, title and start time (within two minutes). Plex names a play the same way in both places, so those match. Emby's plugin may name a play differently from how Horus saw it live, so on Emby the longer Horus has been recording before you import, the likelier a few plays count twice. A play for which Emby's plugin gives only a date (no time) is placed at 12:00 midday in your Horus time zone, so it lands on the right day. Imported plays have no bandwidth figure, and Plex does not say how a past play was streamed, so those show as "Unknown" in the direct play vs transcode charts.
+**Jellyfin.** The same idea as Emby: Jellyfin's own **Playback Reporting** plugin holds the history. Install it under **Dashboard > Plugins > Catalog**, restart Jellyfin, then press **Import history**. Horus asks the plugin which days each person played something and reads those days one by one, so a long history takes a little while. The plugin gives a play's time to the minute, in the time zone Jellyfin itself uses, and Horus reads it as UTC, so imported Jellyfin plays can sit some hours off; a time it cannot read is treated like Emby's date-only plays below. Not yet tried against a real Jellyfin with the plugin installed: please report what you see.
+
+**Import once, right after you add the server.** Importing only reads from the server and changes nothing on it. Running it again adds nothing new: each play has a stable key, so one already imported is skipped. Plays Horus recorded live are skipped too, matched by user, title and start time (within two minutes). Plex names a play the same way in both places, so those match. The Emby and Jellyfin plugins may name a play differently from how Horus saw it live, so on those servers the longer Horus has been recording before you import, the likelier a few plays count twice. A play for which Emby's plugin gives only a date (no time) is placed at 12:00 midday in your Horus time zone, so it lands on the right day. Imported plays have no bandwidth figure, and Plex does not say how a past play was streamed, so those show as "Unknown" in the direct play vs transcode charts.
 
 ## Notifications and alerts
 **Settings > Notifications** can post a message to a Discord channel webhook, an ntfy topic, a Telegram chat, a Gotify server, Pushover, or any web address (JSON) when someone starts or finishes playing, a server becomes unreachable or comes back, or a stream has a [playback problem](#playback-problems). Channel addresses, tokens and keys are secrets: they are stored encrypted and never shown again. Tick the matching event on a channel to receive it.
@@ -40,7 +43,7 @@ Telegram messages are sent as plain text. Telegram, Gotify and Pushover were bui
 Three optional alerts (*Alerts and reports* on the same page, all off by default) use the same channels: too many transcodes at once, a server's bandwidth over a limit, and someone Horus has never seen starting to play. Each is sent once when the limit is crossed.
 
 ## Playback problems
-While Horus records history it also watches every playing stream for trouble. It only reads what Plex and Emby report, once per poll, so treat it as a good hint rather than a measurement.
+While Horus records history it also watches every playing stream for trouble. It only reads what Plex, Emby and Jellyfin report, once per poll, so treat it as a good hint rather than a measurement.
 
 | Problem | What it means | Plex | Emby |
 |---|---|---|---|
@@ -50,9 +53,11 @@ While Horus records history it also watches every playing stream for trouble. It
 | Direct play failed | The server had to convert because direct play gave an error | No | Yes |
 | Keeps buffering | Three or more interruptions (buffering or stalled) in one play | Yes | Yes |
 
+**Jellyfin** is read like Emby for Stalled, Direct play failed and Keeps buffering, and has no buffering state either. Slow transcode is not detected on Jellyfin: it reports a frame rate but not when a conversion is merely pausing because it is far enough ahead, so the two cannot be told apart.
+
 A problem counts once it has been seen on two polls in a row, so a seek or the first seconds of a play are ignored. Something shorter than the poll interval is missed, and a stream without a position (live TV) cannot be seen to stall.
 
-- **Activity** marks the stream in red next to its title, and shows the transcode speed and (Emby) the reason for transcoding.
+- **Activity** marks the stream in red next to its title, and shows the transcode speed and (Emby and Jellyfin) the reason for transcoding.
 - **Graphs** has the problems over time, by user and by player for the chosen dates, and a list of the latest ones.
 - **Notifications**: tick *A stream has a playback problem* on a channel. It is sent once per kind for each play, and once more when a play keeps buffering.
 - Problems are kept as long as history is and are in [`/api/v1/problems`](api.md#data-api-for-grafana-and-other-tools). Someone who may only see their own activity sees only their own problems.

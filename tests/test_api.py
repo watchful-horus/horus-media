@@ -60,7 +60,7 @@ def test_test_unsaved_ok_and_bad_token(client):
 
 
 def test_invalid_type_rejected(client):
-    assert client.post("/api/servers", json={**PLEX, "type": "jellyfin"}).status_code == 422
+    assert client.post("/api/servers", json={**PLEX, "type": "kodi"}).status_code == 422
 
 
 def test_token_never_logged(client, caplog):

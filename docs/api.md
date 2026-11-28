@@ -29,7 +29,7 @@ scrape_configs:
 ## The app's own API
 These are used by the web UI and need a signed-in session (not an ordinary API key).
 
-- `POST /api/servers` add `{type: plex|emby, name, url, token}`; `GET /api/servers`; `DELETE /api/servers/{id}`
+- `POST /api/servers` add `{type: plex|emby|jellyfin, name, url, token}`; `GET /api/servers`; `DELETE /api/servers/{id}`
 - `POST /api/plex/link`, `GET /api/plex/link/{pin}`, `POST /api/plex/link/{pin}/add` the Sign in with Plex flow (the account token never leaves the server)
 - `POST /api/servers/{id}/test` test a saved server; `POST /api/servers/test` test `{type, url, token}` without saving
 - `GET /api/activity` live sessions from all servers, merged, plus per-server status

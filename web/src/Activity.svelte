@@ -186,7 +186,7 @@
     <h2>Welcome to Horus</h2>
     <p class="muted">Three steps and this page fills up.</p>
     <ol class="steps">
-      <li><strong>Add a server.</strong> Plex (sign in with Plex) or Emby (an API key).</li>
+      <li><strong>Add a server.</strong> Plex (sign in with Plex), Emby or Jellyfin (an API key).</li>
       <li><strong>Watch something.</strong> Streams appear here live, and Horus starts recording history.</li>
       <li><strong>Optional: import older plays.</strong> Right after adding a server, so the Graphs page has data from day one.</li>
     </ol>

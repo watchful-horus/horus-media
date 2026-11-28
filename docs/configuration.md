@@ -28,7 +28,7 @@ In **Settings > General**, under *Network*, you can change the HTTP port and cho
 ### Backups
 Backups are zips of the database plus `horus.key`, written to a `backups` folder next to the database, either by hand or automatically (every whole number of days at a time you choose, 03:00 by default, with retention).
 
-- They contain your encrypted server tokens, the key to decrypt them and the password hashes of every account, so keep them private: anyone holding one can use your Plex and Emby tokens.
+- They contain your encrypted server tokens, the key to decrypt them and the password hashes of every account, so keep them private: anyone holding one can use your Plex, Emby and Jellyfin tokens and keys.
 - **Download** next to a backup gives you that full zip (this is how you move Horus to another machine). Only a signed-in admin can download one; no API key or control key can.
 - To restore, use the **Restore** button next to a backup, or **Restore from a file...**. Horus checks the backup, saves the current state first (so a restore can be undone), then swaps in the database and its key together. If Horus is stopped in the middle of that (a power cut, say), it finishes the restore the next time it starts. Restoring also restores the accounts and API keys that were in it.
 - By hand: stop Horus, unzip over `horus.db` and `horus.key` in the data folder, start it again.

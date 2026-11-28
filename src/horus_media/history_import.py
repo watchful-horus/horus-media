@@ -39,11 +39,13 @@ def import_history(store: ServerStore, server_id: int,
         status = getattr(getattr(cause, "response", None), "status_code", "?")
         log.warning("history import for %s: Playback Reporting not available (HTTP %s)",
                     row["name"], status)
+        product, where = (("Jellyfin", "Dashboard > Plugins > Catalog")
+                          if row["type"] == "jellyfin" else ("Emby", "Dashboard > Plugins > Catalogue"))
         raise HistoryImportError(
-            "Emby has no Playback Reporting plugin to read history from. In Emby open "
-            "Dashboard > Plugins > Catalogue, install Playback Reporting, restart Emby and try "
-            "again. Horus must also use an administrator's API key. The plugin only has plays "
-            "from after it was installed.") from None
+            f"{product} has no Playback Reporting plugin to read history from. In {product} "
+            f"open {where}, install Playback Reporting, restart {product} and try again. Horus "
+            "must also use an administrator's API key. The plugin only has plays from after it "
+            "was installed.") from None
     except (httpx.HTTPError, ValueError, KeyError, TypeError) as e:
         log.warning("history import failed for %s: %s", row["name"], type(e).__name__)
         raise HistoryImportError("Could not read the history from that server") from None

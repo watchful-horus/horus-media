@@ -171,4 +171,22 @@ MIGRATIONS: list[str] = [
     DROP TABLE notification_channels;
     ALTER TABLE notification_channels_new RENAME TO notification_channels;
     """,
+    # Jellyfin as a third kind of server. The servers table listed the allowed kinds itself, so
+    # it is rebuilt without the list (`models.ServerType` decides). History, samples and
+    # problems point at it; `db._migrate` switches the foreign-key rule off while it runs, so
+    # dropping the old table does not take their rows with it. Ids are kept.
+    """
+    CREATE TABLE servers_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL,
+        name TEXT NOT NULL,
+        url TEXT NOT NULL,
+        token TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    );
+    INSERT INTO servers_new (id, type, name, url, token, created_at)
+        SELECT id, type, name, url, token, created_at FROM servers;
+    DROP TABLE servers;
+    ALTER TABLE servers_new RENAME TO servers;
+    """,
 ]
