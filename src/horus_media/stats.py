@@ -65,8 +65,8 @@ def compute_stats(
     servers = [dict(r) for r in conn.execute("SELECT id, name FROM servers ORDER BY id")]
     names = {s["id"]: s["name"] for s in servers}
     plays = conn.execute(
-        "SELECT server_id, user, platform, play_method, media_type, started_at FROM history "
-        "WHERE started_at >= ? AND started_at < ? "
+        "SELECT server_id, user, platform, play_method, media_type, started_at, last_seen_at, "
+        "imported FROM history WHERE started_at >= ? AND started_at < ? "
         + ("AND user = ? COLLATE NOCASE " if only_user is not None else "")
         + "ORDER BY started_at",
         (lo, hi) if only_user is None else (lo, hi, only_user),
@@ -80,9 +80,21 @@ def compute_stats(
     per_day_method = {m: Counter() for m in METHODS}
     per_hour: dict[int, Counter] = {sid: Counter() for sid in names}
     per_hour_method = {m: Counter() for m in METHODS}
+    # Seconds watched, counted where the play started (as the monthly chart does).
+    watched_day = {sid: Counter() for sid in names}
+    watched_hour: dict[int, Counter] = {sid: Counter() for sid in names}
+    watched_total, imported = 0.0, 0
     for p in plays:
         local = _local(p["started_at"], tz)
         per_day[p["server_id"]][local.date()] += 1
+        length = _length(p)
+        if length is None:
+            imported += 1
+        else:
+            watched_total += length
+            watched_day[p["server_id"]][local.date()] += length
+            if hourly:
+                watched_hour[p["server_id"]][_floor(local, HOUR).isoformat()] += length
         by_user[p["user"] or UNKNOWN] += 1
         by_platform[p["platform"] or UNKNOWN] += 1
         methods[p["play_method"]] += 1
@@ -157,6 +169,9 @@ def compute_stats(
                 "hours": hours,
                 "series": [{"server": names[sid], "data": [per_hour[sid][h] for h in hours]}
                            for sid in names],
+                "watched": [{"server": names[sid],
+                             "data": [round(watched_hour[sid][h] / 3600, 2) for h in hours]}
+                            for sid in names],
             },
             "methods_per_hour": [{"name": m, "data": [per_hour_method[m][h] for h in hours]}
                                  for m in METHODS],
@@ -169,11 +184,19 @@ def compute_stats(
         ],
         "range": {"start": start.isoformat(), "end": end.isoformat()},
         "total_plays": len(plays),
+        # Hours watched in the range, and how many of the plays are imported ones without a length.
+        "total_hours": round(watched_total / 3600, 1),
+        "imported_plays": imported,
         "servers": servers,
         "plays_per_day": {
             "days": [d.isoformat() for d in days],
             "series": [
                 {"server": names[sid], "data": [per_day[sid][d] for d in days]} for sid in names
+            ],
+            # Hours watched per day, per server, in the same order as `series`.
+            "watched": [
+                {"server": names[sid], "data": [round(watched_day[sid][d] / 3600, 2) for d in days]}
+                for sid in names
             ],
         },
         "by_user": _ranked(by_user),
@@ -200,6 +223,16 @@ def compute_stats(
 # One play counts for at most this long, so a player left on pause overnight (or a clock that
 # jumped) cannot swamp a month.
 LONGEST_PLAY_SECONDS = 12 * 3600
+
+
+def _length(play: sqlite3.Row) -> float | None:
+    """Seconds a play lasted, from its start to the last time it was seen (so a pause counts).
+    None for a play imported from the server's own history: those have no length."""
+    if play["imported"]:
+        return None
+    length = (datetime.fromisoformat(play["last_seen_at"])
+              - datetime.fromisoformat(play["started_at"])).total_seconds()
+    return min(max(length, 0.0), LONGEST_PLAY_SECONDS)
 
 
 def compute_monthly(
@@ -237,12 +270,11 @@ def compute_monthly(
             continue
         key = _local(r["started_at"], tz).date().replace(day=1).isoformat()
         counts[r["server_id"]][key] += 1
-        if r["imported"]:
+        length = _length(r)
+        if length is None:
             imported += 1
             continue
-        length = (datetime.fromisoformat(r["last_seen_at"])
-                  - datetime.fromisoformat(r["started_at"])).total_seconds()
-        seconds[r["server_id"]][key] += min(max(length, 0.0), LONGEST_PLAY_SECONDS)
+        seconds[r["server_id"]][key] += length
     return {
         "months": keys,
         "series": [{"server": s["name"], "data": [counts[s["id"]][k] for k in keys]}

@@ -18,6 +18,16 @@
   let data = $state(null)
   let error = $state(null)
   let granChoice = $state(null) // null = pick automatically from the range length
+  // What the first chart counts: hours watched (the default) or plays. Remembered per browser.
+  const MEASURE_KEY = 'horus.graphs.measure'
+  const savedMeasure = () => {
+    try { return localStorage.getItem(MEASURE_KEY) === 'plays' ? 'plays' : 'hours' } catch { return 'hours' }
+  }
+  let measure = $state(savedMeasure())
+  function pickMeasure(m) {
+    measure = m
+    try { localStorage.setItem(MEASURE_KEY, m) } catch { /* private mode: not remembered */ }
+  }
   let monthly = $state(null) // last 12 calendar months, not tied to the date range
   let problems = $state(null) // playback problems in the same date range
 
@@ -127,10 +137,13 @@
       data: series[0].data.map((_, i) => series.reduce((n, s) => n + s.data[i], 0)),
     }]
 
-  const timeLines = (keys, series, g, extra = {}) => ({
+  // Hours are shown to one decimal; a count is shown as it is.
+  const asHours = (v) => `${(Math.round(v * 10) / 10).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} h`
+  const timeLines = (keys, series, g, extra = {}, inHours = false) => ({
     xAxis: { type: 'time' },
-    yAxis: { type: 'value', minInterval: 1, min: 0 },
-    tooltip: tip((p) => nice(p.value[0], g), (p) => p.value[1]),
+    yAxis: inHours ? { type: 'value', min: 0, axisLabel: { formatter: (v) => `${v} h` } }
+      : { type: 'value', minInterval: 1, min: 0 },
+    tooltip: tip((p) => nice(p.value[0], g), (p) => (inHours ? asHours(p.value[1]) : p.value[1])),
     dataZoom: [{ type: 'inside' }], // scroll to zoom, drag to pan; no slider bar
     series: series.map((s) => (s.total ? totalLine(s.name, keys.map((k, i) => [k, s.data[i]])) : {
       name: s.name, type: 'line', data: keys.map((k, i) => [k, s.data[i]]),
@@ -139,9 +152,9 @@
     })),
   })
 
-  const timeTable = (keys, series, g) => ({
+  const timeTable = (keys, series, g, inHours = false) => ({
     head: ['Date', ...series.map((s) => label(s.name))],
-    rows: keys.map((k, i) => [nice(k, g), ...series.map((s) => s.data[i])]),
+    rows: keys.map((k, i) => [nice(k, g), ...series.map((s) => (inHours ? asHours(s.data[i]) : s.data[i]))]),
   })
 
   // Phones only: a long name beside a bar ends in "..." so the bars keep their room. The whole
@@ -182,16 +195,21 @@
     if (!data) return null
     const days = data.plays_per_day.days
     const hourly = gran === 'hour' && data.plays_per_hour
+    const inHours = measure === 'hours'
+    const perHour = inHours ? data.plays_per_hour?.watched : data.plays_per_hour?.series
     const plays = hourly
-      ? { keys: data.plays_per_hour.hours, series: data.plays_per_hour.series.map((s) => ({ name: s.server, data: s.data })) }
-      : rollup(days, data.plays_per_day.series, gran)
+      ? { keys: data.plays_per_hour.hours, series: perHour.map((s) => ({ name: s.server, data: s.data })) }
+      : rollup(days, inHours ? data.plays_per_day.watched : data.plays_per_day.series, gran)
+    // Adding up many small parts of an hour leaves stray digits: keep two decimals.
+    const tidy = (list) => list.map((v) => Math.round(v * 100) / 100)
+    if (inHours) plays.series = plays.series.map((s) => ({ ...s, data: tidy(s.data) }))
     const methods = hourly
       ? { keys: data.plays_per_hour.hours, series: data.methods_per_hour }
       : rollup(days, data.methods_per_day, gran)
-    const playSeries = withTotal(plays.series)
+    const playSeries = withTotal(plays.series).map((s) => (inHours && s.total ? { ...s, data: tidy(s.data) } : s))
     const methodSeries = withTotal(methods.series.map((s) => ({ ...s, name: label(s.name) })))
     return {
-      plays: { option: timeLines(plays.keys, playSeries, gran), table: timeTable(plays.keys, playSeries, gran) },
+      plays: { option: timeLines(plays.keys, playSeries, gran, {}, inHours), table: timeTable(plays.keys, playSeries, gran, inHours) },
       methods: {
         option: timeLines(methods.keys, methodSeries, gran),
         table: timeTable(methods.keys, methodSeries, gran),
@@ -354,6 +372,13 @@
       },
     }
   })
+  const watchedNote = $derived(
+    !data || measure !== 'hours' ? null
+      : 'From the start of each play to the last time it was seen, so a pause counts.' +
+        (data.imported_plays
+          ? ` ${data.imported_plays.toLocaleString()} of the ${data.total_plays.toLocaleString()} plays were imported from the server's own history; those have no length and add no hours.`
+          : ''),
+  )
   const monthlyHoursNote = $derived(
     !monthly?.hours ? null
       : 'From the start of each play to the last time it was seen, so a pause counts.' +
@@ -399,14 +424,18 @@
   <div class="card"><p class="muted">Add a server first. Plays are recorded while Horus is running.</p></div>
 {:else}
   <p class="muted summary">
-    {data.total_plays} plays, {data.range.start} to {data.range.end}.
+    {data.total_plays.toLocaleString()} {data.total_plays === 1 ? 'play' : 'plays'}, {data.total_hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} {data.total_hours === 1 ? 'hour' : 'hours'} watched, {data.range.start} to {data.range.end}.
     {#if data.total_plays === 0 && !data.earliest}Nothing recorded yet. Horus records plays while it is running, so this fills up as people watch. To bring in older plays, press Import history under Settings &gt; Servers.
     {:else if data.total_plays === 0}Nothing recorded in this range. Use the arrows to look further back.{/if}
   </p>
   <div class="grid">
     <section class="card wide">
       <div class="head">
-        <h2>Plays over time</h2>
+        <h2>{measure === 'hours' ? 'Hours watched over time' : 'Plays over time'}</h2>
+        <div class="seg" role="group" aria-label="Show">
+          <button class:on={measure === 'hours'} onclick={() => pickMeasure('hours')}>Hours</button>
+          <button class:on={measure === 'plays'} onclick={() => pickMeasure('plays')}>Plays</button>
+        </div>
         <div class="seg" role="group" aria-label="Group by">
           {#each ['hour', 'day', 'week', 'month'] as g}
             <button class:on={gran === g} disabled={g === 'hour' && !hourOk}
@@ -416,6 +445,7 @@
         </div>
       </div>
       <Chart option={built.plays.option} table={built.plays.table} slots={serverSlotsWithTotal} height={300} />
+      {#if watchedNote}<p class="muted note">{watchedNote}</p>{/if}
     </section>
     <section class="card wide">
       <h2>Direct play vs transcode over time</h2>
@@ -498,7 +528,8 @@
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
     padding: 14px 18px; min-width: 0; }
   .wide { grid-column: 1 / -1; }
-  .head { display: flex; justify-content: space-between; align-items: center; }
+  .head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .head h2 { margin-right: auto; }
   h2 { margin: 0 0 6px; font-size: 15px; }
   .seg button { padding: 3px 10px; font-size: 13px; }
   .scroll { overflow-x: auto; }

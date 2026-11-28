@@ -58,6 +58,36 @@ def test_hourly_series_cover_every_hour_and_count_plays(db):
     assert sum(sum(m["data"]) for m in data["methods_per_hour"]) == data["total_plays"] == 3
 
 
+def test_hours_watched_per_day_and_hour_follow_the_plays(db):
+    _, conn = db
+    utc = ZoneInfo("UTC")
+
+    def play(server_id, started, minutes, imported=0):
+        seen = (started + timedelta(minutes=minutes)).isoformat()
+        conn.execute(
+            "INSERT INTO history (server_id, session_key, user, title, media_type, device, "
+            "platform, play_method, started_at, last_seen_at, ended_at, imported) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            (server_id, f"k{started.isoformat()}", "u", "t", "movie", "d", "p", "direct_play",
+             started.isoformat(), seen, seen, imported))
+
+    with conn:
+        play(1, datetime(2026, 3, 10, 14, 5, tzinfo=UTC), 90)
+        play(1, datetime(2026, 3, 10, 23, 30, tzinfo=UTC), 60)   # counted where it started
+        play(2, datetime(2026, 3, 11, 20, 0, tzinfo=UTC), 30)
+        play(2, datetime(2026, 3, 11, 21, 0, tzinfo=UTC), 24 * 60)  # left on: at most 12 hours
+        play(2, datetime(2026, 3, 11, 22, 0, tzinfo=UTC), 120, imported=1)  # no length
+    data = compute_stats(conn, date(2026, 3, 10), date(2026, 3, 11), utc, hourly=True)
+    plex, emby = data["plays_per_day"]["watched"]
+    assert (plex["server"], plex["data"]) == ("Plex", [2.5, 0])
+    assert emby["data"] == [0, 12.5]
+    assert (data["total_plays"], data["total_hours"], data["imported_plays"]) == (5, 15.0, 1)
+    by_hour = data["plays_per_hour"]["watched"]
+    assert by_hour[0]["data"][14] == 1.5 and by_hour[0]["data"][23] == 1.0
+    assert by_hour[1]["data"][24 + 20] == 0.5 and sum(by_hour[1]["data"]) == 12.5
+    assert "plays_per_hour" not in compute_stats(conn, date(2026, 3, 10), date(2026, 3, 10), utc)
+
+
 def test_hourly_data_only_when_asked_for(db):
     _, conn = db
     data = compute_stats(conn, date(2026, 3, 10), date(2026, 3, 10), ZoneInfo("UTC"))

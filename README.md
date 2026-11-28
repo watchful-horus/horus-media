@@ -16,13 +16,13 @@ docker run -d --name horus -p 8000:8000 -v horus-data:/data -e TZ=Europe/London 
 ```
 More ways to install are in [Quick start](#quick-start) and [docs/install.md](docs/install.md).
 
-> Status: early release (0.4.23), public and tested with Docker and a Proxmox container. Plex, Emby and Jellyfin are names and trademarks of their owners; Horus is not affiliated with any of them.
+> Status: early release (0.4.24), public and tested with Docker and a Proxmox container. Plex, Emby and Jellyfin are names and trademarks of their owners; Horus is not affiliated with any of them.
 
 ## Features
 - Live activity from Plex, Emby and Jellyfin in one view, with posters and full stream details
 - Play history recorded locally (SQLite) from the moment you add a server, with optional import of past history
 - Playback problems: buffering, stalled playback and slow transcodes are marked on the live view, graphed and listed ([what is detected](docs/servers-and-integrations.md#playback-problems))
-- Graphs: plays over time by hour, day, week or month; direct play vs transcode; bandwidth; plays by user, platform, hour and weekday; media types
+- Graphs: hours watched or plays over time by hour, day, week or month; direct play vs transcode; bandwidth; plays by user, platform, hour and weekday; media types
 - Accounts with admin and user roles (an email address works as a username), API keys, and a read-only data API for Grafana and Prometheus
 - Notifications (Discord, ntfy, webhook), optional alerts, and weekly or monthly summary reports
 - Backups and restore, application logs, restart / shut down from the web UI, and an **Update now** button for a Proxmox container

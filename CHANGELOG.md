@@ -2,6 +2,13 @@
 
 Newest first. Each version is a tag on GitHub, with a Docker image and a release download.
 
+## 0.4.24 (unreleased)
+
+**New**
+- **Hours watched over time.** The first chart on **Graphs** has an **Hours / Plays** switch and now opens on hours watched, because a count treats a ten-second play like a two-hour film. One click shows plays as before, and your browser remembers the choice. Hour, Day, Week and Month and **View as table** work for both.
+- The line above the charts now also gives the hours watched in the chosen dates, for example "64 plays, 36.4 hours watched".
+- Hours are counted as on the monthly chart: from the start of a play to the last time it was seen (so a pause counts), on the day or hour the play started, at most 12 hours for one play. Plays imported from a server's own history have no length and add no hours; a note under the chart says how many those are.
+
 ## 0.4.23 (2026-11-28)
 
 **Changed**
