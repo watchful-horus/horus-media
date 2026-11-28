@@ -87,6 +87,9 @@ class HistoryRecord(BaseModel):
     started_at: datetime
     duration_seconds: int = 0
     date_only: bool = False  # the server gave only a date; the time of day is made up on import
+    # started_at is the server's own clock time, and its date is the UTC day the server listed
+    # the play under: the import turns it into a real time with Horus's time zone
+    wall_clock: bool = False
 
 
 def _server_name(v: str) -> str:

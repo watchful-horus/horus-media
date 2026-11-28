@@ -2,7 +2,8 @@
 Stand-in responses only, shaped after Jellyfin's own API description."""
 
 import sqlite3
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import httpx
 import pytest
@@ -11,6 +12,7 @@ from fastapi.testclient import TestClient
 from horus_media import problems
 from horus_media.clients import JellyfinClient, make_client
 from horus_media.db import connect, migrate
+from horus_media.history_import import _real_time
 from horus_media.main import create_app
 from horus_media.migrations import MIGRATIONS
 from horus_media.models import ServerActivity
@@ -53,8 +55,9 @@ PLAYING = [
 class Jellyfin:
     """A stand-in Jellyfin that only accepts the documented key header."""
 
-    def __init__(self, plugin: bool = True):
+    def __init__(self, plugin: bool = True, twice: bool = False):
         self.plugin = plugin
+        self.twice = twice  # also list the late play on the day it is counted on
         self.calls: list[tuple[str, str]] = []
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
@@ -81,9 +84,19 @@ class Jellyfin:
                 {"user_id": "labels_user", "user_name": "labels_user",
                  "user_usage": {"2026-03-01": 0, "2026-03-02": 0}},
                 {"user_id": USER, "user_name": "erin",
-                 "user_usage": {"2026-03-01": 0, "2026-03-02": 2}}])
+                 "user_usage": {"2026-03-01": 0, "2026-03-02": 3}}])
+        # Like the real plugin on a server eight hours behind UTC: the count above goes by the
+        # server's own day, the lists below by the UTC day, with the server's clock time.
+        late = {"Time": "5:18 PM", "Id": "i3", "Name": "Late Film", "Type": "Movie",
+                "Client": "Jellyfin Web", "Method": "Transcode (v:direct a:aac)",
+                "Device": "Chrome", "Duration": "190", "RowId": "9"}
+        if path == f"/user_usage_stats/{USER}/2026-03-03/GetItems":
+            return httpx.Response(200, json=[late])
+        if path in (f"/user_usage_stats/{USER}/2026-03-01/GetItems",
+                    f"/user_usage_stats/{USER}/2026-03-04/GetItems"):
+            return httpx.Response(200, json=[])
         if path == f"/user_usage_stats/{USER}/2026-03-02/GetItems":
-            return httpx.Response(200, json=[
+            return httpx.Response(200, json=([late] if self.twice else []) + [
                 {"Time": "3:05 PM", "Id": "i1", "Name": "A Film", "Type": "Movie",
                  "Client": "Jellyfin Web", "Method": "DirectPlay", "Device": "Firefox",
                  "Duration": "5400", "RowId": "7"},
@@ -224,7 +237,7 @@ def test_history_comes_from_the_plugin_with_reads_only():
     fake = Jellyfin()
     records = client_for(fake).get_history()
     assert fake.calls == []
-    film, episode = records
+    film, episode, late = records
     assert (film.user, film.title, film.media_type, film.play_method) == \
         ("erin", "A Film", "movie", "direct_play")
     assert film.started_at == datetime(2026, 3, 2, 15, 5, tzinfo=UTC)
@@ -233,13 +246,62 @@ def test_history_comes_from_the_plugin_with_reads_only():
     # A time that cannot be read keeps the play, on its day only.
     assert (episode.play_method, episode.date_only) == ("transcode", True)
     assert episode.started_at.date().isoformat() == "2026-03-02"
+    assert (film.wall_clock, episode.wall_clock) == (True, False)
+    # Counted on the 2nd (the server's evening) but listed on the 3rd (UTC): still found.
+    assert (late.title, late.play_method, late.duration_seconds) == ("Late Film", "transcode", 190)
+    assert late.key == "9:2026-03-03T17:18:00+00:00" and late.wall_clock is True
+
+
+def test_a_play_listed_on_two_days_is_taken_once():
+    records = client_for(Jellyfin(twice=True)).get_history()
+    assert sorted(r.title for r in records) == ["A Film", "Late Film", "Some Show - Pilot"]
+
+
+def test_the_count_is_asked_up_to_tomorrow():
+    asked = {}
+
+    def fake(request):
+        if request.url.path.endswith("/PlayActivity"):
+            asked.update(request.url.params)
+        return Jellyfin()(request)
+
+    client_for(fake).get_history()
+    assert asked["endDate"] == (datetime.now(UTC).date() + timedelta(days=1)).isoformat()
+
+
+def test_clock_times_become_real_times_in_the_horus_time_zone():
+    behind, ahead = ZoneInfo("America/Los_Angeles"), ZoneInfo("Asia/Tokyo")
+    # 5:18 PM on the server, listed under 3 March UTC: that is the evening of the 2nd there.
+    assert _real_time(datetime(2026, 3, 3, 17, 18, tzinfo=UTC), behind) ==         datetime(2026, 3, 3, 1, 18, tzinfo=UTC)
+    assert _real_time(datetime(2026, 3, 2, 15, 5, tzinfo=UTC), behind) ==         datetime(2026, 3, 2, 23, 5, tzinfo=UTC)
+    # 8:00 AM on a server ahead of UTC, listed under 2 March UTC: the morning of the 3rd there.
+    assert _real_time(datetime(2026, 3, 2, 8, 0, tzinfo=UTC), ahead) ==         datetime(2026, 3, 2, 23, 0, tzinfo=UTC)
+    same = datetime(2026, 3, 2, 8, 0, tzinfo=UTC)
+    assert _real_time(same, ZoneInfo("UTC")) == same
+
+
+def test_import_uses_the_time_zone_and_skips_a_play_recorded_live(tmp_path, monkeypatch):
+    c, sid = app(Jellyfin(), tmp_path, monkeypatch)
+    c.put("/api/settings", json={"timezone": "America/Los_Angeles"})
+    db = sqlite3.connect(tmp_path / "horus.db")
+    db.execute("INSERT INTO history (server_id, session_key, user, title, media_type, device, "
+               "platform, play_method, started_at, last_seen_at) VALUES (?, 'live', 'erin', "
+               "'Late Film', 'movie', 'Chrome', 'Jellyfin Web', 'transcode', "
+               "'2026-03-03T01:17:52.382740+00:00', '2026-03-03T01:21:00+00:00')", (sid,))
+    db.commit()
+    result = c.post(f"/api/servers/{sid}/import-history").json()
+    assert (result["found"], result["added"], result["skipped"]) == (3, 2, 1)
+    film = db.execute("SELECT started_at FROM history WHERE title = 'A Film'").fetchone()[0]
+    assert film == "2026-03-02T23:05:00+00:00"
+    assert db.execute("SELECT COUNT(*) FROM history WHERE title = 'Late Film'").fetchone()[0] == 1
+    db.close()
 
 
 def test_import_through_the_app_and_twice_adds_nothing(tmp_path, monkeypatch):
     c, sid = app(Jellyfin(), tmp_path, monkeypatch)
-    assert c.post(f"/api/servers/{sid}/import-history").json()["added"] == 2
+    assert c.post(f"/api/servers/{sid}/import-history").json()["added"] == 3
     again = c.post(f"/api/servers/{sid}/import-history").json()
-    assert (again["added"], again["skipped"]) == (0, 2)
+    assert (again["added"], again["skipped"]) == (0, 3)
 
 
 def test_without_the_plugin_the_message_names_jellyfin(tmp_path, monkeypatch):

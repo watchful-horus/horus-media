@@ -4,7 +4,7 @@ key is sent, what a conversion reports, and how the Playback Reporting plugin is
 
 import logging
 import re
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import httpx
 
@@ -17,10 +17,13 @@ DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 # The plugin gives a play's time of day as text in the server's own style.
 TIME_FORMATS = ("%I:%M %p", "%H:%M", "%H:%M:%S", "%I:%M:%S %p")
 PLUGIN_MISSING = (400, 401, 403, 404, 500)
+ONE_DAY = timedelta(days=1)
 
 
 def _started(day: str, time_of_day: str) -> tuple[datetime, bool]:
-    """When a play began, and whether only its day is known."""
+    """When a play began, and whether only its day is known. The result is the server's own
+    clock time on the day the play was listed under, labelled UTC for now: only the import
+    knows the time zone to read it in (see history_import._real_time)."""
     text = " ".join(str(time_of_day or "").upper().replace(".", "").split())
     for fmt in TIME_FORMATS:
         try:
@@ -73,9 +76,14 @@ class JellyfinClient(EmbyClient):
         if not kinds:
             return []
         names = {u.get("id"): u.get("name") for u in users if isinstance(u, dict)}
-        # One call says which days each person played something; only those days are read.
+        # One call says which days each person played something. It counts a play on the day
+        # the server's own clock showed, while the list of a day's plays goes by the UTC day
+        # (seen on a real server), so a late-evening play is counted on one day and listed on
+        # the next. The days on either side are read too, and a play is only taken once. The
+        # count is asked up to tomorrow, for a server whose clock is ahead of UTC.
         activity = self._get("/user_usage_stats/PlayActivity", {
-            "days": HISTORY_DAYS, "endDate": datetime.now(UTC).date().isoformat(),
+            "days": HISTORY_DAYS,
+            "endDate": (datetime.now(UTC).date() + ONE_DAY).isoformat(),
             "dataType": "count", "filter": kinds})
         records: list[HistoryRecord] = []
         for entry in activity if isinstance(activity, list) else []:
@@ -83,12 +91,23 @@ class JellyfinClient(EmbyClient):
             if not user_id or user_id == "labels_user" or not re.fullmatch(r"[0-9A-Fa-f-]+", user_id):
                 continue
             user = names.get(user_id) or entry.get("user_name") or "Unknown"
-            for day, count in sorted((entry.get("user_usage") or {}).items()):
-                if not count or not DAY.fullmatch(day):
-                    continue
-                rows = self._get(f"/user_usage_stats/{user_id}/{day}/GetItems", {"filter": kinds})
+            days: set[date] = set()
+            for day, count in (entry.get("user_usage") or {}).items():
+                if count and DAY.fullmatch(day):
+                    counted = date.fromisoformat(day)
+                    days.update((counted - ONE_DAY, counted, counted + ONE_DAY))
+            seen: set[str] = set()
+            for day in sorted(days):
+                rows = self._get(f"/user_usage_stats/{user_id}/{day.isoformat()}/GetItems",
+                                 {"filter": kinds})
                 for row in rows if isinstance(rows, list) else []:
-                    records.append(self._record(row, user, day))
+                    if not isinstance(row, dict):
+                        continue
+                    row_id = str(row.get("RowId") or "")
+                    if row_id and row_id in seen:
+                        continue
+                    seen.add(row_id)
+                    records.append(self._record(row, user, day.isoformat()))
         return records
 
     @staticmethod
@@ -110,4 +129,5 @@ class JellyfinClient(EmbyClient):
             started_at=started,
             duration_seconds=max(seconds, 0),
             date_only=date_only,
+            wall_clock=not date_only,
         )

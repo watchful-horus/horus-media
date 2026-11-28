@@ -2,7 +2,7 @@
 
 import logging
 import sqlite3
-from datetime import datetime, time, timedelta, tzinfo
+from datetime import UTC, datetime, time, timedelta, tzinfo
 
 import httpx
 
@@ -60,14 +60,32 @@ def _noon(started: datetime, zone: tzinfo) -> datetime:
     return datetime.combine(started.date(), time(12), tzinfo=zone)
 
 
+def _real_time(started: datetime, zone: tzinfo | None) -> datetime:
+    """The real time of a play whose server gave only its own clock time and the UTC day the
+    play fell on. That clock time is read in Horus's time zone (the machine's own when none is
+    set), on whichever of the three possible dates puts the play on that UTC day. Right when
+    the server and Horus are in the same time zone."""
+    day, clock = started.date(), started.time()
+    for offset in (0, -1, 1):
+        local = datetime.combine(day + timedelta(days=offset), clock)
+        local = local.replace(tzinfo=zone) if zone else local.astimezone()
+        real = local.astimezone(UTC)
+        if real.date() == day:
+            return real
+    return started
+
+
 def store_records(conn: sqlite3.Connection, server_id: int, records: list[HistoryRecord]) -> dict:
     added = skipped = 0
-    zone = app_settings.load(conn).zone() or datetime.now().astimezone().tzinfo
+    chosen = app_settings.load(conn).zone()
+    zone = chosen or datetime.now().astimezone().tzinfo
     with conn:
         for r in records:
             key = r.key  # built from the original time, so plays imported earlier are not repeated
             if r.date_only:
                 r = r.model_copy(update={"started_at": _noon(r.started_at, zone)})
+            elif r.wall_clock:
+                r = r.model_copy(update={"started_at": _real_time(r.started_at, chosen)})
             lo = (r.started_at - timedelta(minutes=2)).isoformat()
             hi = (r.started_at + timedelta(minutes=2)).isoformat()
             live = conn.execute(
